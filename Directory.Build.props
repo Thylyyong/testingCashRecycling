@@ -1,0 +1,46 @@
+<Project>
+
+  <!-- =====================================================================
+       SOLUTION-WIDE BUILD SETTINGS  (owner: Project Lead / Systems Integrator)
+       Applies to EVERY project unless a csproj overrides it locally.
+       ===================================================================== -->
+  <PropertyGroup>
+    <!-- Language / runtime baseline. App + Hal.Vendor.* retarget to
+         net10.0-windows on Windows once WinUI 3 markup and real vendor
+         SDKs are introduced (post AOT-spike). -->
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Nullability: non-negotiable, everywhere. -->
+    <Nullable>enable</Nullable>
+
+    <!-- Strict compiler: every C# warning is a build failure. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+
+    <!-- Reproducible builds. -->
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- =====================================================================
+       NATIVE AOT READINESS
+       Every PRODUCT project carries IsAotCompatible=true, which switches on
+       the trim + AOT analyzers so AOT-hostile code (reflection, runtime
+       codegen) fails the build the moment it is written. PublishAot itself
+       lives on the entry executable (App) and pulls the whole graph into
+       the native image at publish time.
+       Test projects are excluded on purpose: reflection-based test hosts
+       are not AOT-compatible.
+       ===================================================================== -->
+  <PropertyGroup Condition="!$(MSBuildProjectName.EndsWith('Tests'))">
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

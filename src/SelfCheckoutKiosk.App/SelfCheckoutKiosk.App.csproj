@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- PRESENTATION LAYER + COMPOSITION ROOT. The ONLY project that references
+       the Infrastructure and Hal.Vendor.* assemblies. Owner: UI team (views)
+       + Lead (composition root / DI).
+       Native AOT is enforced on THIS entry executable; it pulls the whole
+       object graph into the native image at publish.
+       TODO(UI/Lead): retarget to net10.0-windows and add the WinUI 3 Windows
+       App SDK once the AOT spike ratifies the presentation framework. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SelfCheckoutKiosk.App</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Presentation\SelfCheckoutKiosk.Presentation.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Infrastructure\SelfCheckoutKiosk.Infrastructure.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.EpsonM30\SelfCheckoutKiosk.Hal.Vendor.EpsonM30.csproj" />
+  </ItemGroup>
+</Project>

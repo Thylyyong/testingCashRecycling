@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Kiosk <-> Back-Office Sync Contract (v0.1, over Tailscale)",
+  "description": "Producer = Flutter back-office. Consumer = kiosk (validates on inbound).",
+  "definitions": {
+    "CatalogPush": {
+      "type": "object",
+      "required": ["schemaVersion", "generatedAtUtc", "items"],
+      "properties": {
+        "schemaVersion": { "type": "string", "const": "0.1" },
+        "generatedAtUtc": { "type": "string", "format": "date-time" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["ean13", "description", "usdPrice"],
+            "properties": {
+              "ean13": { "type": "string", "pattern": "^\\d{13}$" },
+              "description": { "type": "string", "minLength": 1, "maxLength": 120 },
+              "usdPrice": { "type": "number", "minimum": 0, "multipleOf": 0.01 },
+              "active": { "type": "boolean", "default": true }
+            }
+          }
+        }
+      }
+    },
+    "CouponPush": {
+      "type": "object",
+      "required": ["schemaVersion", "coupons"],
+      "properties": {
+        "schemaVersion": { "type": "string", "const": "0.1" },
+        "coupons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["code", "discountUsd", "expiresAtUtc"],
+            "properties": {
+              "code": { "type": "string", "pattern": "^VCH-[A-Z0-9]+$" },
+              "discountUsd": { "type": "number", "minimum": 0, "multipleOf": 0.01 },
+              "expiresAtUtc": { "type": "string", "format": "date-time" },
+              "maxRedemptions": { "type": "integer", "minimum": 1, "default": 1 }
+            }
+          }
+        }
+      }
+    },
+    "TransactionPull": {
+      "type": "object",
+      "description": "Kiosk -> back-office. Read-only for the dashboard.",
+      "required": ["transactionGuid", "createdAtUtc", "totalUsd", "syncStatus"],
+      "properties": {
+        "transactionGuid": { "type": "string", "format": "uuid" },
+        "createdAtUtc": { "type": "string", "format": "date-time" },
+        "totalUsd": { "type": "number", "minimum": 0 },
+        "paymentMethod": { "type": "string", "enum": ["Cash", "KhqrDigital"] },
+        "syncStatus": { "type": "string", "enum": ["Pending", "Completed"] }
+      }
+    }
+  }
+}

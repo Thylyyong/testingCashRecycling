@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- PRESENTATION LAYER — Views + ViewModels. References ONLY Core.
+       Owner: Front-End Developers.
+       HARD BOUNDARY: never references Infrastructure, Hal.Vendor.*, or any DB /
+       hardware / vendor type. ViewModels bind to ILLCoreLogicEngine only.
+       Retargets to net10.0-windows with the WinUI 3 markup once the framework
+       is ratified; ViewModels stay framework-agnostic and testable headless. -->
+  <PropertyGroup>
+    <RootNamespace>SelfCheckoutKiosk.Presentation</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
+  </ItemGroup>
+  <!-- TODO(Front-End): swap the hand-rolled ObservableObject for
+       CommunityToolkit.Mvvm (source-generated, AOT-friendly) on your connected
+       machine: <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" /> -->
+</Project>

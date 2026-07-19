@@ -1,0 +1,15 @@
+{
+  "solution": {
+    "path": "SelfCheckoutKiosk.sln",
+    "projects": [
+      "src\\SelfCheckoutKiosk.Domain\\SelfCheckoutKiosk.Domain.csproj",
+      "src\\SelfCheckoutKiosk.Core\\SelfCheckoutKiosk.Core.csproj",
+      "src\\SelfCheckoutKiosk.Infrastructure\\SelfCheckoutKiosk.Infrastructure.csproj",
+      "src\\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX\\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX.csproj",
+      "src\\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner\\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.csproj",
+      "src\\SelfCheckoutKiosk.Hal.Vendor.EpsonM30\\SelfCheckoutKiosk.Hal.Vendor.EpsonM30.csproj",
+      "tests\\SelfCheckoutKiosk.Core.Tests\\SelfCheckoutKiosk.Core.Tests.csproj",
+      "tests\\SelfCheckoutKiosk.Infrastructure.Tests\\SelfCheckoutKiosk.Infrastructure.Tests.csproj"
+    ]
+  }
+}

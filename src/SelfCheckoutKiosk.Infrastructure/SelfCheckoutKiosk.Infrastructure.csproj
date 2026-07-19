@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- INFRASTRUCTURE LAYER. References Core (implements its ports).
+       Owner: Back-End Developer.
+       TODO(Back-End): add EF Core + SQLCipher package refs in Sprint 0 proper;
+       the AOT spike validates them here first. -->
+  <PropertyGroup>
+    <RootNamespace>SelfCheckoutKiosk.Infrastructure</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
+  </ItemGroup>
+</Project>

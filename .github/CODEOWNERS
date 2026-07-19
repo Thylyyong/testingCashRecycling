@@ -1,0 +1,27 @@
+# CODEOWNERS — the ACTUAL per-folder control (sparse-checkout is not access control).
+# Pair with branch protection on main: require CODEOWNER review + status checks,
+# disallow direct pushes. Replace the placeholder handles with real GitHub users.
+
+# --- Lead: cross-cutting config, composition root, provisioning, security ---
+/Directory.Build.props                              @project-lead
+/SelfCheckoutKiosk.sln                              @project-lead
+/*.slnf                                             @project-lead
+/.github/                                           @project-lead
+/src/SelfCheckoutKiosk.App/                         @project-lead
+/deploy/                                            @project-lead
+
+# --- Back-End: domain, core, infrastructure, hardware adapters, tests ---
+/src/SelfCheckoutKiosk.Domain/                      @backend-dev
+/src/SelfCheckoutKiosk.Core/                        @backend-dev @project-lead
+/src/SelfCheckoutKiosk.Infrastructure/              @backend-dev
+/src/SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX/    @backend-dev
+/src/SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner/ @backend-dev
+/src/SelfCheckoutKiosk.Hal.Vendor.EpsonM30/         @backend-dev
+/tests/                                             @backend-dev
+
+# --- Front-End: presentation only (Views + ViewModels) ---
+/src/SelfCheckoutKiosk.Presentation/                @frontend-dev-1 @frontend-dev-2
+
+# --- Licensing token logic stays Lead-only even though it lives in Core ---
+# (more specific rule wins, so this overrides the Core rule above)
+/src/SelfCheckoutKiosk.Core/Licensing/              @project-lead

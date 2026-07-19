@@ -1,0 +1,18 @@
+## .NET / Visual Studio
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+.vs/
+publish/
+artifacts/
+## AOT native intermediates
+*.o
+*.exports
+## Local-only verification source (never commit)
+nuget.verify.config
+## Secrets — NEVER commit provisioning material
+deploy/Provisioning/*.key
+deploy/Provisioning/*.pfx
+deploy/Provisioning/secrets.*

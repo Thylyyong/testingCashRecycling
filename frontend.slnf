@@ -1,0 +1,9 @@
+{
+  "solution": {
+    "path": "SelfCheckoutKiosk.sln",
+    "projects": [
+      "src\\SelfCheckoutKiosk.Presentation\\SelfCheckoutKiosk.Presentation.csproj",
+      "src\\SelfCheckoutKiosk.Core\\SelfCheckoutKiosk.Core.csproj"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- DOMAIN LAYER — centre of the onion. References NOTHING.
+       No frameworks, no EF Core, no hardware, no DI. Pure C#.
+       Owner: Back-End Developer. -->
+  <PropertyGroup>
+    <RootNamespace>SelfCheckoutKiosk.Domain</RootNamespace>
+  </PropertyGroup>
+</Project>
