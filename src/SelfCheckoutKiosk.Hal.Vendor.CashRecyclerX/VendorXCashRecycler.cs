@@ -1,3 +1,5 @@
+using System.Net.Http;
+using System.Text;
 using SelfCheckoutKiosk.Core.Abstractions;
 using SelfCheckoutKiosk.Domain.ValueObjects;
 
@@ -8,34 +10,45 @@ using SelfCheckoutKiosk.Domain.ValueObjects;
 namespace SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX;
 
 /// <summary>
-/// Simulation adapter for the "CashRecyclerX" SKU (Blueprint §4).
-/// Implements <see cref="ICashRecycler"/> against a software-only device state
-/// machine — no real vendor SDK is required for Sprint 0 / unit testing.
+/// Hybrid Adapter for the "CashRecyclerX" SKU (Blueprint §4).
+/// Implements <see cref="ICashRecycler"/> against both a local hardware REST API
+/// (CashDevice-RestAPI server) and a software-only simulation state machine for Sprint 0 / unit testing.
 ///
 /// ARCHITECTURE RULES — do not violate:
 ///   1. This adapter depends on SelfCheckoutKiosk.Core ONLY. No reference to
 ///      Infrastructure or App is ever allowed here.
 ///   2. Zero business logic lives in this class. It models the physical device
 ///      state (Disconnected / Connected / Armed / Stopped) and translates
-///      commands to state transitions or event fires — nothing more.
+///      commands to HTTP REST calls or state transitions — nothing more.
 ///   3. The engine (LLCoreLogicEngine) is the sole subscriber to the events
 ///      raised here. No other class may subscribe directly.
-///   4. When the real vendor SDK is available (Sprint 1+), replace the
-///      simulation state machine below with real SDK calls — the ICashRecycler
-///      surface remains unchanged, so Core and tests need no modification.
-///
-/// TODO(Systems/Sprint 1): wire the real vendor SDK once the package is available.
-/// Retarget .csproj to net10.0-windows if the SDK requires it (coordinate with Lead).
 /// </summary>
-public sealed class VendorXCashRecycler : ICashRecycler
+public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
 {
     // -----------------------------------------------------------------------
-    // Simulation state machine
+    // State machine & REST API Configuration
     // -----------------------------------------------------------------------
     private enum RecyclerState { Disconnected, Connected, Armed, Stopped }
 
     private readonly object _stateLock = new();
     private RecyclerState _state = RecyclerState.Disconnected;
+
+    private readonly HttpClient _httpClient;
+    private readonly string _apiBaseUrl;
+    private readonly bool _useRealApi;
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="VendorXCashRecycler"/>.
+    /// </summary>
+    /// <param name="apiBaseUrl">Base address of the running vendor REST server (default: http://localhost:5000).</param>
+    /// <param name="useRealApi">If set to <c>true</c>, actual HTTP commands are dispatched to the machine; otherwise runs in test simulation mode.</param>
+    /// <param name="httpClient">Optional custom <see cref="HttpClient"/> instance.</param>
+    public VendorXCashRecycler(string apiBaseUrl = "http://localhost:5000", bool useRealApi = false, HttpClient? httpClient = null)
+    {
+        _apiBaseUrl = apiBaseUrl.TrimEnd('/');
+        _useRealApi = useRealApi;
+        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+    }
 
     // -----------------------------------------------------------------------
     // ICashRecycler events
@@ -48,48 +61,66 @@ public sealed class VendorXCashRecycler : ICashRecycler
     // -----------------------------------------------------------------------
 
     /// <summary>
-    /// Simulates opening a connection to the cash recycler hardware.
-    /// In production this would open the vendor SDK session / serial port.
+    /// Connects to the cash recycler hardware via REST API or simulation.
     /// </summary>
-    public Task ConnectAsync(CancellationToken cancellationToken = default)
+    public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
+        if (_useRealApi)
+        {
+            try
+            {
+                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/connect", null, cancellationToken);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                OnFault?.Invoke(this, new HardwareFaultEventArgs("CashRecyclerX", $"REST API Connect error: {ex.Message}"));
+                throw;
+            }
+        }
+
         lock (_stateLock)
         {
             if (_state != RecyclerState.Disconnected)
-                return Task.CompletedTask; // idempotent
+                return; // idempotent
 
             _state = RecyclerState.Connected;
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Simulates arming the recycler to accept incoming notes.
+    /// Arms the recycler to accept incoming notes by opening the physical intake slot via REST API.
     /// Device must be Connected first.
     /// </summary>
-    public Task ArmAcceptanceAsync(CancellationToken cancellationToken = default)
+    public async Task ArmAcceptanceAsync(CancellationToken cancellationToken = default)
     {
+        if (_useRealApi)
+        {
+            using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/enable", null, cancellationToken);
+            response.EnsureSuccessStatusCode();
+        }
+
         lock (_stateLock)
         {
             if (_state == RecyclerState.Connected)
                 _state = RecyclerState.Armed;
-            // Silently ignore if already Armed or in other states (idempotent simulation).
         }
-
-        return Task.CompletedTask;
     }
 
-    /// <summary>Simulates a normal disarm — device stops accepting notes, returns to Connected.</summary>
-    public Task DisarmAcceptanceAsync(CancellationToken cancellationToken = default)
+    /// <summary>Normal disarm — device stops accepting notes and closes intake slot via REST API.</summary>
+    public async Task DisarmAcceptanceAsync(CancellationToken cancellationToken = default)
     {
+        if (_useRealApi)
+        {
+            using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/disable", null, cancellationToken);
+            response.EnsureSuccessStatusCode();
+        }
+
         lock (_stateLock)
         {
             if (_state == RecyclerState.Armed)
                 _state = RecyclerState.Connected;
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -97,38 +128,76 @@ public sealed class VendorXCashRecycler : ICashRecycler
     /// Called by the engine immediately on <see cref="Core.Currency.LowFloatMonitor.LowFloatStateTriggered"/>.
     /// Transitions to Stopped from any state.
     /// </summary>
-    public Task StopAcceptingCashAsync(CancellationToken cancellationToken = default)
+    public async Task StopAcceptingCashAsync(CancellationToken cancellationToken = default)
     {
+        if (_useRealApi)
+        {
+            try
+            {
+                await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/disable", null, cancellationToken);
+            }
+            catch
+            {
+                // Best-effort attempt during hard safeguard stop
+            }
+        }
+
         lock (_stateLock)
         {
             _state = RecyclerState.Stopped;
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Simulates dispensing change. Returns success with the exact <paramref name="change"/>
-    /// breakdown requested (simulation always succeeds). Real SDK would command the
-    /// cassette motors and confirm physical note ejection.
+    /// Dispenses change via REST API. Commands the physical cassette motors and confirms physical note ejection.
     /// </summary>
-    public Task<DispenseResult> DispenseAsync(
+    public async Task<DispenseResult> DispenseAsync(
         ChangeBreakdown change,
         CancellationToken cancellationToken = default)
     {
+        if (_useRealApi)
+        {
+            try
+            {
+                // Construct simple JSON payload without reflection for Native AOT safety
+                string jsonPayload = $"{{\"totalUsd\": {change.TotalUsd.Amount}, \"totalKhr\": {change.TotalKhr.Amount}}}";
+                using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/dispense", content, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                return new DispenseResult(true, change);
+            }
+            catch (Exception ex)
+            {
+                OnFault?.Invoke(this, new HardwareFaultEventArgs("CashRecyclerX", $"Dispense failure: {ex.Message}"));
+                return new DispenseResult(false, change);
+            }
+        }
+
         // Simulation: report success with the requested breakdown.
-        // Real SDK: command the cassette and confirm physical ejection.
-        return Task.FromResult(new DispenseResult(true, change));
+        return new DispenseResult(true, change);
     }
 
     /// <summary>
-    /// Simulates returning the escrowed note to the customer.
-    /// No state change required — device remains Armed after a reject.
+    /// Commands the reject gate via REST API to return the escrowed note to the customer.
     /// </summary>
-    public Task RejectEscrowedNoteAsync(CancellationToken cancellationToken = default)
+    public async Task RejectEscrowedNoteAsync(CancellationToken cancellationToken = default)
     {
-        // Simulation: immediate return. Real SDK: command the reject gate.
-        return Task.CompletedTask;
+        if (_useRealApi)
+        {
+            using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/escrow/reject", null, cancellationToken);
+            response.EnsureSuccessStatusCode();
+        }
+
+        // Simulation / real behavior: immediate return. Device remains Armed after a reject.
+    }
+
+    /// <summary>
+    /// Disposes the HTTP client resources.
+    /// </summary>
+    public void Dispose()
+    {
+        _httpClient.Dispose();
     }
 
     // -----------------------------------------------------------------------

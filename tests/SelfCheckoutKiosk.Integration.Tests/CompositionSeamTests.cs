@@ -95,12 +95,15 @@ public sealed class CompositionSeamTests : IDisposable
     private readonly string _logPath =
         Path.Combine(Path.GetTempPath(), $"seam_test_{Guid.NewGuid():N}.log");
 
-    private readonly FakeCashRecycler      _fakeCashRecycler = new();
-    private readonly FakeScanner           _fakeScanner      = new();
-    private readonly FakePrinter           _fakePrinter      = new();
+    private readonly FakeCashRecycler       _fakeCashRecycler = new();
+    private readonly FakeScanner            _fakeScanner      = new();
+    private readonly FakePrinter            _fakePrinter      = new();
     private readonly DualCurrencyCalculator _calculator       = new();
-    private readonly LowFloatMonitor       _lowFloat         = new();
-    private readonly OfflineLicenseManager _license          = new();
+    private readonly LowFloatMonitor        _lowFloat         = new();
+    private readonly OfflineLicenseManager  _license          = new();
+
+    // Extra temp logs created by the isolated-engine tests.
+    private readonly List<string> _extraLogs = [];
 
     private HardwareAppendLog BuildLog() => new(_logPath);
 
@@ -114,11 +117,39 @@ public sealed class CompositionSeamTests : IDisposable
             _license,
             log ?? BuildLog());
 
+    /// <summary>
+    /// Builds a fully initialised engine with its own isolated recycler and log
+    /// so that event handlers from other tests never bleed in.
+    /// Used only by the cash-payment seam tests.
+    /// </summary>
+    private async Task<(LLCoreLogicEngine engine, FakeCashRecycler recycler, string logPath)>
+        BuildIsolatedEngineAsync()
+    {
+        var recycler = new FakeCashRecycler();
+        var logPath  = Path.Combine(Path.GetTempPath(), $"seam_cash_{Guid.NewGuid():N}.log");
+        _extraLogs.Add(logPath);
+
+        var engine = new LLCoreLogicEngine(
+            recycler,
+            _fakeScanner,
+            _fakePrinter,
+            _calculator,
+            _lowFloat,
+            _license,
+            new HardwareAppendLog(logPath));
+
+        await engine.InitializeAsync();
+        return (engine, recycler, logPath);
+    }
+
     public void Dispose()
     {
         if (File.Exists(_logPath))
             File.Delete(_logPath);
+        foreach (var p in _extraLogs)
+            if (File.Exists(p)) File.Delete(p);
     }
+
 
     // -----------------------------------------------------------------------
     // Tests
@@ -164,7 +195,7 @@ public sealed class CompositionSeamTests : IDisposable
         var engine = BuildEngine(log);
         await engine.InitializeAsync();
 
-        _fakeCashRecycler.FireNoteInEscrow(new Money(1.00m));
+        _fakeCashRecycler.FireNoteInEscrow(Money.Usd(1.00m));
 
         var content = File.ReadAllText(_logPath);
         Assert.Contains("IN_ESCROW", content);
@@ -218,6 +249,93 @@ public sealed class CompositionSeamTests : IDisposable
         Assert.Equal(KioskState.Faulted, engine.CurrentState);
         Assert.NotNull(receivedFault);
         Assert.Equal("Jam detected", receivedFault.Message);
+    }
+
+    // -----------------------------------------------------------------------
+    // Cash payment confirmation seam tests (Systems Team scope)
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Full seam: begin session → fire exact note → engine confirms → log records
+    /// COMMITTED_TO_VAULT. Proves Category 1/2/3 are wired for the happy path.
+    /// </summary>
+    [Fact]
+    public async Task CashPayment_ExactAmount_SeamConfirmsAndLogsCommit()
+    {
+        var (engine, recycler, logPath) = await BuildIsolatedEngineAsync();
+        await engine.BeginCashPaymentAsync(0.75m);
+
+        CashPaymentConfirmedEventArgs? confirmed = null;
+        engine.OnCashPaymentConfirmed += (_, e) => confirmed = e;
+
+        recycler.FireNoteInEscrow(Money.Usd(0.75m));
+
+        Assert.NotNull(confirmed);
+        Assert.Equal(0.75m, confirmed!.TotalUsd);
+        Assert.Equal(KioskState.TransactionComplete, engine.CurrentState);
+
+        var logText = File.ReadAllText(logPath);
+        Assert.Contains("IN_ESCROW",          logText);
+        Assert.Contains("COMMITTED_TO_VAULT", logText);
+    }
+
+    /// <summary>
+    /// Full seam: Coca-Cola scenario — $0.75 product, customer inserts $2.
+    /// Overpayment = 5 125 KHR > 500 KHR → note must be rejected.
+    /// Log must record IN_ESCROW then REJECTED (never COMMITTED_TO_VAULT).
+    /// </summary>
+    [Fact]
+    public async Task CashPayment_LargeOverpayment_SeamRejectsAndLogsReject()
+    {
+        var (engine, recycler, logPath) = await BuildIsolatedEngineAsync();
+        await engine.BeginCashPaymentAsync(0.75m);
+
+        CashPaymentRejectedEventArgs? rejected = null;
+        engine.OnCashPaymentRejected += (_, e) => rejected = e;
+
+        recycler.FireNoteInEscrow(Money.Usd(2.00m));
+
+        Assert.NotNull(rejected);
+        Assert.Equal(5_125m, rejected!.OverpaymentKhr, precision: 0);
+        Assert.NotEqual(KioskState.TransactionComplete, engine.CurrentState);
+
+        var logText = File.ReadAllText(logPath);
+        Assert.Contains("IN_ESCROW", logText);
+        Assert.Contains("REJECTED",  logText);
+        Assert.DoesNotContain("COMMITTED_TO_VAULT", logText);
+    }
+
+    /// <summary>
+    /// Full seam: $2.00 product, customer pays $1.00 USD + 4 100 KHR (mixed currency).
+    /// Both notes must be committed; engine must confirm on the second insertion.
+    /// Proves MixedPaymentAccumulator works end-to-end through the wired seam.
+    /// </summary>
+    [Fact]
+    public async Task CashPayment_MixedCurrency_AccumulatesAndConfirms()
+    {
+        var (engine, recycler, logPath) = await BuildIsolatedEngineAsync();
+        await engine.BeginCashPaymentAsync(2.00m);
+
+        CashPaymentPendingEventArgs?   pending   = null;
+        CashPaymentConfirmedEventArgs? confirmed = null;
+        engine.OnCashPaymentPending   += (_, e) => pending   = e;
+        engine.OnCashPaymentConfirmed += (_, e) => confirmed = e;
+
+        // First note: $1.00 USD → under-paid, session stays open
+        recycler.FireNoteInEscrow(Money.Usd(1.00m));
+        Assert.NotNull(pending);
+        Assert.Equal(1.00m,  pending!.RemainingUsd);
+        Assert.Equal(4_100m, pending.RemainingKhr);
+        Assert.Null(confirmed);
+
+        // Second note: 4 100 KHR = $1.00 → total met, session confirmed
+        recycler.FireNoteInEscrow(Money.Khr(4_100m));
+        Assert.NotNull(confirmed);
+        Assert.Equal(KioskState.TransactionComplete, engine.CurrentState);
+
+        // Both notes must appear as COMMITTED_TO_VAULT in the audit log
+        var logText = File.ReadAllText(logPath);
+        Assert.Equal(2, logText.Split("COMMITTED_TO_VAULT").Length - 1);
     }
 }
 

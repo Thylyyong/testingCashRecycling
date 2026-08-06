@@ -23,6 +23,14 @@ namespace SelfCheckoutKiosk.Core.Engine;
 ///   as the very first step inside InitializeAsync once OfflineLicenseManager
 ///   is implemented. The call site is marked below with a clear comment.
 ///
+/// Cash payment machine rules (Systems Team scope):
+///   1 USD = 4 100 KHR (DualCurrencyCalculator.DefaultUsdToKhrRate).
+///   Under-payment  → note committed to vault, session kept open; customer inserts more
+///                    (mixed USD + KHR accepted across multiple insertions).
+///   Over ≤ 500 KHR → confirmed, merchant absorbs the small overpayment.
+///   Over > 500 KHR → current note rejected (returned to customer); prior
+///                    committed notes stay in the vault; session stays open.
+///
 /// State machine (Backend Team scope — remaining methods are stubs):
 ///   TODO(Backend): implement Idle → Scanning → AwaitingPayment →
 ///   ProcessingCash → DispensingChange → TransactionComplete, plus the
@@ -30,6 +38,16 @@ namespace SelfCheckoutKiosk.Core.Engine;
 /// </summary>
 public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
 {
+    // -----------------------------------------------------------------------
+    // Machine constant — overpayment tolerance
+    // -----------------------------------------------------------------------
+    /// <summary>
+    /// Maximum overpayment (in KHR) the machine will absorb without rejecting
+    /// the note. If overpayment &gt; this value the note is pushed back.
+    /// Blueprint §3: 500 KHR (~$0.12 at 4 100 rate).
+    /// </summary>
+    private const decimal MaxAcceptableOverpaymentKhr = 500m;
+
     // -----------------------------------------------------------------------
     // Injected collaborators (interfaces only — never vendor concrete types)
     // -----------------------------------------------------------------------
@@ -64,15 +82,27 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
     // -----------------------------------------------------------------------
     public KioskState CurrentState { get; private set; } = KioskState.Idle;
 
+    /// <summary>
+    /// Active cash payment session. Non-null only while in ProcessingCash state.
+    /// Created by BeginCashPaymentAsync, cleared by confirmation, fault, or reset.
+    /// NOT thread-safe — all access is from the single HAL event thread (Blueprint §4).
+    /// </summary>
+    private MixedPaymentAccumulator? _paymentSession;
+
     // -----------------------------------------------------------------------
     // Public events (ILLCoreLogicEngine)
     // -----------------------------------------------------------------------
-    public event EventHandler<KioskStateChangedEventArgs>? OnStateChanged;
-    public event EventHandler<ProductAddedEventArgs>?      OnProductAdded;    // Backend scope
-    public event EventHandler<BalanceChangedEventArgs>?    OnBalanceChanged;  // Backend scope
-    public event EventHandler?                             LowFloatStateTriggered;
-    public event EventHandler?                             LowFloatStateCleared;
-    public event EventHandler<HardwareFaultEventArgs>?     OnHardwareFault;
+    public event EventHandler<KioskStateChangedEventArgs>?   OnStateChanged;
+    public event EventHandler<ProductAddedEventArgs>?        OnProductAdded;    // Backend scope
+    public event EventHandler<BalanceChangedEventArgs>?      OnBalanceChanged;  // Backend scope
+    public event EventHandler?                               LowFloatStateTriggered;
+    public event EventHandler?                               LowFloatStateCleared;
+    public event EventHandler<HardwareFaultEventArgs>?       OnHardwareFault;
+
+    // Cash payment decision events (Systems Team scope)
+    public event EventHandler<CashPaymentPendingEventArgs>?   OnCashPaymentPending;
+    public event EventHandler<CashPaymentConfirmedEventArgs>? OnCashPaymentConfirmed;
+    public event EventHandler<CashPaymentRejectedEventArgs>?  OnCashPaymentRejected;
 
     // -----------------------------------------------------------------------
     // InitializeAsync — Systems Team scope
@@ -112,21 +142,141 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
     }
 
     // -----------------------------------------------------------------------
+    // BeginCashPaymentAsync — Systems Team scope
+    // -----------------------------------------------------------------------
+    /// <summary>
+    /// Arms the recycler for cash acceptance and opens a new payment session
+    /// for the given product total. Transitions the engine to ProcessingCash.
+    ///
+    /// Call once per transaction, after the customer confirms they want to pay
+    /// with cash (e.g. from the payment selection ViewModel).
+    ///
+    /// Multi-note / mixed-currency flow:
+    ///   Each subsequent OnNoteInEscrow event is processed by
+    ///   HandleNoteInEscrowInternal until the session is complete or faulted.
+    /// </summary>
+    /// <param name="totalUsd">Product total in USD (e.g. 0.75m for a $0.75 item).</param>
+    public async Task BeginCashPaymentAsync(
+        decimal totalUsd,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(totalUsd);
+
+        // Create a fresh accumulator for this transaction.
+        _paymentSession = new MixedPaymentAccumulator(totalUsd, _calculator);
+
+        TransitionState(KioskState.ProcessingCash);
+
+        // Arm the hardware — from this point on, notes enter escrow and fire events.
+        await _cashRecycler.ArmAcceptanceAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    // -----------------------------------------------------------------------
     // Private event handlers — Systems Team scope (cash path)
     // -----------------------------------------------------------------------
 
     /// <summary>
     /// Called on every note-in-escrow event, AFTER HardwareAppendLog has already
-    /// written the audit record. The EscrowId is available via
+    /// written the IN_ESCROW audit record. The EscrowId is available via
     /// _hardwareAppendLog.LastEscrowId (single-note-at-a-time hardware constraint).
     ///
-    /// TODO(Backend): implement ProcessingCash state transition, balance update,
-    /// and ultimately CommitToVault / Reject call via _hardwareAppendLog.
+    /// Decision table (1 USD = 4 100 KHR, MaxAcceptableOverpaymentKhr = 500):
+    ///
+    ///   Accumulated &lt; Total (under-paid):
+    ///     → CommitToVault (note stays in machine permanently)
+    ///     → Raise OnCashPaymentPending (UI: "insert X more")
+    ///     → Session stays open; recycler stays Armed for next note.
+    ///
+    ///   Accumulated ≥ Total AND overpayment ≤ 500 KHR:
+    ///     → CommitToVault
+    ///     → DisarmAcceptanceAsync (no more notes)
+    ///     → Transition to TransactionComplete
+    ///     → Raise OnCashPaymentConfirmed (UI: success + receipt)
+    ///
+    ///   Accumulated ≥ Total AND overpayment &gt; 500 KHR:
+    ///     → Log.Reject + RejectEscrowedNoteAsync (push this note back)
+    ///     → Previously committed notes remain in vault
+    ///     → Raise OnCashPaymentRejected (UI: "too much — insert less")
+    ///     → Session stays open at the prior accumulated total.
     /// </summary>
     private void HandleNoteInEscrowInternal(object? sender, NoteInEscrowEventArgs e)
     {
         // Audit record already written by HardwareAppendLog (first subscriber).
-        // TODO(Backend): transition to ProcessingCash, update balance, raise OnBalanceChanged.
+        var escrowId = _hardwareAppendLog.LastEscrowId;
+
+        // Safety guard — reject if no active session (e.g. unexpected note).
+        if (_paymentSession is null)
+        {
+            _hardwareAppendLog.Reject(escrowId);
+            _ = _cashRecycler.RejectEscrowedNoteAsync();
+            return;
+        }
+
+        // Speculatively accumulate the note to test whether it would overpay.
+        _paymentSession.AccumulateNote(e.Note);
+
+        var totalUsd    = _paymentSession.TotalUsd;
+        var tenderedUsd = _paymentSession.AccumulatedUsdEquivalent;
+
+        // Compute overpayment in KHR (negative means under-paid — clamp to 0).
+        var overpaymentUsd = tenderedUsd - totalUsd;
+        var overpaymentKhr = overpaymentUsd * DualCurrencyCalculator.DefaultUsdToKhrRate;
+
+        // --- CASE A: Under-paid — commit note, wait for more ----------------
+        if (overpaymentKhr < 0m)
+        {
+            _hardwareAppendLog.CommitToVault(escrowId);
+            // Note physically stays in machine vault. No DisarmAcceptance —
+            // the recycler remains Armed and ready for the next insertion.
+
+            var remainingUsd = _paymentSession.RemainingUsd;
+            var remainingKhr = remainingUsd * DualCurrencyCalculator.DefaultUsdToKhrRate;
+
+            OnCashPaymentPending?.Invoke(this, new CashPaymentPendingEventArgs(
+                totalUsd,
+                tenderedUsd,
+                remainingUsd,
+                remainingKhr));
+
+            return;
+        }
+
+        // --- CASE B: Overpayment within tolerance — confirm ------------------
+        if (overpaymentKhr <= MaxAcceptableOverpaymentKhr)
+        {
+            _hardwareAppendLog.CommitToVault(escrowId);
+
+            // Disarm the recycler — session is complete.
+            _ = _cashRecycler.DisarmAcceptanceAsync();
+
+            _paymentSession = null;
+            TransitionState(KioskState.TransactionComplete);
+
+            OnCashPaymentConfirmed?.Invoke(this, new CashPaymentConfirmedEventArgs(
+                totalUsd,
+                tenderedUsd,
+                overpaymentKhr));
+
+            return;
+        }
+
+        // --- CASE C: Overpayment exceeds tolerance — reject this note --------
+        // Roll back the speculative accumulation so the session total is correct.
+        _paymentSession.RollBackLastNote(e.Note);
+
+        _hardwareAppendLog.Reject(escrowId);
+
+        // Fire-and-forget is safe: RejectEscrowedNoteAsync is idempotent and the
+        // physical note will be returned to the customer regardless.
+        _ = _cashRecycler.RejectEscrowedNoteAsync();
+
+        // Recompute tendered after rollback for accurate event data.
+        var tenderedAfterRollback = _paymentSession.AccumulatedUsdEquivalent;
+
+        OnCashPaymentRejected?.Invoke(this, new CashPaymentRejectedEventArgs(
+            totalUsd,
+            tenderedAfterRollback,
+            overpaymentKhr));
     }
 
     /// <summary>
@@ -175,4 +325,3 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
     public Task ResetToIdleAsync(CancellationToken cancellationToken = default)
         => throw new NotImplementedException("TODO(Backend): tear down transaction, return to Idle.");
 }
-

@@ -36,7 +36,7 @@ public sealed class HardwareAppendLogTests : IDisposable
     {
         var log = new HardwareAppendLog(_logPath);
 
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(1.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(1.00m)));
 
         var lines = File.ReadAllLines(_logPath);
         Assert.Single(lines);
@@ -49,7 +49,7 @@ public sealed class HardwareAppendLogTests : IDisposable
     {
         var log = new HardwareAppendLog(_logPath);
 
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(5.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(5.00m)));
 
         Assert.NotEqual(Guid.Empty, log.LastEscrowId);
     }
@@ -59,7 +59,7 @@ public sealed class HardwareAppendLogTests : IDisposable
     {
         var log = new HardwareAppendLog(_logPath);
 
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(20.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(20.00m)));
         var escrowId = log.LastEscrowId;
 
         var content = File.ReadAllText(_logPath);
@@ -74,7 +74,7 @@ public sealed class HardwareAppendLogTests : IDisposable
     public void CommitToVault_WritesCommittedEntry_PairedByEscrowId()
     {
         var log = new HardwareAppendLog(_logPath);
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(1.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(1.00m)));
         var escrowId = log.LastEscrowId;
 
         log.CommitToVault(escrowId);
@@ -93,7 +93,7 @@ public sealed class HardwareAppendLogTests : IDisposable
     public void Reject_WritesRejectedEntry_PairedByEscrowId()
     {
         var log = new HardwareAppendLog(_logPath);
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(1.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(1.00m)));
         var escrowId = log.LastEscrowId;
 
         log.Reject(escrowId);
@@ -123,7 +123,7 @@ public sealed class HardwareAppendLogTests : IDisposable
     public void ScanOrphans_ResolvedEntry_ReturnsEmpty()
     {
         var log = new HardwareAppendLog(_logPath);
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(1.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(1.00m)));
         var id = log.LastEscrowId;
         log.CommitToVault(id);
 
@@ -137,7 +137,7 @@ public sealed class HardwareAppendLogTests : IDisposable
     {
         // Simulate: power was lost after escrow was written, before commit.
         var log = new HardwareAppendLog(_logPath);
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(1.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(1.00m)));
         var orphanId = log.LastEscrowId;
         // Deliberately do NOT call CommitToVault or Reject.
 
@@ -153,12 +153,12 @@ public sealed class HardwareAppendLogTests : IDisposable
         var log = new HardwareAppendLog(_logPath);
 
         // Note 1 → resolved
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(1.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(1.00m)));
         var resolvedId = log.LastEscrowId;
         log.CommitToVault(resolvedId);
 
         // Note 2 → orphan
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(5.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(5.00m)));
         var orphanId = log.LastEscrowId;
 
         var orphans = log.ScanOrphans();
@@ -176,10 +176,10 @@ public sealed class HardwareAppendLogTests : IDisposable
     {
         var log = new HardwareAppendLog(_logPath);
 
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(1.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(1.00m)));
         var id1 = log.LastEscrowId;
 
-        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(new Money(5.00m)));
+        log.HandleNoteInEscrow(sender: null, new NoteInEscrowEventArgs(Money.Usd(5.00m)));
         var id2 = log.LastEscrowId;
 
         Assert.NotEqual(id1, id2);

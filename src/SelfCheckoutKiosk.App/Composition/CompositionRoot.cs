@@ -29,28 +29,36 @@ public static class CompositionRoot
     public static KioskServices Build()
     {
         // 1. Core, hardware-independent. None touch a device at construction.
-        var calculator = new DualCurrencyCalculator();
+        var calculator      = new DualCurrencyCalculator();
         var lowFloatMonitor = new LowFloatMonitor();
-        var licenseManager = new OfflineLicenseManager();
+        var licenseManager  = new OfflineLicenseManager();
 
         // 2. TODO(Lead): validate the license BEFORE any hardware is created.
         //    await licenseManager.LoadAndValidateAsync();  // failure = hard stop.
 
-        // 3. Concrete HAL adapters — the ONLY vendor-assembly references anywhere.
-        ICashRecycler cashRecycler = new VendorXCashRecycler();
+        // 3. Hardware append log — must be on the BitLocker-protected OS volume
+        //    (Blueprint §5). Path is injected here, not hard-coded in HardwareAppendLog.
+        //    TODO(Lead/Ops): confirm final log directory after OS hardening.
+        var logPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "SelfCheckoutKiosk", "logs", "cash_hardware.log");
+        var hardwareAppendLog = new HardwareAppendLog(logPath);
+
+        // 4. Concrete HAL adapters — the ONLY vendor-assembly references anywhere.
+        ICashRecycler   cashRecycler   = new VendorXCashRecycler();
         IBarcodeScanner barcodeScanner = new DatalogicBarcodeScanner();
         IReceiptPrinter receiptPrinter = new EpsonReceiptPrinter();
 
-        // 4. TODO(Back-End): construct KioskDbContext via a FACTORY delegate
+        // 5. TODO(Back-End): construct KioskDbContext via a FACTORY delegate
         //    (EF contexts are cheap; do not hold one open for process lifetime).
 
-        // 5. Engine last — it receives interfaces, never concrete adapters, so it
+        // 6. Engine last — it receives interfaces, never concrete adapters, so it
         //    never knows which vendor SKU it got.
         ILLCoreLogicEngine engine = new LLCoreLogicEngine(
             cashRecycler, barcodeScanner, receiptPrinter,
-            calculator, lowFloatMonitor, licenseManager);
+            calculator, lowFloatMonitor, licenseManager, hardwareAppendLog);
 
-        // 6. TODO(UI): construct ViewModels + Tailscale sync worker, each
+        // 7. TODO(UI): construct ViewModels + Tailscale sync worker, each
         //    depending ONLY on the engine (+ db factory) — never on a HAL type.
 
         return new KioskServices { Engine = engine };
@@ -67,6 +75,9 @@ public static class CompositionRoot
     services.AddSingleton<DualCurrencyCalculator>();
     services.AddSingleton<LowFloatMonitor>();
     services.AddSingleton<OfflineLicenseManager>();
+    services.AddSingleton(sp => new HardwareAppendLog(
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "SelfCheckoutKiosk", "logs", "cash_hardware.log")));
 
     // 2. Validate license here (resolve + LoadAndValidateAsync) — hard stop on fail.
 
@@ -78,7 +89,7 @@ public static class CompositionRoot
     // 4. DbContext via factory delegate, NOT a singleton
     services.AddTransient(sp => new KioskDbContext(sealedPassphrase));
 
-    // 5. Engine last, injected with interfaces from steps 1-3
+    // 5. Engine last, injected with interfaces from steps 1-4
     services.AddSingleton<ILLCoreLogicEngine, LLCoreLogicEngine>();
 
     // 6. ViewModels + Tailscale sync worker as hosted/scoped services

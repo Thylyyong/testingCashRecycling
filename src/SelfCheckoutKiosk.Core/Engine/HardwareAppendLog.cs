@@ -75,7 +75,7 @@ public sealed class HardwareAppendLog
     public void HandleNoteInEscrow(object? sender, NoteInEscrowEventArgs e)
     {
         var escrowId = Guid.NewGuid();
-        WriteEntry($"{EventInEscrow}|{escrowId:N}|{e.Note.AmountUsd:F2}");
+        WriteEntry($"{EventInEscrow}|{escrowId:N}|{e.Note.Amount:F2}");
         _lastEscrowId = escrowId;
     }
 
