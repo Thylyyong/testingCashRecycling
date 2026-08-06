@@ -4,5 +4,6 @@
        Owner: Back-End Developer. -->
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk.Domain</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 </Project>

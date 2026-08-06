@@ -5,6 +5,7 @@
        the AOT spike validates them here first. -->
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk.Infrastructure</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />

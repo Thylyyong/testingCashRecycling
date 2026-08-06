@@ -4,6 +4,7 @@
        Owner: Back-End Developer. -->
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk.Core</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SelfCheckoutKiosk.Domain\SelfCheckoutKiosk.Domain.csproj" />

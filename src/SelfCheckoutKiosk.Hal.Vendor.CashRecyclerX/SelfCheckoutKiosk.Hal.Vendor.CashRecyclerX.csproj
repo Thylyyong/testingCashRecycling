@@ -4,6 +4,7 @@
        Owner: Back-End / Systems. Retargets to net10.0-windows with the real SDK. -->
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
