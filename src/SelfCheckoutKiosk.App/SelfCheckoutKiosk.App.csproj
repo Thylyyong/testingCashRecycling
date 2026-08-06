@@ -14,10 +14,17 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Views\Admin\AdminLoginView.xaml" />
+    <None Remove="Views\Customer\CartView.xaml" />
     <None Remove="Views\KioskBaseView.xaml" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="..\..\..\..\..\..\Desktop\Mockup Design Asset\banner4.jpg" Link="Assets\Images\banner4.jpg" />
+    <Content Include="..\..\..\..\..\..\Desktop\Mockup Design Asset\banner6.jpg" Link="Assets\Images\banner6.jpg" />
+    <Content Include="..\..\..\..\..\..\Desktop\Mockup Design Asset\banner7.jpg" Link="Assets\Images\banner7.jpg" />
+    <Content Include="..\..\..\..\..\..\Desktop\Mockup Design Asset\banner8.jpg" Link="Assets\Images\banner8.jpg" />
+    <Content Include="..\..\..\..\..\..\Desktop\Mockup Design Asset\banner9.jpg" Link="Assets\Images\banner9.jpg" />
     <Content Include="Assets\SplashScreen.scale-200.png" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\Square150x150Logo.scale-200.png" />
@@ -44,10 +51,17 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="ViewModels\" />
+    <Page Update="Views\KioskBaseView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
-    <Page Update="Views\KioskBaseView.xaml">
+    <Page Update="Views\Customer\CartView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\Admin\AdminLoginView.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

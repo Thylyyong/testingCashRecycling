@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="SelfCheckoutKiosk.App.Views.Admin.AdminLoginView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SelfCheckoutKiosk.App.Views.Admin"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="White">
+
+        <!-- Login Card -->
+        <Border
+            Width="420"
+            Padding="40"
+            CornerRadius="16"
+            Background="#F3F3F3"
+            BorderBrush="#E0E0E0"
+            BorderThickness="1"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center">
+
+            <StackPanel Spacing="20">
+
+                <!-- Title -->
+                <TextBlock
+                    Text="Administrator Login"
+                    FontSize="32"
+                    FontWeight="SemiBold"
+                    Foreground="Black"
+                    HorizontalAlignment="Center"/>
+
+                <TextBlock
+                    Text="Self Checkout Kiosk"
+                    FontSize="14"
+                    Opacity="0.7"
+                    Foreground="Black"
+                    HorizontalAlignment="Center"/>
+
+
+                <!-- Username -->
+                <StackPanel Spacing="8">
+
+                    <TextBlock
+                        Text="Username"
+                        FontWeight="SemiBold"
+                        Foreground="Black"/>
+
+                    <TextBox
+                        x:Name="UsernameTextBox"
+                        PlaceholderText="Enter username"
+                        Height="42"
+                        Background="White"
+                        Foreground="Black"
+                        BorderBrush="#CCCCCC"
+                        BeforeTextChanging="UsernameTextBox_BeforeTextChanging">
+                        <TextBox.Resources>
+                            <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="White"/>
+                            <SolidColorBrush x:Key="TextControlForegroundFocused" Color="Black"/>
+                            <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="White"/>
+                        </TextBox.Resources>
+                    </TextBox>
+
+                </StackPanel>
+
+
+                <!-- Password -->
+                <StackPanel Spacing="8">
+
+                    <TextBlock
+                        Text="Password"
+                        FontWeight="SemiBold"
+                        Foreground="Black"/>
+
+                    <PasswordBox
+                        x:Name="PasswordBox"
+                        PlaceholderText="Enter password"
+                        Height="42"
+                        Background="White"
+                        Foreground="Black"
+                        BorderBrush="#CCCCCC">
+                        <PasswordBox.Resources>
+                            <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="White"/>
+                            <SolidColorBrush x:Key="TextControlForegroundFocused" Color="Black"/>
+                            <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="White"/>
+                        </PasswordBox.Resources>
+                    </PasswordBox>
+
+                </StackPanel>
+
+
+                <!-- Sign In Button -->
+                <Button
+                    Content="Sign In"
+                    Height="45"
+                    HorizontalAlignment="Stretch"
+                    CornerRadius="8"
+                    Background="#0067C0"
+                    Foreground="White"
+                    Click="SignInButton_Click">
+                    <Button.Resources>
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#005A9E"/>
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#004578"/>
+                    </Button.Resources>
+                </Button>
+
+
+                <!-- Return Button -->
+                <Button
+                    Content="Return to Customer Mode"
+                    HorizontalAlignment="Center"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Foreground="#0066CC"
+                    Click="ReturnButton_Click">
+                    <Button.Resources>
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="Transparent"/>
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="Transparent"/>
+                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#004080"/>
+                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#002B55"/>
+                    </Button.Resources>
+                </Button>
+
+            </StackPanel>
+
+        </Border>
+
+    </Grid>
+</Page>

@@ -9,11 +9,11 @@
     mc:Ignorable="d"
     Title="SelfCheckoutKiosk.App">
 
-    <Window.SystemBackdrop>
+    <!--<Window.SystemBackdrop>
         <MicaBackdrop />
-    </Window.SystemBackdrop>
+    </Window.SystemBackdrop>-->
 
-    <Grid>
-
+    <Grid KeyDown="Window_KeyDown" IsTabStop="True" Background="White">
+        <Frame x:Name="RootFrame"/>
     </Grid>
 </Window>
