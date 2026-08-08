@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="SelfCheckoutKiosk.App.Views.Customer.PaymentSelectionView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SelfCheckoutKiosk.App.Views.Customer"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <!-- ENABLED CARD STYLE -->
+        <Style x:Key="PaymentCardEnabledStyle" TargetType="Button">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="20"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        </Style>
+
+        <!-- DISABLED CARD STYLE -->
+        <Style x:Key="PaymentCardDisabledStyle" TargetType="Button">
+            <Setter Property="Background" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="CornerRadius" Value="20"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="Opacity" Value="0.6"/>
+        </Style>
+
+        <Style x:Key="PaymentIconStyle" TargetType="FontIcon">
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons"/>
+            <Setter Property="FontSize" Value="110"/>
+        </Style>
+
+        <Style x:Key="PaymentTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="34"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,20,0,6"/>
+        </Style>
+
+        <Style x:Key="PaymentSubtitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Background="White">
+        <Grid.RowDefinitions>
+            <!-- 0: Header -->
+            <RowDefinition Height="Auto"/>
+            <!-- 1: Payment cards (3 rows) -->
+            <RowDefinition Height="*"/>
+            <!-- 2: Cancel button -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ========================================================= -->
+        <!-- 0. HEADER -->
+        <!-- ========================================================= -->
+        <Grid Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+            <Viewbox Stretch="Uniform" StretchDirection="Both" MaxWidth="900" MaxHeight="140" HorizontalAlignment="Stretch" Margin="40,32,40,24">
+                <StackPanel Spacing="4" HorizontalAlignment="Left">
+                    <TextBlock Text="CHECKOUT" FontSize="14" FontWeight="SemiBold" Foreground="#94A3B8" CharacterSpacing="100"/>
+                    <TextBlock Text="Choose a Payment Method" FontSize="32" FontWeight="Bold" Foreground="#1A202C"/>
+                </StackPanel>
+            </Viewbox>
+        </Grid>
+
+        <!-- ========================================================= -->
+        <!-- 1. PAYMENT CARDS: 2 columns x 3 rows, each card forced square via Viewbox -->
+        <!-- ========================================================= -->
+        <Grid Grid.Row="1" Padding="40,32" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="24"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="24"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- ===== ROW 1 ===== -->
+            <!-- CASH (Enabled) -->
+            <Viewbox Grid.Row="0" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <Button x:Name="CashCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}" Click="CashCard_Click">
+                    <Button.Resources>
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#F1F5F9"/>
+                        <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#2563EB"/>
+                        <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#2563EB"/>
+                    </Button.Resources>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE8C7;" Foreground="#2563EB" Style="{StaticResource PaymentIconStyle}"/>
+                        <TextBlock Text="Cash" Foreground="#1E293B" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="USD / KHR" Foreground="#64748B" Style="{StaticResource PaymentSubtitleStyle}"/>
+                    </StackPanel>
+                </Button>
+            </Viewbox>
+
+            <!-- KHQR (Enabled) -->
+            <Viewbox Grid.Row="0" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <Button x:Name="KhqrCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}" Click="KhqrCard_Click">
+                    <Button.Resources>
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#F1F5F9"/>
+                        <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#2563EB"/>
+                        <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#2563EB"/>
+                    </Button.Resources>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xED14;" Foreground="#2563EB" Style="{StaticResource PaymentIconStyle}"/>
+                        <TextBlock Text="KHQR" Foreground="#1E293B" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="Digital" Foreground="#64748B" Style="{StaticResource PaymentSubtitleStyle}"/>
+                    </StackPanel>
+                </Button>
+            </Viewbox>
+
+            <!-- ===== ROW 2 ===== -->
+            <!-- DEBIT / CREDIT CARD (Disabled) -->
+            <Viewbox Grid.Row="2" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <Button x:Name="CardCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}" IsEnabled="False" Click="CardCard_Click">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE8C7;" Foreground="#94A3B8" Style="{StaticResource PaymentIconStyle}"/>
+                        <TextBlock Text="Debit / Credit Card" Foreground="#64748B" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="Unavailable" Foreground="#94A3B8" Style="{StaticResource PaymentSubtitleStyle}"/>
+                    </StackPanel>
+                </Button>
+            </Viewbox>
+
+            <!-- INTERNATIONAL QR (Disabled) -->
+            <Viewbox Grid.Row="2" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <Button x:Name="IntlQrCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}" IsEnabled="False" Click="IntlQrCard_Click">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xED14;" Foreground="#94A3B8" Style="{StaticResource PaymentIconStyle}"/>
+                        <TextBlock Text="International QR" Foreground="#64748B" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="Unavailable" Foreground="#94A3B8" Style="{StaticResource PaymentSubtitleStyle}"/>
+                    </StackPanel>
+                </Button>
+            </Viewbox>
+
+            <!-- ===== ROW 3 ===== -->
+            <!-- MEMBERSHIP CARD (Disabled) -->
+            <Viewbox Grid.Row="4" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <Button x:Name="MembershipCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}" IsEnabled="False" Click="MembershipCard_Click">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE8C3;" Foreground="#94A3B8" Style="{StaticResource PaymentIconStyle}"/>
+                        <TextBlock Text="Membership Card" Foreground="#64748B" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="Unavailable" Foreground="#94A3B8" Style="{StaticResource PaymentSubtitleStyle}"/>
+                    </StackPanel>
+                </Button>
+            </Viewbox>
+
+            <!-- COUPON (Disabled) -->
+            <Viewbox Grid.Row="4" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <Button x:Name="CouponCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}" IsEnabled="False" Click="CouponCard_Click">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE8EC;" Foreground="#94A3B8" Style="{StaticResource PaymentIconStyle}"/>
+                        <TextBlock Text="Coupon" Foreground="#64748B" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="Unavailable" Foreground="#94A3B8" Style="{StaticResource PaymentSubtitleStyle}"/>
+                    </StackPanel>
+                </Button>
+            </Viewbox>
+        </Grid>
+
+        <!-- ========================================================= -->
+        <!-- 2. CANCEL BUTTON (full-width, stretched at bottom) -->
+        <!-- ========================================================= -->
+        <Grid Grid.Row="2" Padding="40,0,40,32">
+            <Button x:Name="CancelButton" Height="60" HorizontalAlignment="Stretch" Background="White" BorderBrush="#EF4444" BorderThickness="2" CornerRadius="16" Click="CancelButton_Click">
+                <Button.Resources>
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FEF2F2"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FEE2E2"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#EF4444"/>
+                    <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#EF4444"/>
+                </Button.Resources>
+                <TextBlock Text="CANCEL" FontSize="22" FontWeight="Bold" Foreground="#EF4444"/>
+            </Button>
+        </Grid>
+    </Grid>
+</Page>

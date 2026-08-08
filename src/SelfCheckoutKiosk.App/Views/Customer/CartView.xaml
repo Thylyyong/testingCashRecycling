@@ -11,88 +11,102 @@
 
     <!-- Storyboard moved here so x:Name is reliably findable in code-behind -->
     <Page.Resources>
+
+        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#E5E7EB"/>
+        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#D1D5DB"/>
+
+        <Style x:Key="SubtleButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#EDF2F7"/>
+            <Setter Property="Foreground" Value="#2D3748"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+
+        <!-- Small pill-style buttons used in the header status/action bar -->
+        <Style x:Key="HeaderChipButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#1F7FCB"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Height" Value="40"/>
+        </Style>
+
         <Storyboard x:Name="ScanAnimation" RepeatBehavior="Forever" AutoReverse="True">
-            <DoubleAnimation
-                Storyboard.TargetName="ScanLineTransform"
-                Storyboard.TargetProperty="Y"
-                From="0" To="96"
-                Duration="0:0:1.4">
+            <DoubleAnimation Storyboard.TargetName="ScanLineTransform" Storyboard.TargetProperty="Y" From="0" To="96" Duration="0:0:1.4">
                 <DoubleAnimation.EasingFunction>
                     <SineEase EasingMode="EaseInOut"/>
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
         </Storyboard>
 
-        <!-- Template for each cart item card -->
+        <!-- Template for each cart item row (no card, divider-separated) -->
         <DataTemplate x:Key="CartItemTemplate" x:DataType="vm:CartItem">
-            <Border Background="White" CornerRadius="12" Padding="14" BorderBrush="#E2E8F0" BorderThickness="1">
+            <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="8,18">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                    <!-- Top row: name/SKU + remove button -->
-                    <Grid Grid.Row="0">
+                    <!-- Name / SKU / qty & unit price -->
+                    <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="19" Foreground="#2D3748" TextTrimming="CharacterEllipsis"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <TextBlock Foreground="#64748B" FontSize="14">
+                        <Run Text="SKU:"/>
+                        <Run Text="{x:Bind Sku}"/>
+                            </TextBlock>
+                            <TextBlock FontSize="14" Foreground="#718096">
+                        <Run Text="Qty:"/>
+                        <Run Text="{x:Bind Quantity, Mode=OneWay}"/>
+                        <Run Text="  •  $"/>
+                        <Run Text="{x:Bind PricePerItem}"/>
+                        <Run Text="each"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Line total + delete -->
+                    <Grid Grid.Column="1" VerticalAlignment="Center">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,8,0">
-                            <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="17"
-                                Foreground="#2D3748" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{x:Bind Sku}" Foreground="#A0AEC0" FontSize="12"/>
-                        </StackPanel>
+                        <TextBlock Grid.Column="0" FontWeight="Bold" FontSize="21" Foreground="#0067C0" VerticalAlignment="Center" Margin="0,0,18,0">
+                    <Run Text="$"/><Run Text="{x:Bind LineTotal, Mode=OneWay}"/>
+                        </TextBlock>
 
-                        <Button Grid.Column="1"
-                            Width="40" Height="40"
-                            CornerRadius="8"
-                            Background="#FEF2F2"
-                            Foreground="#DC2626"
-                            VerticalAlignment="Top"
-                            HorizontalAlignment="Right"
-                            Padding="0"
-                            Tag="{x:Bind}"
-                            Click="RemoveItem_Click">
+                        <Button Grid.Column="1" Width="48" Height="48" CornerRadius="8" Foreground="#DC2626" Padding="0" Tag="{x:Bind}">
                             <Button.Resources>
                                 <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FEE2E2"/>
                                 <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FECACA"/>
                             </Button.Resources>
-                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74D;" FontSize="16" Foreground="#DC2626"/>
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74D;" FontSize="20" Foreground="#DC2626"/>
+                            <Button.Flyout>
+                                <Flyout Placement="Right">
+                                    <Flyout.FlyoutPresenterStyle>
+                                        <Style TargetType="FlyoutPresenter">
+                                            <Setter Property="Background" Value="White"/>
+                                            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                            <Setter Property="CornerRadius" Value="10"/>
+                                            <Setter Property="Padding" Value="12"/>
+                                        </Style>
+                                    </Flyout.FlyoutPresenterStyle>
+                                    <StackPanel Spacing="10" Width="170">
+                                        <TextBlock Text="Remove this item?" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="#1E293B"/>
+                                        <Button Content="Remove" HorizontalAlignment="Stretch" Height="38" Background="#DC2626" Foreground="White" CornerRadius="6" Tag="{x:Bind}" Click="ConfirmRemove_Click">
+                                            <Button.Resources>
+                                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#B91C1C"/>
+                                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#991B1B"/>
+                                            </Button.Resources>
+                                        </Button>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
                         </Button>
-                    </Grid>
-
-                    <!-- Bottom row: price info + qty controls -->
-                    <Grid Grid.Row="1" Margin="0,14,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock FontSize="13" Foreground="#718096">
-                                <Run Text="{x:Bind PricePerItem}"/>
-                                <Run Text="each"/>
-                            </TextBlock>
-                            <TextBlock FontWeight="Bold" FontSize="17" Foreground="#0067C0"
-                                Text="{x:Bind LineTotal}"/>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <Button Width="44" Height="44" CornerRadius="8" Background="#EDF2F7" Foreground="#2D3748"
-                                Tag="{x:Bind}" Click="Decrement_Click">
-                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF8AB;" FontSize="15" Foreground="Black"/>
-                            </Button>
-
-                            <TextBlock Text="{x:Bind Quantity, Mode=OneWay}" FontWeight="Bold" FontSize="19" VerticalAlignment="Center"
-                                Width="28" TextAlignment="Center" Foreground="#2D3748"/>
-
-                            <Button Width="44" Height="44" CornerRadius="8" Background="#EDF2F7" Foreground="#2D3748"
-                                Tag="{x:Bind}" Click="Increment_Click">
-                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xF8AA;" FontSize="15" Foreground="Black"/>
-                            </Button>
-                        </StackPanel>
                     </Grid>
                 </Grid>
             </Border>
@@ -102,76 +116,182 @@
     <Grid Background="#FFF4F6F8">
 
         <Grid.RowDefinitions>
-            <RowDefinition Height="10*" />
-            <RowDefinition Height="68*" />
-            <RowDefinition Height="10*" />
-            <RowDefinition Height="12*" />
+            <RowDefinition Height="20*"/>
+            <RowDefinition Height="6*"/>
+            <RowDefinition Height="52*"/>
+            <RowDefinition Height="10*"/>
+            <RowDefinition Height="12*"/>
         </Grid.RowDefinitions>
 
-        <!-- 1. HEADER AREA -->
-        <Border 
-            Grid.Row="0"
-            Background="#0067C0"
-            Padding="20,0"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+        <!-- 1. HEADER AREA (branding + status/action bar) -->
+        <Border Grid.Row="0" Background="#0067C0" Padding="20,12" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <StackPanel Spacing="10" VerticalAlignment="Center">
 
-                <FontIcon Grid.Column="0"
-                    FontFamily="Segoe Fluent Icons"
-                    Glyph="&#xE7BF;"
-                    FontSize="32"
-                    Foreground="White"
-                    VerticalAlignment="Center"
-                    Margin="0,0,12,0"/>
+                <!-- Top Row: Cart Info (Left) & Network Status (Right) -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
-                    <TextBlock Text="Your Cart" Foreground="White" FontSize="22" FontWeight="Bold"/>
-                    <TextBlock x:Name="ItemCountLabel" Text="0 items" Foreground="#D6E9FA" FontSize="14"/>
-                </StackPanel>
-            </Grid>
+                    <FontIcon Grid.Column="0" FontFamily="Segoe Fluent Icons" Glyph="&#xE7BF;" FontSize="28" Foreground="White" VerticalAlignment="Center" Margin="0,0,12,0"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                        <TextBlock Text="Your Cart" Foreground="White" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock x:Name="ItemCountLabel" Text="0 items" Foreground="#D6E9FA" FontSize="13"/>
+                    </StackPanel>
+
+                    <!-- Network status pushed to the far right -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <FontIcon x:Name="NetworkIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE701;" FontSize="16" Foreground="#7CFC9A"/>
+                        <TextBlock x:Name="NetworkStatusLabel" Text="Online" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                        
+                    </StackPanel>
+                </Grid>
+
+                <!-- Bottom Row: Split into Left Group & Right Group -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left Group: Check Price & Recall -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+
+                        <!-- Add Item Manually -->
+                        <Button x:Name="AddItemManuallyButton" Style="{StaticResource HeaderChipButtonStyle}" Click="AddItemManuallyLink_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE710;" FontSize="15" Foreground="White"/>
+                                <TextBlock Text="Add" Foreground="White" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                        
+                        <!-- Check Price -->
+                        <Button x:Name="CheckPriceButton" Style="{StaticResource HeaderChipButtonStyle}" Click="CheckPriceButton_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8EF;" FontSize="15" Foreground="White"/>
+                                <TextBlock Text="Check Price" Foreground="White" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                        
+                        <!-- Recall -->
+                        <Button x:Name="RecallButton" Style="{StaticResource HeaderChipButtonStyle}" Click="RecallButton_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7A7;" FontSize="15" Foreground="White"/>
+                                <TextBlock Text="Recall" Foreground="White" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Currency -->
+                        <Button x:Name="CurrencySwitchButton" Style="{StaticResource HeaderChipButtonStyle}" Click="CurrencySwitch_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE825;" FontSize="15" Foreground="White"/>
+                                <TextBlock x:Name="CurrencySwitchLabel" Text="USD" Foreground="White" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Right Group: Currency, Language & Help -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <!-- Currency switch -->
+                        <!--<Button x:Name="CurrencySwitchButton" Style="{StaticResource HeaderChipButtonStyle}" Click="CurrencySwitch_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE825;" FontSize="15" Foreground="White"/>
+                                <TextBlock x:Name="CurrencySwitchLabel" Text="USD" Foreground="White" FontSize="12"/>
+                            </StackPanel>
+                        </Button>-->
+
+                        <!-- Language switch -->
+                        <!--<Button x:Name="LanguageSwitchButton" Style="{StaticResource HeaderChipButtonStyle}" Click="LanguageSwitch_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE774;" FontSize="15" Foreground="White"/>
+                                <TextBlock x:Name="LanguageSwitchLabel" Text="EN" Foreground="White" FontSize="12"/>
+                            </StackPanel>
+                        </Button>-->
+
+                        <!-- Help -->
+                        <Button x:Name="HelpButton" Style="{StaticResource HeaderChipButtonStyle}" Click="HelpButton_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE9CE;" FontSize="16" Foreground="White"/>
+                                <TextBlock Text="Help"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+            </StackPanel>
         </Border>
 
-        <!-- ROW 1: Either EmptyCartState OR ItemsListArea shows, never both -->
+        <!-- 2. GRADIENT PAYMENT METHODS BANNER -->
+        <Border Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#0067C0" Offset="0"/>
+                    <GradientStop Color="#38A5F0" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <TextBlock Text="Cash (USD/KHR) &amp; KHQR are accepted" Foreground="White" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- ROW 2: Either EmptyCartState OR ItemsListArea shows, never both -->
 
         <!-- EMPTY CART STATE -->
-        <Border x:Name="EmptyCartState"
-            Grid.Row="1"
-            Background="#FFF4F6F8"
-            Visibility="Visible">
+        <Border x:Name="EmptyCartState" Grid.Row="2" Background="#FFF4F6F8" Visibility="Visible">
 
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24">
 
                 <Grid Width="220" Height="140">
+
                     <Border Background="White" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1.5" Padding="20,16">
                         <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Rectangle Width="3"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="6"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="2"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="4"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="2"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="7"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="3"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="2"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="5"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="3"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="2"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="6"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="3"  Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="4"  Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="3" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="6" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="2" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="4" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="2" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="7" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="3" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="2" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="5" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="3" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="2" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="6" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="3" Height="70" Fill="#2D3748"/>
+                            <Rectangle Width="4" Height="70" Fill="#2D3748"/>
                         </StackPanel>
                     </Border>
 
-                    <Rectangle x:Name="ScanLine"
-                        Width="180" Height="3"
-                        Fill="#0067C0"
-                        VerticalAlignment="Top"
-                        HorizontalAlignment="Center"
-                        Margin="0,20,0,20">
+                    <Rectangle x:Name="ScanLine" Width="180" Height="3" Fill="#0067C0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,20">
                         <Rectangle.RenderTransform>
                             <TranslateTransform x:Name="ScanLineTransform" Y="0"/>
                         </Rectangle.RenderTransform>
@@ -186,19 +306,13 @@
         </Border>
 
         <!-- POPULATED CART STATE -->
-        <Border x:Name="ItemsListArea"
-            Grid.Row="1"
-            Background="#FFF4F6F8"
-            Padding="16,12"
-            Visibility="Collapsed">
+        <Border x:Name="ItemsListArea" Grid.Row="2" Background="#FFF4F6F8" Padding="16,4" Visibility="Collapsed">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ItemsControl
-                    x:Name="CartItemsControl"
-                    ItemTemplate="{StaticResource CartItemTemplate}">
+                <ItemsControl x:Name="CartItemsControl" ItemTemplate="{StaticResource CartItemTemplate}">
 
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <StackPanel Spacing="12"/>
+                            <StackPanel/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
 
@@ -207,47 +321,33 @@
         </Border>
 
         <!-- 3. TOTALS SUMMARY BREAKDOWN -->
-        <Border Grid.Row="2" Background="White" Padding="24,0" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
-            <Grid>
+        <Border Grid.Row="3" Background="White" Padding="24,0" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+            <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
-                    <TextBlock Text="Total to Pay" FontSize="15" Foreground="#718096"/>
-                    <TextBlock x:Name="ItemCountSubLabel" Text="0 items in cart" FontSize="12" Foreground="#A0AEC0"/>
+                    <TextBlock Text="Total to Pay" FontSize="16" FontWeight="SemiBold" Foreground="#718096"/>
+                    <TextBlock x:Name="ItemCountSubLabel" Text="0 items in cart" FontSize="14" Foreground="#A0AEC0"/>
                 </StackPanel>
 
-                <TextBlock x:Name="TotalAmountLabel"
-                    Text="$0.00"
-                    Grid.Column="1"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Center"
-                    FontWeight="Bold"
-                    FontSize="30"
-                    Foreground="#0067C0"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="0">
+                    <TextBlock x:Name="TotalUSDLabel" Text="$0.00" HorizontalAlignment="Right" FontWeight="Bold" FontSize="30" Foreground="#0067C0"/>
+                    <TextBlock x:Name="TotalKHRLabel" Text="≈ ៛0" HorizontalAlignment="Right" FontSize="16" FontWeight="SemiBold" Foreground="#718096"/>
+                </StackPanel>
             </Grid>
         </Border>
 
         <!-- 4. BOTTOM ACTION BUTTON AREA -->
-        <Grid Grid.Row="3" Background="White" Padding="16" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid Grid.Row="4" Background="White" Padding="16" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Button
-                Grid.Column="0"
-                x:Name="BackToScanButton"
-                Width="72"
-                HorizontalAlignment="Stretch"
-                Height="72"
-                VerticalAlignment="Center"
-                Margin="0,0,10,0"
-                CornerRadius="12"
-                Background="#F1F5F9"
-                Foreground="#374151">
+            <Button Grid.Column="0" x:Name="BackToScanButton" Width="72" HorizontalAlignment="Stretch" Height="72" VerticalAlignment="Center" Margin="0,0,10,0" CornerRadius="12" Background="#F1F5F9" Foreground="#374151">
                 <Button.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#E5E7EB"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#D1D5DB"/>
@@ -255,17 +355,20 @@
                 <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE830;" FontSize="22" Foreground="Black"/>
             </Button>
 
-            <Button
-                Grid.Column="1"
-                x:Name="CheckoutButton"
-                HorizontalAlignment="Stretch"
-                Height="72"
-                VerticalAlignment="Center"
-                CornerRadius="12"
-                Background="#0067C0">
+            <Button Grid.Column="1" x:Name="CheckoutButton" HorizontalAlignment="Stretch" Height="72" VerticalAlignment="Center" CornerRadius="12">
+                <Button.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#2563EB" Offset="0"/>
+                        <GradientStop Color="#1D4ED8" Offset="1"/>
+                    </LinearGradientBrush>
+                </Button.Background>
                 <Button.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#005A9E"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#004578"/>
+
+                    <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#E2E8F0"/>
+                    <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#94A3B8"/>
+                    <!--<SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="#CBD5E1"/>-->
                 </Button.Resources>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
                     <TextBlock Text="PAY NOW" FontWeight="Bold" FontSize="18" Foreground="White"/>

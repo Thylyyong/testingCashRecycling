@@ -40,45 +40,15 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         private void LoadLocalAssets()
         {
-            BannerMediaPaths.Add(new BannerMedia
-            {
-                Path = "ms-appx:///Assets/Images/banner1.jpg"
-            });
+            const string bannerPath = "ms-appx:///Assets/Images/Banner/";
 
-            BannerMediaPaths.Add(new BannerMedia
+            for (int i = 1; i <= 8; i++)
             {
-                Path = "ms-appx:///Assets/Images/banner2.jpg"
-            });
-
-            BannerMediaPaths.Add(new BannerMedia
-            {
-                Path = "ms-appx:///Assets/Images/banner3.jpg"
-            });
-
-            BannerMediaPaths.Add(new BannerMedia
-            {
-                Path = "ms-appx:///Assets/Images/banner4.jpg"
-            });
-
-            BannerMediaPaths.Add(new BannerMedia
-            {
-                Path = "ms-appx:///Assets/Images/banner5.jpg"
-            });
-
-            BannerMediaPaths.Add(new BannerMedia
-            {
-                Path = "ms-appx:///Assets/Images/banner6.jpg"
-            });
-
-            BannerMediaPaths.Add(new BannerMedia
-            {
-                Path = "ms-appx:///Assets/Images/banner7.jpg"
-            });
-
-            BannerMediaPaths.Add(new BannerMedia
-            {
-                Path = "ms-appx:///Assets/Images/banner8.jpg"
-            });
+                BannerMediaPaths.Add(new BannerMedia
+                {
+                    Path = $"{bannerPath}banner{i}.jpg"
+                });
+            }
         }
 
         public void NextBanner()
@@ -92,6 +62,28 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             {
                 BannerMediaPaths[i].IsCurrent = (i == CurrentBannerIndex);
             }
+        }
+
+        public void PreviousBanner()
+        {
+            if (BannerMediaPaths.Count == 0)
+                return;
+
+            CurrentBannerIndex = (CurrentBannerIndex - 1 + BannerMediaPaths.Count) % BannerMediaPaths.Count;
+
+            for (int i = 0; i < BannerMediaPaths.Count; i++)
+            {
+                BannerMediaPaths[i].IsCurrent = (i == CurrentBannerIndex);
+            }
+        }
+
+        public void ProceedToHome()
+        {
+            NavigationService.NavigateTo(
+                typeof(HomeView),
+                null,
+                SlideNavigationTransitionEffect.FromRight
+            );
         }
 
         public void ProceedToCart()

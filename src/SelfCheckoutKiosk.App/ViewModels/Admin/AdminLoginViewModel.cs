@@ -44,7 +44,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
         public void ReturnToCustomerMode()
         {
             App.MainWindowInstance?.NavigationService?.NavigateTo(
-                typeof(KioskBaseView),
+                typeof(KioskBaseView2),
                 null,
                 new SuppressNavigationTransitionInfo()
             );

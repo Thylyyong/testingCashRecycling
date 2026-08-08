@@ -22,6 +22,8 @@ using Windows.System;
 using Windows.UI.Core;
 using WinRT.Interop;
 using SelfCheckoutKiosk.App.Views.Customer;
+using Microsoft.UI.Windowing;
+using Windows.Graphics;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -73,6 +75,11 @@ namespace SelfCheckoutKiosk.App
         {
             InitializeComponent();
 
+            var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(windowHandle);
+            var appWindow = AppWindow.GetFromWindowId(windowId);
+            appWindow.SetIcon("Assets/Logo/ca.ico");
+
             // Setup vertical 9:16 aspect ratio window sizing hook
             _hwnd = WindowNative.GetWindowHandle(this);
             _wndProcDelegate = new Win32SubClassDelegate(CustomWndProc);
@@ -86,7 +93,7 @@ namespace SelfCheckoutKiosk.App
             NavigationService = new NavigationService(RootFrame);
 
             // Navigate to the initial page using the service
-            NavigationService.NavigateTo(typeof(KioskBaseView));
+            NavigationService.NavigateTo(typeof(KioskBaseView2));
         }
 
         private void EnforceInitialAspectRatio(int initialWidth, int initialHeight)
@@ -151,7 +158,7 @@ namespace SelfCheckoutKiosk.App
             if (ctrl && shift && e.Key == VirtualKey.Back)
             {
                 NavigationService.NavigateTo(
-                    typeof(KioskBaseView),
+                    typeof(KioskBaseView2),
                     null,
                     new SuppressNavigationTransitionInfo()
                 );
