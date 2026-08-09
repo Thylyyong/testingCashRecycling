@@ -38,8 +38,10 @@
     <None Remove="Views\Admin\AdminLoginView.xaml" />
     <None Remove="Views\Customer\CartView.xaml" />
     <None Remove="Views\Customer\HomeView.xaml" />
+    <None Remove="Views\Customer\IngestionProgressView.xaml" />
     <None Remove="Views\Customer\PaymentOptionView.xaml" />
     <None Remove="Views\Customer\PaymentSelectionView.xaml" />
+    <None Remove="Views\Customer\SuccessView.xaml" />
     <None Remove="Views\KioskBaseView.xaml" />
   </ItemGroup>
 
@@ -106,6 +108,16 @@
   <ItemGroup>
     <None Include="..\..\..\..\..\..\Desktop\CA\en-flag.webp" Link="Assets\Images\Flag\en-flag.webp" />
     <None Include="..\..\..\..\..\..\Desktop\CA\km-flag.webp" Link="Assets\Images\Flag\km-flag.webp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\Customer\IngestionProgressView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\Customer\SuccessView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Page Update="Views\Customer\PaymentOptionView.xaml">

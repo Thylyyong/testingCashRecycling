@@ -3,199 +3,131 @@ using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 
 namespace SelfCheckoutKiosk.App.ViewModels.Customer
 {
-    public class CartItem : INotifyPropertyChanged
-    {
-        public Product Product { get; }
-
-        // Forward properties to Product so existing XAML bindings continue working without changes
-        public string Name => Product.Name;
-        public string Sku => Product.Sku;
-        public decimal PricePerItem => Product.Price;
-
-        private int _quantity;
-        public int Quantity
-        {
-            get => _quantity;
-            set
-            {
-                if (_quantity != value)
-                {
-                    _quantity = value;
-                    OnPropertyChanged(nameof(Quantity));
-                    OnPropertyChanged(nameof(LineTotal));
-                }
-            }
-        }
-
-        public decimal LineTotal => PricePerItem * Quantity;
-
-        public CartItem(Product product, int quantity = 1)
-        {
-            Product = product ?? throw new ArgumentNullException(nameof(product));
-            _quantity = quantity;
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged(string name) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    }
-
     public class CartViewModel : INotifyPropertyChanged
     {
         private readonly IProductService _productService;
+        private readonly ICartService _cartService;
 
         public INavigationService NavigationService { get; }
-        public ObservableCollection<CartItem> Items { get; } = new();
 
-        public bool IsEmpty => Items.Count == 0;
-        public int ItemCount => Items.Sum(i => i.Quantity);
-        public decimal Total => Items.Sum(i => i.LineTotal);
+        public ObservableCollection<CartItem> Items => _cartService.Items;
+
+        public bool IsEmpty => _cartService.IsEmpty;
+        public int ItemCount => _cartService.TotalItemCount;
+        public decimal Total => _cartService.TotalUsd;
+        public decimal TotalKhr => _cartService.TotalKhr;
+        public bool IsUsd => _cartService.IsUsd;
+        public decimal ExchangeRate => _cartService.ExchangeRate;
+        public bool HasItems => !IsEmpty;
+        public string CurrencyLabel => IsUsd ? "USD" : "KHR";
+        public string ItemCountText => $"{ItemCount} items";
+        public string ItemCountSubText => $"{ItemCount} items in cart";
+
+        public string FormattedTotalUsd => IsUsd ? $"${Total:0.00}" : $"៛{TotalKhr:N0}";
+        public string FormattedTotalKhr => IsUsd ? $"≈ ៛{TotalKhr:N0}" : $"≈ ${Total:0.00}";
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged(string name) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        public CartViewModel(INavigationService navigationService, IProductService productService)
+        public CartViewModel(INavigationService navigationService, IProductService productService, ICartService cartService)
         {
-            NavigationService = navigationService;
-            _productService = productService;
+            NavigationService = navigationService ?? throw new ArgumentNullException(nameof(navigationService));
+            _productService = productService ?? throw new ArgumentNullException(nameof(productService));
+            _cartService = cartService ?? throw new ArgumentNullException(nameof(cartService));
 
-            Items.CollectionChanged += OnItemsCollectionChanged;
+            _cartService.PropertyChanged += OnCartServicePropertyChanged;
         }
 
-        public void LoadMockData()
+        private void OnCartServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            Items.Clear();
+            if (e.PropertyName == nameof(ICartService.TotalUsd)) OnPropertyChanged(nameof(Total));
 
-            // Fetch product catalog directly from service
-            foreach (var product in _productService.GetAllProducts())
+            if (e.PropertyName == nameof(ICartService.TotalKhr)) OnPropertyChanged(nameof(TotalKhr));
+
+            if (e.PropertyName == nameof(ICartService.TotalItemCount))
             {
-                AddItem(product, 1);
+                OnPropertyChanged(nameof(ItemCount));
+                OnPropertyChanged(nameof(ItemCountText));
+                OnPropertyChanged(nameof(ItemCountSubText));
             }
-        }
 
-        public void ClearCart()
-        {
-            Items.Clear();
-        }
-
-        /// <summary>
-        /// Adds a product to the cart or increments quantity if it already exists.
-        /// </summary>
-        public void AddItem(Product product, int qty = 1)
-        {
-            if (product == null || string.IsNullOrWhiteSpace(product.Sku)) return;
-
-            // 1. Case-insensitive SKU lookup
-            var existing = Items.FirstOrDefault(i => string.Equals(i.Sku, product.Sku, StringComparison.OrdinalIgnoreCase));
-
-            if (existing != null)
+            if (e.PropertyName == nameof(ICartService.IsEmpty))
             {
-                // 2. Increment quantity on existing item
-                existing.Quantity += qty;
+                OnPropertyChanged(nameof(IsEmpty));
+                OnPropertyChanged(nameof(HasItems)); 
+            }
 
-                // 3. Move re-scanned item to bottom of list
-                int oldIndex = Items.IndexOf(existing);
-                if (oldIndex < Items.Count - 1)
-                {
-                    Items.Move(oldIndex, Items.Count - 1);
-                }
-            }
-            else
+            if (e.PropertyName == nameof(ICartService.IsUsd))
             {
-                // 4. Add new item to cart
-                Items.Add(new CartItem(product, qty));
+                OnPropertyChanged(nameof(IsUsd));
+                OnPropertyChanged(nameof(CurrencyLabel));
             }
+
+
+            OnPropertyChanged(nameof(FormattedTotalUsd));
+            OnPropertyChanged(nameof(FormattedTotalKhr));
         }
 
-        /// <summary>
-        /// Primitive overload for backward compatibility.
-        /// </summary>
+        public void ToggleCurrency()
+        {
+            _cartService.IsUsd = !_cartService.IsUsd;
+        }
+
+        public Product? FindProductBySku(string sku)
+        {
+            if (string.IsNullOrWhiteSpace(sku)) return null;
+            return _productService.GetAllProducts()
+                .FirstOrDefault(p => p.Sku.Equals(sku, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public bool TryAddScannedBarcode(string sku, out Product? foundProduct)
+        {
+            foundProduct = FindProductBySku(sku);
+            if (foundProduct != null)
+            {
+                AddItem(foundProduct.Name, foundProduct.Sku, foundProduct.Price, 1);
+                return true;
+            }
+            return false;
+        }
+
         public void AddItem(string name, string sku, decimal price, int qty = 1)
         {
-            var product = new Product
-            {
-                Name = name,
-                Sku = sku,
-                Price = price
-            };
-
-            AddItem(product, qty);
-        }
-
-        public void RemoveItem(CartItem item)
-        {
-            Items.Remove(item);
+            _cartService.AddItem(name, sku, price, qty);
         }
 
         public void DecrementOrRemove(CartItem item)
         {
-            if (item.Quantity > 1)
-            {
-                item.Quantity--;
-            }
-            else
-            {
-                Items.Remove(item);
-            }
+            _cartService.DecrementOrRemove(item);
         }
 
-        private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        public void ClearCart()
         {
-            if (e.OldItems != null)
-            {
-                foreach (CartItem item in e.OldItems)
-                    item.PropertyChanged -= OnItemPropertyChanged;
-            }
-
-            if (e.NewItems != null)
-            {
-                foreach (CartItem item in e.NewItems)
-                    item.PropertyChanged += OnItemPropertyChanged;
-            }
-
-            RaiseAll();
+            _cartService.ClearCart();
         }
 
-        private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        public void CancelOrderAndProceedHome()
         {
-            if (e.PropertyName == nameof(CartItem.Quantity) || e.PropertyName == nameof(CartItem.LineTotal))
-            {
-                RaiseAll();
-            }
-        }
-
-        private void RaiseAll()
-        {
-            OnPropertyChanged(nameof(IsEmpty));
-            OnPropertyChanged(nameof(ItemCount));
-            OnPropertyChanged(nameof(Total));
+            _cartService.ClearCart();
+            ProceedToHome();
         }
 
         public void ProceedToHome()
         {
-            NavigationService.NavigateTo(
-                typeof(HomeView),
-                null,
-                SlideNavigationTransitionEffect.FromLeft
-            );
+            NavigationService.NavigateTo(typeof(HomeView), null, SlideNavigationTransitionEffect.FromLeft);
         }
 
         public void ProceedToPaymentSelection()
         {
-            NavigationService.NavigateTo(
-                typeof(PaymentSelectionView),
-                null,
-                SlideNavigationTransitionEffect.FromRight
-            );
+            NavigationService.NavigateTo(typeof(PaymentSelectionView), null, SlideNavigationTransitionEffect.FromRight);
         }
+
+        protected void OnPropertyChanged(string name) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

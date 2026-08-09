@@ -1,23 +1,5 @@
 ﻿using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.ApplicationModel;
-using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+using SelfCheckoutKiosk.App.Services;
 
 namespace SelfCheckoutKiosk.App
 {
@@ -30,6 +12,10 @@ namespace SelfCheckoutKiosk.App
 
         public static MainWindow? MainWindowInstance { get; private set; }
 
+        // Application-wide singletons initialized at startup
+        public static ICartService CartServiceInstance { get; } = new CartService();
+        public static IProductService ProductServiceInstance { get; } = new MockProductService();
+
         public App()
         {
             InitializeComponent();
@@ -40,7 +26,7 @@ namespace SelfCheckoutKiosk.App
             var mainWindow = new MainWindow();
             _window = mainWindow;
 
-            // Assign the static reference BEFORE window operations/navigation occur
+            // Assign the static reference BEFORE window operations or navigation occur
             MainWindowInstance = mainWindow;
 
             _window.Activate();

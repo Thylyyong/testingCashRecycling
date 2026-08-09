@@ -2,41 +2,30 @@ using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Animation;
-using Microsoft.UI.Xaml.Navigation;
+using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading.Tasks;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.System;
 
 namespace SelfCheckoutKiosk.App.Views.Customer
 {
     public sealed partial class CartView : Page
     {
-        public CartViewModel ViewModel { get; }
+        private const int MaxKeyIntervalMs = 80;
 
-        private readonly IProductService _productService;
-
-        // Barcode Scanner Keystroke Buffer State
         private readonly StringBuilder _barcodeBuffer = new();
         private DateTime _lastKeyTime = DateTime.MinValue;
-        private const int MaxKeyIntervalMs = 80; // Scanners type < 50ms per key
 
-        // Header state
-        private bool _isUsd = true;
         private bool _isEnglish = true;
         private bool _isOnline = false;
+        private bool _isPriceCheckMode = false;
+
+        public CartViewModel ViewModel { get; }
 
         public CartView()
         {
@@ -45,10 +34,12 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             INavigationService navigationService = App.MainWindowInstance?.NavigationService
                 ?? new NavigationService(Frame);
 
-            _productService = new MockProductService();
-            ViewModel = new CartViewModel(navigationService, _productService);
-
-            //LoadMockCartData();
+            // Instantiate ViewModel using shared App singletons
+            ViewModel = new CartViewModel(
+                navigationService,
+                App.ProductServiceInstance,
+                App.CartServiceInstance
+            );
 
             BackToScanButton.Click += BackToScanButton_Click;
             CheckoutButton.Click += CheckoutButton_Click;
@@ -57,18 +48,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             this.Unloaded += CartView_Unloaded;
         }
 
-        private void LoadMockCartData()
-        {
-            var mockProducts = _productService.GetAllProducts().Take(2).ToList();
-            foreach (var product in mockProducts)
-            {
-                ViewModel.AddItem(product.Name, product.Sku, product.Price, 1);
-            }
-        }
-
         private void CartView_Loaded(object sender, RoutedEventArgs e)
         {
-            // Subscribe to window-level key presses so scanning works anywhere on the page
             if (App.MainWindowInstance?.Content is FrameworkElement root)
             {
                 root.KeyDown += Page_KeyDown;
@@ -78,13 +59,12 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 this.KeyDown += Page_KeyDown;
             }
 
-            RefreshCartUI();
             RefreshNetworkStatusUI();
+            UpdateCartStateUI();
         }
 
         private void CartView_Unloaded(object sender, RoutedEventArgs e)
         {
-            // Unhook scanner event listener when leaving page
             if (App.MainWindowInstance?.Content is FrameworkElement root)
             {
                 root.KeyDown -= Page_KeyDown;
@@ -95,15 +75,12 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
         }
 
-        // --- Barcode / QR Scanner Tracker ---
-
         private async void Page_KeyDown(object sender, KeyRoutedEventArgs e)
         {
             var now = DateTime.Now;
             var elapsed = (now - _lastKeyTime).TotalMilliseconds;
             _lastKeyTime = now;
 
-            // If keypress interval is too long, reset buffer (user is typing slowly on a keyboard)
             if (elapsed > MaxKeyIntervalMs && _barcodeBuffer.Length > 0)
             {
                 _barcodeBuffer.Clear();
@@ -116,7 +93,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     string scannedSku = _barcodeBuffer.ToString().Trim();
                     _barcodeBuffer.Clear();
 
-                    await ProcessScannedBarcodeAsync(scannedSku);
+                    if (_isPriceCheckMode)
+                    {
+                        await HandlePriceCheckScanAsync(scannedSku);
+                    }
+                    else
+                    {
+                        await ProcessScannedBarcodeAsync(scannedSku);
+                    }
+
                     e.Handled = true;
                 }
             }
@@ -146,34 +131,21 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async Task ProcessScannedBarcodeAsync(string sku)
         {
-            // 1. Look up item in catalog
-            var product = _productService.GetAllProducts().FirstOrDefault(p => p.Sku.Equals(sku, StringComparison.OrdinalIgnoreCase));
+            bool added = ViewModel.TryAddScannedBarcode(sku, out _);
 
-            if (product != null)
+            if (added)
             {
-                // 2. Add scanned item to cart
-                ViewModel.AddItem(product.Name, product.Sku, product.Price, 1);
-                RefreshCartUI();
+                UpdateCartStateUI();
             }
             else
             {
-                // 3. Unknown barcode feedback
-                ContentDialog dialog = new ContentDialog
-                {
-                    Title = "Item Not Found",
-                    Content = $"No product found for barcode: {sku}",
-                    CloseButtonText = "OK",
-                    XamlRoot = this.XamlRoot,
-                    RequestedTheme = ElementTheme.Light
-                };
-
+                var dialog = CreateBaseDialog("Item Not Found", $"No product found for barcode: {sku}");
+                dialog.CloseButtonText = "OK";
                 await dialog.ShowAsync();
             }
         }
 
-        // --- UI Updates ---
-
-        private void RefreshCartUI()
+        private void UpdateCartStateUI()
         {
             if (ViewModel.IsEmpty)
             {
@@ -188,64 +160,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 ItemsListArea.Visibility = Visibility.Visible;
                 CartItemsControl.ItemsSource = ViewModel.Items;
             }
-
-            ItemCountLabel.Text = $"{ViewModel.ItemCount} items";
-            ItemCountSubLabel.Text = $"{ViewModel.ItemCount} items in cart";
-
-            // Disable checkout when cart is empty
-            CheckoutButton.IsEnabled = !ViewModel.IsEmpty;
-
-            decimal totalKHR = ViewModel.Total * 4100;
-
-            if (_isUsd)
-            {
-                TotalUSDLabel.Text = $"${ViewModel.Total:0.00}";
-                TotalKHRLabel.Text = $"≈ ៛{totalKHR:N0}";
-            }
-            else
-            {
-                TotalUSDLabel.Text = $"៛{totalKHR:N0}";
-                TotalKHRLabel.Text = $"≈ ${ViewModel.Total:0.00}";
-            }
         }
-
-        private void ConfirmRemove_Click(object sender, RoutedEventArgs e)
-        {
-            var innerButton = (Button)sender;
-
-            CloseFlyoutForElement(innerButton);
-
-            if (innerButton.DataContext is CartItem item)
-            {
-                ViewModel.DecrementOrRemove(item);
-                RefreshCartUI();
-            }
-        }
-
-        private void CloseFlyoutForElement(FrameworkElement element)
-        {
-            var popups = VisualTreeHelper.GetOpenPopupsForXamlRoot(element.XamlRoot);
-            foreach (var popup in popups)
-            {
-                if (popup.Child is FlyoutPresenter presenter && IsChildOf(element, presenter))
-                {
-                    popup.IsOpen = false;
-                    break;
-                }
-            }
-        }
-
-        private bool IsChildOf(DependencyObject child, DependencyObject parent)
-        {
-            while (child != null)
-            {
-                if (child == parent) return true;
-                child = VisualTreeHelper.GetParent(child);
-            }
-            return false;
-        }
-
-        // --- Header Status ---
 
         private void RefreshNetworkStatusUI()
         {
@@ -263,90 +178,114 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
         }
 
-        private async void CheckPriceButton_Click(object sender, RoutedEventArgs e)
-        {
-            ContentDialog dialog = new ContentDialog
-            {
-                Title = "Check Price",
-                Content = "Scan an item to check its price.",
-                CloseButtonText = "OK",
-                XamlRoot = this.Content.XamlRoot,
-                RequestedTheme = ElementTheme.Light
-            };
-
-            await dialog.ShowAsync();
-        }
-
-        private void RecallButton_Click(object sender, RoutedEventArgs e)
-        {
-            // TODO: undo latest action
-        }
-
         private void CurrencySwitch_Click(object sender, RoutedEventArgs e)
         {
-            _isUsd = !_isUsd;
-            CurrencySwitchLabel.Text = _isUsd ? "USD" : "KHR";
-            RefreshCartUI();
+            ViewModel.ToggleCurrency();
         }
 
         private void LanguageSwitch_Click(object sender, RoutedEventArgs e)
         {
             _isEnglish = !_isEnglish;
-            //LanguageSwitchLabel.Text = _isEnglish ? "EN" : "KM";
         }
 
         private async void HelpButton_Click(object sender, RoutedEventArgs e)
         {
-            ContentDialog dialog = new ContentDialog
+            var dialog = CreateBaseDialog("Help is on the way", new TextBlock
             {
-                Title = "Help Is On the Way",
-                Content = new TextBlock
-                {
-                    Text = "A staff member has been notified and will assist you shortly.",
-                    TextWrapping = TextWrapping.Wrap
-                },
-                CloseButtonText = "OK",
-                XamlRoot = this.Content.XamlRoot,
-                RequestedTheme = ElementTheme.Light
-            };
+                Text = "A staff member has been notified and will assist you shortly.",
+                TextWrapping = TextWrapping.Wrap
+            });
 
-            dialog.CloseButtonStyle = new Style(typeof(Button))
-            {
-                Setters =
-                {
-                    new Setter(Button.HorizontalAlignmentProperty, HorizontalAlignment.Stretch),
-                    new Setter(Button.HorizontalContentAlignmentProperty, HorizontalAlignment.Center)
-                }
-            };
-
+            dialog.CloseButtonText = "OK";
             await dialog.ShowAsync();
         }
 
-        // --- Bottom Actions ---
+        private async void CheckPriceButton_Click(object sender, RoutedEventArgs e)
+        {
+            _isPriceCheckMode = true;
+            try
+            {
+                var (dialog, getEnteredCode) = CreateNumericKeypadDialog("Check Price (Scan or Enter)", "Enter EAN-13", "Check Price");
+                var result = await dialog.ShowAsync();
+
+                if (result == ContentDialogResult.Primary)
+                {
+                    string code = getEnteredCode();
+                    if (!string.IsNullOrEmpty(code))
+                    {
+                        await HandlePriceCheckScanAsync(code);
+                    }
+                }
+            }
+            finally
+            {
+                _isPriceCheckMode = false;
+            }
+        }
+
+        private async void RecallButton_Click(object sender, RoutedEventArgs e)
+        {
+            var lastItem = ViewModel.Items.LastOrDefault();
+
+            if (lastItem == null)
+            {
+                var emptyDialog = CreateBaseDialog("Your Cart is Empty", "There are no items in the cart to remove.");
+                emptyDialog.CloseButtonText = "OK";
+                await emptyDialog.ShowAsync();
+                return;
+            }
+
+            ViewModel.DecrementOrRemove(lastItem);
+            UpdateCartStateUI();
+        }
+
+        private void ConfirmRemove_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button innerButton)
+            {
+                CloseFlyoutForElement(innerButton);
+
+                if (innerButton.DataContext is CartItem item)
+                {
+                    ViewModel.DecrementOrRemove(item);
+                    UpdateCartStateUI();
+                }
+            }
+        }
+
+        private async void AddItemManuallyLink_Click(object sender, RoutedEventArgs e)
+        {
+            var (dialog, getEnteredCode) = CreateNumericKeypadDialog("Enter Barcode (EAN-13)", "Enter EAN-13", "Add to Cart");
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
+            {
+                string code = getEnteredCode();
+                if (!string.IsNullOrEmpty(code))
+                {
+                    await ProcessScannedBarcodeAsync(code);
+                }
+            }
+        }
 
         private async void BackToScanButton_Click(object sender, RoutedEventArgs e)
         {
-            ContentDialog dialog = new ContentDialog
+            var dialog = CreateBaseDialog("Cancel Order?", new TextBlock
             {
-                Title = "Cancel Order?",
-                Content = new TextBlock
-                {
-                    Text = "Going back will cancel your current Order process. Are you sure you want to continue?",
-                    TextWrapping = TextWrapping.Wrap,
-                    MaxWidth = 450
-                },
-                PrimaryButtonText = "Keep scanning",
-                SecondaryButtonText = "Cancel Order",
-                PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"],
-                XamlRoot = this.Content.XamlRoot,
-                RequestedTheme = ElementTheme.Light
-            };
+                Text = "Going back will cancel your current Order process. Are you sure you want to continue?",
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 450
+            });
+
+            dialog.PrimaryButtonText = "Keep scanning";
+            dialog.SecondaryButtonText = "Cancel Order";
+            dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
 
             var result = await dialog.ShowAsync();
 
             if (result == ContentDialogResult.Secondary)
             {
-                ViewModel.ProceedToHome();
+                ViewModel.CancelOrderAndProceedHome();
             }
         }
 
@@ -355,20 +294,62 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             ViewModel.ProceedToPaymentSelection();
         }
 
-        private async void AddItemManuallyLink_Click(object sender, RoutedEventArgs e)
+        private async Task HandlePriceCheckScanAsync(string sku)
         {
+            var product = ViewModel.FindProductBySku(sku);
+
+            var resultDialog = CreateBaseDialog("", null);
+            resultDialog.CloseButtonText = "OK";
+
+            if (product != null)
+            {
+                decimal priceKHR = product.Price * ViewModel.ExchangeRate;
+                resultDialog.Title = "Price Check Result";
+                resultDialog.Content = new StackPanel
+                {
+                    Spacing = 8,
+                    Children =
+                    {
+                        new TextBlock { Text = product.Name, FontSize = 20, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap },
+                        new TextBlock { Text = $"SKU: {product.Sku}", FontSize = 14, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)) },
+                        new TextBlock { Text = $"${product.Price:0.00} (≈ ៛{priceKHR:N0})", FontSize = 28, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 185, 129)) }
+                    }
+                };
+            }
+            else
+            {
+                resultDialog.Title = "Item Not Found";
+                resultDialog.Content = $"No product found for barcode: {sku}";
+            }
+
+            await resultDialog.ShowAsync();
+        }
+
+        private ContentDialog CreateBaseDialog(string title, object? content)
+        {
+            return new ContentDialog
+            {
+                Title = title,
+                Content = content,
+                XamlRoot = this.Content?.XamlRoot ?? this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
+        }
+
+        private (ContentDialog Dialog, Func<string> GetEnteredCode) CreateNumericKeypadDialog(string title, string placeholderText, string primaryButtonText)
+        {
+            string enteredCode = "";
+
             var entryBox = new TextBox
             {
                 FontSize = 32,
                 FontWeight = FontWeights.Bold,
                 TextAlignment = TextAlignment.Center,
                 IsReadOnly = true,
-                PlaceholderText = "Enter EAN-13",
+                PlaceholderText = placeholderText,
                 MaxLength = 13,
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
-
-            string enteredCode = "";
 
             void AppendDigit(string digit)
             {
@@ -394,19 +375,16 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 }
             }
 
-            // Keypad grid: 1-9, Clear, 0, Delete
             var keypadGrid = new Grid { Margin = new Thickness(0, 16, 0, 0) };
-            for (int i = 0; i < 3; i++)
-                keypadGrid.ColumnDefinitions.Add(new ColumnDefinition());
-            for (int i = 0; i < 4; i++)
-                keypadGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(64) });
+            for (int i = 0; i < 3; i++) keypadGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            for (int i = 0; i < 4; i++) keypadGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(64) });
 
-            Button MakeKeyButton(string label, Action onClick, SolidColorBrush? bg = null, SolidColorBrush? fg = null)
+            Button MakeKeyButton(object content, Action onClick, SolidColorBrush? bg = null, SolidColorBrush? fg = null, double? fontSize = null)
             {
                 var btn = new Button
                 {
-                    Content = label,
-                    FontSize = 22,
+                    Content = content,
+                    FontSize = fontSize ?? 22,
                     FontWeight = FontWeights.SemiBold,
                     Margin = new Thickness(4),
                     CornerRadius = new CornerRadius(10),
@@ -419,52 +397,34 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 return btn;
             }
 
-            // Row 0: 1 2 3
-            for (int i = 0; i < 3; i++)
+            for (int row = 0; row < 3; row++)
             {
-                string digit = (i + 1).ToString();
-                var btn = MakeKeyButton(digit, () => AppendDigit(digit));
-                Grid.SetRow(btn, 0);
-                Grid.SetColumn(btn, i);
-                keypadGrid.Children.Add(btn);
+                for (int col = 0; col < 3; col++)
+                {
+                    string digit = (row * 3 + col + 1).ToString();
+                    var btn = MakeKeyButton(digit, () => AppendDigit(digit));
+                    Grid.SetRow(btn, row);
+                    Grid.SetColumn(btn, col);
+                    keypadGrid.Children.Add(btn);
+                }
             }
 
-            // Row 1: 4 5 6
-            for (int i = 0; i < 3; i++)
-            {
-                string digit = (i + 4).ToString();
-                var btn = MakeKeyButton(digit, () => AppendDigit(digit));
-                Grid.SetRow(btn, 1);
-                Grid.SetColumn(btn, i);
-                keypadGrid.Children.Add(btn);
-            }
-
-            // Row 2: 7 8 9
-            for (int i = 0; i < 3; i++)
-            {
-                string digit = (i + 7).ToString();
-                var btn = MakeKeyButton(digit, () => AppendDigit(digit));
-                Grid.SetRow(btn, 2);
-                Grid.SetColumn(btn, i);
-                keypadGrid.Children.Add(btn);
-            }
-
-            // Row 3: Clear | 0 | Delete
             var clearBtn = MakeKeyButton("Clear", ClearAll,
                 new SolidColorBrush(Windows.UI.Color.FromArgb(255, 254, 226, 226)),
-                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 220, 38, 38)));
-            Grid.SetRow(clearBtn, 3);
-            Grid.SetColumn(clearBtn, 0);
-            keypadGrid.Children.Add(clearBtn);
+                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 220, 38, 38)),
+                18);
+            Grid.SetRow(clearBtn, 3); Grid.SetColumn(clearBtn, 0); keypadGrid.Children.Add(clearBtn);
 
             var zeroBtn = MakeKeyButton("0", () => AppendDigit("0"));
-            Grid.SetRow(zeroBtn, 3);
-            Grid.SetColumn(zeroBtn, 1);
-            keypadGrid.Children.Add(zeroBtn);
+            Grid.SetRow(zeroBtn, 3); Grid.SetColumn(zeroBtn, 1); keypadGrid.Children.Add(zeroBtn);
 
-            var deleteBtn = MakeKeyButton("⌫", DeleteLast,
+            var deleteBtn = MakeKeyButton(
+                new FontIcon { Glyph = "\xE925", FontSize = 30 },
+                DeleteLast,
                 new SolidColorBrush(Windows.UI.Color.FromArgb(255, 241, 245, 249)),
-                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 41, 59)));
+                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 41, 59))
+            );
+
             Grid.SetRow(deleteBtn, 3);
             Grid.SetColumn(deleteBtn, 2);
             keypadGrid.Children.Add(deleteBtn);
@@ -473,26 +433,36 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             contentPanel.Children.Add(entryBox);
             contentPanel.Children.Add(keypadGrid);
 
-            ContentDialog dialog = new ContentDialog
+            var dialog = CreateBaseDialog(title, contentPanel);
+            dialog.PrimaryButtonText = primaryButtonText;
+            dialog.CloseButtonText = "Close";
+            dialog.DefaultButton = ContentDialogButton.Primary;
+            dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+
+            return (dialog, () => enteredCode);
+        }
+
+        private void CloseFlyoutForElement(FrameworkElement element)
+        {
+            var popups = VisualTreeHelper.GetOpenPopupsForXamlRoot(element.XamlRoot);
+            foreach (var popup in popups)
             {
-                Title = "Enter Barcode (EAN-13)",
-                Content = contentPanel,
-                PrimaryButtonText = "Add to Cart",
-                CloseButtonText = "Close",
-                DefaultButton = ContentDialogButton.Primary,
-                PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"],
-                XamlRoot = this.Content.XamlRoot,
-                RequestedTheme = ElementTheme.Light
-            };
-
-
-            var result = await dialog.ShowAsync();
-
-            if (result == ContentDialogResult.Primary && enteredCode.Length > 0)
-            {
-                await ProcessScannedBarcodeAsync(enteredCode);
-                RefreshCartUI();
+                if (popup.Child is FlyoutPresenter presenter && IsChildOf(element, presenter))
+                {
+                    popup.IsOpen = false;
+                    break;
+                }
             }
+        }
+
+        private bool IsChildOf(DependencyObject? child, DependencyObject parent)
+        {
+            while (child != null)
+            {
+                if (child == parent) return true;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return false;
         }
     }
 }
