@@ -8,6 +8,7 @@ using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.System;
@@ -22,8 +23,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private DateTime _lastKeyTime = DateTime.MinValue;
 
         private bool _isEnglish = true;
-        private bool _isOnline = false;
-        private bool _isPriceCheckMode = false;
+        private bool _isOnline = true;
+
+        private enum ScanBehavior { AddToCart, PriceCheck, Blocked }
+        private ScanBehavior _scanBehavior = ScanBehavior.AddToCart;
+
+        private ContentDialog? _activeDialog;
+        private StackPanel? _activePriceResultPanel;
+
+        private readonly KeyEventHandler _dialogScanKeyHandler;
 
         public CartViewModel ViewModel { get; }
 
@@ -31,15 +39,18 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         {
             InitializeComponent();
 
+            _dialogScanKeyHandler = new KeyEventHandler(Page_KeyDown);
+
             INavigationService navigationService = App.MainWindowInstance?.NavigationService
                 ?? new NavigationService(Frame);
 
-            // Instantiate ViewModel using shared App singletons
             ViewModel = new CartViewModel(
                 navigationService,
                 App.ProductServiceInstance,
                 App.CartServiceInstance
             );
+
+            this.IsTabStop = true;
 
             BackToScanButton.Click += BackToScanButton_Click;
             CheckoutButton.Click += CheckoutButton_Click;
@@ -92,17 +103,24 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 {
                     string scannedSku = _barcodeBuffer.ToString().Trim();
                     _barcodeBuffer.Clear();
-
-                    if (_isPriceCheckMode)
-                    {
-                        await HandlePriceCheckScanAsync(scannedSku);
-                    }
-                    else
-                    {
-                        await ProcessScannedBarcodeAsync(scannedSku);
-                    }
-
                     e.Handled = true;
+
+                    switch (_scanBehavior)
+                    {
+                        case ScanBehavior.AddToCart:
+                            await ProcessScannedBarcodeAsync(scannedSku);
+                            break;
+
+                        case ScanBehavior.PriceCheck:
+                            if (_activePriceResultPanel != null)
+                            {
+                                RenderPriceCheckResult(_activePriceResultPanel, scannedSku);
+                            }
+                            break;
+
+                        case ScanBehavior.Blocked:
+                            break;
+                    }
                 }
             }
             else
@@ -111,6 +129,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 if (character != '\0')
                 {
                     _barcodeBuffer.Append(character);
+                    e.Handled = true;
                 }
             }
         }
@@ -141,7 +160,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             {
                 var dialog = CreateBaseDialog("Item Not Found", $"No product found for barcode: {sku}");
                 dialog.CloseButtonText = "OK";
-                await dialog.ShowAsync();
+                await ShowDialogBlockingScansAsync(dialog);
             }
         }
 
@@ -197,29 +216,69 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             });
 
             dialog.CloseButtonText = "OK";
-            await dialog.ShowAsync();
+            await ShowDialogBlockingScansAsync(dialog);
         }
 
         private async void CheckPriceButton_Click(object sender, RoutedEventArgs e)
         {
-            _isPriceCheckMode = true;
-            try
-            {
-                var (dialog, getEnteredCode) = CreateNumericKeypadDialog("Check Price (Scan or Enter)", "Enter EAN-13", "Check Price");
-                var result = await dialog.ShowAsync();
+            var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16) };
+            ShowPriceCheckPlaceholder(resultPanel);
 
-                if (result == ContentDialogResult.Primary)
+            var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel("Enter EAN-13");
+
+            var contentPanel = new StackPanel { Spacing = 0 };
+            contentPanel.Children.Add(resultPanel);
+            contentPanel.Children.Add(keypadPanel);
+
+            var dialog = CreateBaseDialog("Check Price (Scan or Enter)", contentPanel);
+            dialog.PrimaryButtonText = "Check Price";
+            dialog.CloseButtonText = "Close";
+            dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+
+            dialog.PrimaryButtonClick += (s, args) =>
+            {
+                args.Cancel = true; // Keep dialog open
+                var deferral = args.GetDeferral();
+
+                try
                 {
                     string code = getEnteredCode();
-                    if (!string.IsNullOrEmpty(code))
+
+                    if (string.IsNullOrWhiteSpace(code))
                     {
-                        await HandlePriceCheckScanAsync(code);
+                        ShowInlineError(resultPanel, "Please scan or enter a barcode first.");
+                        entryBox.Focus(FocusState.Programmatic);
+                        return;
                     }
+
+                    RenderPriceCheckResult(resultPanel, code);
+                    clearEntry();
+                    entryBox.Focus(FocusState.Programmatic);
                 }
+                finally
+                {
+                    deferral.Complete(); // Now completes safely without triggering dialog exceptions
+                }
+            };
+
+            dialog.AddHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler, true);
+            dialog.Opened += (s, args) => entryBox.Focus(FocusState.Programmatic);
+
+            _scanBehavior = ScanBehavior.PriceCheck;
+            _activeDialog = dialog;
+            _activePriceResultPanel = resultPanel;
+
+            try
+            {
+                await dialog.ShowAsync();
             }
             finally
             {
-                _isPriceCheckMode = false;
+                dialog.RemoveHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler);
+                _activeDialog = null;
+                _activePriceResultPanel = null;
+                _scanBehavior = ScanBehavior.AddToCart;
+                ResetFocus();
             }
         }
 
@@ -231,12 +290,13 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             {
                 var emptyDialog = CreateBaseDialog("Your Cart is Empty", "There are no items in the cart to remove.");
                 emptyDialog.CloseButtonText = "OK";
-                await emptyDialog.ShowAsync();
+                await ShowDialogBlockingScansAsync(emptyDialog);
                 return;
             }
 
             ViewModel.DecrementOrRemove(lastItem);
             UpdateCartStateUI();
+            ResetFocus();
         }
 
         private void ConfirmRemove_Click(object sender, RoutedEventArgs e)
@@ -251,12 +311,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     UpdateCartStateUI();
                 }
             }
+
+            ResetFocus();
         }
 
         private async void AddItemManuallyLink_Click(object sender, RoutedEventArgs e)
         {
             var (dialog, getEnteredCode) = CreateNumericKeypadDialog("Enter Barcode (EAN-13)", "Enter EAN-13", "Add to Cart");
-            var result = await dialog.ShowAsync();
+
+            var result = await ShowDialogBlockingScansAsync(dialog);
 
             if (result == ContentDialogResult.Primary)
             {
@@ -281,7 +344,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             dialog.SecondaryButtonText = "Cancel Order";
             dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
 
-            var result = await dialog.ShowAsync();
+            var result = await ShowDialogBlockingScansAsync(dialog);
 
             if (result == ContentDialogResult.Secondary)
             {
@@ -294,35 +357,69 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             ViewModel.ProceedToPaymentSelection();
         }
 
-        private async Task HandlePriceCheckScanAsync(string sku)
+        private void ShowPriceCheckPlaceholder(StackPanel panel)
         {
-            var product = ViewModel.FindProductBySku(sku);
+            panel.Children.Clear();
+            panel.Children.Add(new TextBlock
+            {
+                Text = "Scan an item, or type its code below.",
+                FontSize = 14,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139))
+            });
+        }
 
-            var resultDialog = CreateBaseDialog("", null);
-            resultDialog.CloseButtonText = "OK";
+        private void ShowInlineError(StackPanel panel, string message)
+        {
+            panel.Children.Clear();
+            panel.Children.Add(new TextBlock
+            {
+                Text = message,
+                FontSize = 15,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 220, 38, 38)),
+                TextWrapping = TextWrapping.Wrap
+            });
+        }
+
+        private void RenderPriceCheckResult(StackPanel panel, string sku)
+        {
+            panel.Children.Clear();
+
+            var product = ViewModel.FindProductBySku(sku);
 
             if (product != null)
             {
                 decimal priceKHR = product.Price * ViewModel.ExchangeRate;
-                resultDialog.Title = "Price Check Result";
-                resultDialog.Content = new StackPanel
-                {
-                    Spacing = 8,
-                    Children =
-                    {
-                        new TextBlock { Text = product.Name, FontSize = 20, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap },
-                        new TextBlock { Text = $"SKU: {product.Sku}", FontSize = 14, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)) },
-                        new TextBlock { Text = $"${product.Price:0.00} (≈ ៛{priceKHR:N0})", FontSize = 28, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 185, 129)) }
-                    }
-                };
+                panel.Children.Add(new TextBlock { Text = product.Name, FontSize = 20, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap });
+                panel.Children.Add(new TextBlock { Text = $"SKU: {product.Sku}", FontSize = 14, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)) });
+                panel.Children.Add(new TextBlock { Text = $"${product.Price:0.00} (≈ ៛{priceKHR:N0})", FontSize = 28, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 185, 129)) });
             }
             else
             {
-                resultDialog.Title = "Item Not Found";
-                resultDialog.Content = $"No product found for barcode: {sku}";
+                ShowInlineError(panel, $"No product found for barcode:\n{sku}");
             }
+        }
 
-            await resultDialog.ShowAsync();
+        private async Task<ContentDialogResult> ShowDialogBlockingScansAsync(ContentDialog dialog)
+        {
+            _scanBehavior = ScanBehavior.Blocked;
+            _activeDialog = dialog;
+            try
+            {
+                return await dialog.ShowAsync();
+            }
+            finally
+            {
+                _activeDialog = null;
+                _scanBehavior = ScanBehavior.AddToCart;
+                ResetFocus();
+            }
+        }
+
+        private void ResetFocus()
+        {
+            this.Focus(FocusState.Programmatic);
         }
 
         private ContentDialog CreateBaseDialog(string title, object? content)
@@ -337,6 +434,19 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         }
 
         private (ContentDialog Dialog, Func<string> GetEnteredCode) CreateNumericKeypadDialog(string title, string placeholderText, string primaryButtonText)
+        {
+            var (panel, getCode, _, _) = BuildKeypadPanel(placeholderText);
+
+            var dialog = CreateBaseDialog(title, panel);
+            dialog.PrimaryButtonText = primaryButtonText;
+            dialog.CloseButtonText = "Close";
+            dialog.DefaultButton = ContentDialogButton.Primary;
+            dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+
+            return (dialog, getCode);
+        }
+
+        private (StackPanel Panel, Func<string> GetEnteredCode, Action ClearEntry, TextBox EntryBox) BuildKeypadPanel(string placeholderText)
         {
             string enteredCode = "";
 
@@ -393,7 +503,11 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     VerticalAlignment = VerticalAlignment.Stretch
                 };
-                btn.Click += (s, args) => onClick();
+                btn.Click += (s, args) =>
+                {
+                    onClick();
+                    entryBox.Focus(FocusState.Programmatic);
+                };
                 return btn;
             }
 
@@ -433,13 +547,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             contentPanel.Children.Add(entryBox);
             contentPanel.Children.Add(keypadGrid);
 
-            var dialog = CreateBaseDialog(title, contentPanel);
-            dialog.PrimaryButtonText = primaryButtonText;
-            dialog.CloseButtonText = "Close";
-            dialog.DefaultButton = ContentDialogButton.Primary;
-            dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
-
-            return (dialog, () => enteredCode);
+            return (contentPanel, () => enteredCode, ClearAll, entryBox);
         }
 
         private void CloseFlyoutForElement(FrameworkElement element)
