@@ -59,11 +59,19 @@ namespace SelfCheckoutKiosk.App.Services
             var existing = Items.FirstOrDefault(i => i.Sku.Equals(sku, StringComparison.OrdinalIgnoreCase));
             if (existing != null)
             {
-                existing.Quantity += quantity; // Now triggers Item_PropertyChanged -> RecalculateTotals!
+                existing.Quantity += quantity;
+
+                // Bring to top so user gets visual confirmation
+                int currentIndex = Items.IndexOf(existing);
+                if (currentIndex > 0)
+                {
+                    Items.Move(currentIndex, 0);
+                }
             }
             else
             {
-                Items.Add(new CartItem
+                // Insert new item at top
+                Items.Insert(0, new CartItem
                 {
                     Sku = sku,
                     Name = name,

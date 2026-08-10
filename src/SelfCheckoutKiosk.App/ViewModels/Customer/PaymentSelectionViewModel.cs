@@ -25,6 +25,10 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public void SelectPaymentMethod(string methodKey)
         {
             PaymentMethodSelected?.Invoke(this, methodKey);
+
+            if (methodKey == "Cash") {
+                ProceedToIngestionProgress();
+            }
         }
 
         public void Cancel()
@@ -41,12 +45,12 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             );
         }
 
-        public void ProceedToHome()
+        public void ProceedToIngestionProgress()
         {
             NavigationService.NavigateTo(
-                typeof(HomeView),
+                typeof(IngestionProgressView),
                 null,
-                SlideNavigationTransitionEffect.FromLeft
+                SlideNavigationTransitionEffect.FromRight
             );
         }
     }

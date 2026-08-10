@@ -197,7 +197,7 @@
         <!-- 2. BACK BUTTON (full-width, stretched at bottom) -->
         <!-- ========================================================= -->
         <Grid Grid.Row="2" Padding="40,0,40,32">
-            <Button Height="60" HorizontalAlignment="Stretch" Background="White" BorderBrush="#CBD5E1" BorderThickness="2" CornerRadius="16" Click="BackButton_Click">
+            <Button Height="80" HorizontalAlignment="Stretch" Background="White" BorderBrush="#CBD5E1" BorderThickness="2" CornerRadius="16" Click="BackButton_Click">
                 <Button.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#F1F5F9"/>
@@ -205,7 +205,7 @@
                     <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#94A3B8"/>
                 </Button.Resources>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-                    <TextBlock Text="BACK" FontSize="22" FontWeight="Bold" Foreground="#334155"/>
+                    <TextBlock Text="BACK" FontSize="24" FontWeight="Bold" Foreground="#334155"/>
                 </StackPanel>
             </Button>
         </Grid>

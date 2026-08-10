@@ -21,8 +21,8 @@
     <Grid Background="White">
 
         <Grid.RowDefinitions>
-            <RowDefinition Height="85*"/>
-            <RowDefinition Height="15*"/>
+            <RowDefinition Height="80*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- 1. BANNER AREA WITH OVERLAY BRANDING -->
@@ -79,7 +79,7 @@
 
             <TextBlock Grid.Row="0" Text="Scan, pay, and go — skip the lines." FontSize="15" Foreground="#718096" HorizontalAlignment="Center" Margin="0,0,0,14"/>
 
-            <Button Grid.Row="1" x:Name="StartButton" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" MaxHeight="82" CornerRadius="10" Click="StartButton_Click">
+            <Button Grid.Row="1" x:Name="StartButton" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Height="80" MaxHeight="80" CornerRadius="16" Click="StartButton_Click">
 
                 <Button.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">

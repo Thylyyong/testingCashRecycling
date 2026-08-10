@@ -66,7 +66,7 @@
         <!-- 0. HEADER -->
         <!-- ========================================================= -->
         <Grid Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
-            <Viewbox Stretch="Uniform" StretchDirection="Both" MaxWidth="900" MaxHeight="140" HorizontalAlignment="Stretch" Margin="40,32,40,24">
+            <Viewbox Stretch="Uniform" StretchDirection="Both" MaxWidth="900" MaxHeight="80" HorizontalAlignment="Stretch" Margin="40,32,40,24">
                 <StackPanel Spacing="4" HorizontalAlignment="Left">
                     <TextBlock Text="CHECKOUT" FontSize="14" FontWeight="SemiBold" Foreground="#94A3B8" CharacterSpacing="100"/>
                     <TextBlock Text="Choose a Payment Method" FontSize="32" FontWeight="Bold" Foreground="#1A202C"/>
@@ -177,14 +177,14 @@
         <!-- 2. CANCEL BUTTON (full-width, stretched at bottom) -->
         <!-- ========================================================= -->
         <Grid Grid.Row="2" Padding="40,0,40,32">
-            <Button x:Name="CancelButton" Height="60" HorizontalAlignment="Stretch" Background="White" BorderBrush="#EF4444" BorderThickness="2" CornerRadius="16" Click="CancelButton_Click">
+            <Button x:Name="CancelButton" Height="80" HorizontalAlignment="Stretch" Background="White" BorderBrush="#EF4444" BorderThickness="2" CornerRadius="16" Click="CancelButton_Click">
                 <Button.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FEF2F2"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FEE2E2"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#EF4444"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#EF4444"/>
                 </Button.Resources>
-                <TextBlock Text="CANCEL" FontSize="22" FontWeight="Bold" Foreground="#EF4444"/>
+                <TextBlock Text="RETURN TO CART" FontSize="24" FontWeight="Bold" Foreground="#EF4444"/>
             </Button>
         </Grid>
     </Grid>

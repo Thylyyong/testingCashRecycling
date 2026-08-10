@@ -15,7 +15,8 @@ namespace SelfCheckoutKiosk.App
         // Application-wide singletons initialized at startup
         public static ICartService CartServiceInstance { get; } = new CartService();
         public static IProductService ProductServiceInstance { get; } = new MockProductService();
-
+        public static IPaymentService PaymentServiceInstance { get; } = new PaymentService();
+        public static IReceiptPrinterService ReceiptPrinterServiceInstance { get; } = new ReceiptPrinterService();
         public App()
         {
             InitializeComponent();

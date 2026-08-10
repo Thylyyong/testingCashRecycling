@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
@@ -284,9 +285,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void RecallButton_Click(object sender, RoutedEventArgs e)
         {
-            var lastItem = ViewModel.Items.LastOrDefault();
+            var latestItem = ViewModel.Items.FirstOrDefault();
 
-            if (lastItem == null)
+            if (latestItem == null)
             {
                 var emptyDialog = CreateBaseDialog("Your Cart is Empty", "There are no items in the cart to remove.");
                 emptyDialog.CloseButtonText = "OK";
@@ -294,7 +295,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 return;
             }
 
-            ViewModel.DecrementOrRemove(lastItem);
+            ViewModel.DecrementOrRemove(latestItem);
             UpdateCartStateUI();
             ResetFocus();
         }
@@ -571,6 +572,34 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 child = VisualTreeHelper.GetParent(child);
             }
             return false;
+        }
+
+        private void CartItemRow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is Border border && border.DataContext is CartItem item)
+            {
+                // Unsubscribe first to avoid duplicate subscriptions if UI elements refresh
+                item.ItemUpdated -= OnItemUpdated;
+                item.ItemUpdated += OnItemUpdated;
+
+                void OnItemUpdated(object? s, EventArgs args)
+                {
+                    // Find and play the FlashAnimation defined in this Border's Resources
+                    if (border.Resources["FlashAnimation"] is Storyboard flashAnimation)
+                    {
+                        flashAnimation.Begin();
+                    }
+                }
+
+                // Clean up event listener when element unloads (scrolled off-screen or removed)
+                RoutedEventHandler? unloadedHandler = null;
+                unloadedHandler = (s, ev) =>
+                {
+                    border.Unloaded -= unloadedHandler;
+                    item.ItemUpdated -= OnItemUpdated;
+                };
+                border.Unloaded += unloadedHandler;
+            }
         }
     }
 }

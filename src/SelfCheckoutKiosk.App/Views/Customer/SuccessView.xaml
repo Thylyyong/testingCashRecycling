@@ -1,14 +1,124 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Page
-    x:Class="SelfCheckoutKiosk.App.Views.Customer.SuccessView"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:SelfCheckoutKiosk.App.Views.Customer"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+<Page x:Class="SelfCheckoutKiosk.App.Views.Customer.SuccessView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="using:SelfCheckoutKiosk.App.Views.Customer" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" RequestedTheme="Light">
 
-    <Grid>
+    <Grid Background="#F8FAFC">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
+        <!-- 1. KIOSK HEADER -->
+        <Border Grid.Row="0" Background="#0067C0" Padding="28,12" Height="80" MaxHeight="80">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
+                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEC61;" FontSize="28" Foreground="White"/>
+                <TextBlock Text="Payment Completed" Foreground="White" FontSize="26" FontWeight="Bold"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 2. BODY / THERMAL RECEIPT CONTAINER -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="32,10">
+            <StackPanel MaxWidth="580" HorizontalAlignment="Center" Spacing="28">
+
+                <!-- Success Banner Header -->
+                <StackPanel HorizontalAlignment="Center" Spacing="12">
+                    <Border Width="104" Height="104" CornerRadius="52" Background="#ECFDF5" HorizontalAlignment="Center">
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE930;" FontSize="52" Foreground="#059669" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="Payment Successful" FontSize="30" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TransactionIdText" FontSize="16" Foreground="#64748B" HorizontalAlignment="Center" FontWeight="Medium"/>
+                    <TextBlock x:Name="CompletedAtText" FontSize="14" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- REALISTIC THERMAL RECEIPT CARD -->
+                <Border Background="#FFFFFF" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="12" Padding="32">
+                    <StackPanel Spacing="22">
+
+                        <!-- Receipt Store Header -->
+                        <StackPanel HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="SELF-CHECKOUT KIOSK" FontWeight="Bold" FontSize="16" Foreground="#0F172A" HorizontalAlignment="Center" CharacterSpacing="120"/>
+                            <TextBlock Text="OFFICIAL RECEIPT" FontSize="13" Foreground="#64748B" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <!-- Top Dashed Separator -->
+                        <Rectangle Height="1.5" Fill="#94A3B8" StrokeDashArray="3 3" Margin="0,4"/>
+
+                        <!-- Payment Method Summary -->
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="PAYMENT METHOD" FontSize="12" FontWeight="Bold" Foreground="#64748B" CharacterSpacing="60"/>
+                            <TextBlock x:Name="MethodLabelText" FontSize="20" FontWeight="Bold" Foreground="#0F172A"/>
+                        </StackPanel>
+
+                        <!-- Cash / Payment Details Breakdown -->
+                        <Border x:Name="CashDetailsSection" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="18,16">
+                            <StackPanel Spacing="14">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Total Due" Foreground="#475569" FontSize="16"/>
+                                    <TextBlock Grid.Column="1" x:Name="TotalDueText" FontWeight="Bold" Foreground="#0F172A" FontSize="16"/>
+                                </Grid>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Amount Paid" Foreground="#475569" FontSize="16"/>
+                                    <TextBlock Grid.Column="1" x:Name="TotalPaidText" FontWeight="Bold" Foreground="#0F172A" FontSize="16"/>
+                                </Grid>
+
+                                <!--<Grid x:Name="ChangeDueRow">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Change Due" Foreground="#475569" FontSize="16" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="1" x:Name="ChangeDueText" FontWeight="Bold" Foreground="#059669" FontSize="18"/>
+                                </Grid>-->
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Accepted Notes Breakdown -->
+                        <!--<StackPanel Spacing="8">
+                            <TextBlock Text="TENDER BREAKDOWN" FontSize="12" FontWeight="Bold" Foreground="#64748B" CharacterSpacing="60"/>
+                            <TextBlock x:Name="AttemptsSummaryText" FontFamily="Consolas, Courier New, monospace" FontSize="14" Foreground="#1E293B" LineHeight="22"/>
+                        </StackPanel>-->
+
+                        <!-- Bottom Dashed Separator -->
+                        <Rectangle Height="1.5" Fill="#94A3B8" StrokeDashArray="3 3" Margin="0,4"/>
+
+                        <!-- Receipt Footer Message -->
+                        <TextBlock Text="Thank you for shopping with us!" FontSize="14" Foreground="#64748B" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 3. KIOSK FOOTER -->
+        <Grid Grid.Row="2" Background="White" Padding="32,20">
+            <Button x:Name="DoneButton" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Height="80" CornerRadius="16" Click="DoneButton_Click">
+
+                <Button.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#2563EB" Offset="0"/>
+                        <GradientStop Color="#1D4ED8" Offset="1"/>
+                    </LinearGradientBrush>
+                </Button.Background>
+
+                <Button.Resources>
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#1D4ED8"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#1E40AF"/>
+                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White"/>
+                    <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
+                </Button.Resources>
+
+                <TextBlock Text="Done" FontWeight="Bold" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Button>
+        </Grid>
     </Grid>
 </Page>

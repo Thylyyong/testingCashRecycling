@@ -5,6 +5,7 @@ namespace SelfCheckoutKiosk.App.Models
 {
     public class CartItem : INotifyPropertyChanged
     {
+        public event EventHandler? ItemUpdated;
         private int _quantity = 1;
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -23,6 +24,8 @@ namespace SelfCheckoutKiosk.App.Models
                     _quantity = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(LineTotal));
+
+                    ItemUpdated?.Invoke(this, EventArgs.Empty);
                 }
             }
         }
