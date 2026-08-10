@@ -1,12 +1,82 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- INFRASTRUCTURE LAYER. References Core (implements its ports).
-       Owner: Back-End Developer.
-       TODO(Back-End): add EF Core + SQLCipher package refs in Sprint 0 proper;
-       the AOT spike validates them here first. -->
+
+  <!--
+    ============================================================
+    Infrastructure Runtime Compatibility
+    ============================================================
+
+    Directory.Build.props enables:
+
+        <IsAotCompatible>true</IsAotCompatible>
+
+    for every production project.
+
+    EF Core 10 currently relies on functionality that is not fully
+    compatible with NativeAOT / trimming.
+
+    Infrastructure is the EF Core / SQLite / SQLCipher persistence
+    boundary, so it explicitly opts out of those compatibility
+    analyzers.
+
+    IMPORTANT:
+    - Domain remains AOT-compatible.
+    - Core remains AOT-compatible.
+    - We do not suppress IL2026 / IL3050.
+    - We do not change the solution-wide strict warning policy.
+    ============================================================
+  -->
   <PropertyGroup>
-    <RootNamespace>SelfCheckoutKiosk.Infrastructure</RootNamespace>
+    <IsAotCompatible>false</IsAotCompatible>
+    <IsTrimmable>false</IsTrimmable>
+
+    <EnableAotAnalyzer>false</EnableAotAnalyzer>
+    <EnableTrimAnalyzer>false</EnableTrimAnalyzer>
   </PropertyGroup>
+
+
+  <!--
+    ============================================================
+    Project Dependencies
+    ============================================================
+  -->
   <ItemGroup>
+    <ProjectReference Include="..\SelfCheckoutKiosk.Domain\SelfCheckoutKiosk.Domain.csproj" />
+
     <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
   </ItemGroup>
+
+
+  <!--
+    ============================================================
+    Persistence Dependencies
+    ============================================================
+
+    Use Sqlite.Core rather than Microsoft.EntityFrameworkCore.Sqlite.
+
+    Sqlite.Core gives us the managed EF Core SQLite provider without
+    forcing the normal bundled native SQLite implementation.
+
+    That keeps the native database engine open for the SQLCipher
+    provider that will be configured in the next persistence step.
+    ============================================================
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.10" />
+
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+      <PrivateAssets>all</PrivateAssets>
+
+      <IncludeAssets>
+        runtime;
+        build;
+        native;
+        contentfiles;
+        analyzers;
+        buildtransitive
+      </IncludeAssets>
+    </PackageReference>
+
+    <PackageReference Include="SQLitePCLRaw.provider.winsqlite3" Version="2.1.11" />
+  </ItemGroup>
+
 </Project>
