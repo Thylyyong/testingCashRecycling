@@ -1,4 +1,12 @@
-<Page x:Class="SelfCheckoutKiosk.App.Views.Customer.HomeView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d">
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="SelfCheckoutKiosk.App.Views.Customer.HomeView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
     <Page.Resources>
         <!-- LANGUAGE DROPDOWN -->
         <Style x:Key="LanguageDropDownButtonStyle" TargetType="DropDownButton">
@@ -19,7 +27,64 @@
             <Setter Property="FontFamily" Value="{StaticResource KhmerFont}"/>
         </Style>
     </Page.Resources>
+
     <Grid x:Name="RootGrid" Background="White">
+
+        <!-- ========================================================= -->
+        <!-- VISUAL STATE MANAGER (RESPONSIVE SCALING) -->
+        <!-- ========================================================= -->
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="AdaptiveLayoutStates">
+                <VisualState x:Name="DefaultKioskState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                </VisualState>
+
+                <!-- 27.5" 9:16 Vertical Screen (1080x1920) -->
+                <VisualState x:Name="LargeVerticalKioskState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowHeight="1000"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- 0. Language Switcher Scaling -->
+                        <Setter Target="LanguageDropDownButton.Padding" Value="24,12"/>
+                        <Setter Target="LanguageDropDownButton.CornerRadius" Value="28"/>
+                        <Setter Target="CurrentLanguageFlag.Width" Value="36"/>
+                        <Setter Target="CurrentLanguageFlag.Height" Value="24"/>
+                        <Setter Target="CurrentLanguageText.FontSize" Value="22"/>
+
+                        <!-- Dropdown Menu Scaling -->
+                        <Setter Target="EnglishMenuItem.FontSize" Value="22"/>
+                        <Setter Target="EnglishMenuItem.Padding" Value="24,16"/>
+                        <Setter Target="EnglishMenuIcon.Width" Value="36"/>
+                        <Setter Target="EnglishMenuIcon.Height" Value="24"/>
+
+                        <Setter Target="KhmerMenuItem.FontSize" Value="22"/>
+                        <Setter Target="KhmerMenuItem.Padding" Value="24,16"/>
+                        <Setter Target="KhmerMenuIcon.Width" Value="36"/>
+                        <Setter Target="KhmerMenuIcon.Height" Value="24"/>
+
+                        <!-- 1. Welcome Heading Scaling -->
+                        <Setter Target="WelcomeStackPanel.Spacing" Value="10"/>
+                        <Setter Target="WelcomeSubheadingText.FontSize" Value="22"/>
+                        <Setter Target="WelcomeTitleText.FontSize" Value="56"/>
+
+                        <!-- 3. Footer Scaling -->
+                        <Setter Target="FooterGrid.Padding" Value="40,0"/>
+                        <Setter Target="StoreHoursStack.Spacing" Value="12"/>
+                        <Setter Target="StoreHoursIcon.FontSize" Value="24"/>
+                        <Setter Target="StoreHoursText.FontSize" Value="20"/>
+                        <Setter Target="HelpButton.Padding" Value="28,14"/>
+                        <Setter Target="HelpButton.CornerRadius" Value="32"/>
+                        <Setter Target="HelpButtonStack.Spacing" Value="12"/>
+                        <Setter Target="HelpButtonIcon.FontSize" Value="24"/>
+                        <Setter Target="HelpButtonText.FontSize" Value="20"/>
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
         <Grid.RowDefinitions>
             <!-- 0: Language bar -->
             <RowDefinition Height="8*"/>
@@ -30,6 +95,7 @@
             <!-- 3: Footer -->
             <RowDefinition Height="12*"/>
         </Grid.RowDefinitions>
+
         <!-- ========================================================= -->
         <!-- 0. LANGUAGE SWITCHER -->
         <!-- ========================================================= -->
@@ -42,30 +108,32 @@
                 <DropDownButton.Flyout>
                     <MenuFlyout Placement="Bottom">
                         <!-- ENGLISH -->
-                        <MenuFlyoutItem Text="English" Style="{StaticResource LanguageMenuItemStyle}" RequestedTheme="Light" Click="LanguageItem_Click">
+                        <MenuFlyoutItem x:Name="EnglishMenuItem" Text="English" Style="{StaticResource LanguageMenuItemStyle}" RequestedTheme="Light" Click="LanguageItem_Click">
                             <MenuFlyoutItem.Icon>
-                                <ImageIcon Width="26" Height="18" Source="ms-appx:///Assets/Images/Flag/en-flag.png"/>
+                                <ImageIcon x:Name="EnglishMenuIcon" Width="26" Height="18" Source="ms-appx:///Assets/Images/Flag/en-flag.png"/>
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                         <!-- KHMER -->
-                        <MenuFlyoutItem Text="ភាសាខ្មែរ" Style="{StaticResource LanguageMenuItemStyle}" RequestedTheme="Light" Click="LanguageItem_Click">
+                        <MenuFlyoutItem x:Name="KhmerMenuItem" Text="ភាសាខ្មែរ" Style="{StaticResource LanguageMenuItemStyle}" RequestedTheme="Light" Click="LanguageItem_Click">
                             <MenuFlyoutItem.Icon>
-                                <ImageIcon Width="26" Height="18" Source="ms-appx:///Assets/Images/Flag/km-flag.png"/>
+                                <ImageIcon x:Name="KhmerMenuIcon" Width="26" Height="18" Source="ms-appx:///Assets/Images/Flag/km-flag.png"/>
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
                     </MenuFlyout>
                 </DropDownButton.Flyout>
             </DropDownButton>
         </Grid>
+
         <!-- ========================================================= -->
         <!-- 1. WELCOME HEADING -->
         <!-- ========================================================= -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
-            <TextBlock Text="WELCOME TO" FontSize="16" FontWeight="SemiBold" Foreground="#94A3B8" CharacterSpacing="100" HorizontalAlignment="Center"/>
-            <TextBlock Text="Self-Checkout" FontSize="38" FontWeight="Bold" Foreground="#1A202C" HorizontalAlignment="Center"/>
+        <StackPanel x:Name="WelcomeStackPanel" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+            <TextBlock x:Name="WelcomeSubheadingText" Text="WELCOME TO" FontSize="16" FontWeight="SemiBold" Foreground="#94A3B8" CharacterSpacing="100" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="WelcomeTitleText" Text="Self-Checkout" FontSize="38" FontWeight="Bold" Foreground="#1A202C" HorizontalAlignment="Center"/>
         </StackPanel>
+
         <!-- ========================================================= -->
-        <!-- 2. ACTION CARDS -->
+        <!-- 2. ACTION CARDS (UNCHANGED) -->
         <!-- ========================================================= -->
         <Grid Grid.Row="2" Padding="40,0" HorizontalAlignment="Stretch" VerticalAlignment="Top">
             <Grid.ColumnDefinitions>
@@ -73,9 +141,8 @@
                 <ColumnDefinition Width="32"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <!-- ===================================================== -->
+
             <!-- SCAN ITEM CARD -->
-            <!-- ===================================================== -->
             <Viewbox Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button Width="400" Height="400" CornerRadius="28" BorderThickness="0" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Click="ScanItemCard_Click">
                     <Button.Background>
@@ -92,8 +159,8 @@
                         <!-- Floating & pulse scan animation -->
                         <Storyboard x:Name="ScanIconAnimation" AutoReverse="True" RepeatBehavior="Forever">
                             <DoubleAnimation Storyboard.TargetName="IconTransform"
-                                 Storyboard.TargetProperty="Y"
-                                 From="-1" To="1.5" Duration="0:0:1.2">
+                                             Storyboard.TargetProperty="Y"
+                                             From="-1" To="1.5" Duration="0:0:1.2">
                                 <DoubleAnimation.EasingFunction>
                                     <SineEase EasingMode="EaseInOut"/>
                                 </DoubleAnimation.EasingFunction>
@@ -101,7 +168,6 @@
                         </Storyboard>
                     </Button.Resources>
 
-                    <!-- Container for Icon, Main Title, and Subtitle -->
                     <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -109,7 +175,7 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- 1. ICON (Starts animation on Loaded) -->
+                        <!-- ICON -->
                         <Viewbox Grid.Row="0" MaxWidth="120" MaxHeight="120" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,20">
                             <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEC5A;" Foreground="White" Loaded="ScanIcon_Loaded">
                                 <FontIcon.RenderTransform>
@@ -118,17 +184,16 @@
                             </FontIcon>
                         </Viewbox>
 
-                        <!-- 2. MAIN TITLE -->
+                        <!-- MAIN TITLE -->
                         <TextBlock Grid.Row="1" Text="Scan Item" FontWeight="Bold" FontSize="38" Foreground="White" HorizontalAlignment="Center" TextAlignment="Center"/>
 
-                        <!-- 3. SUBTITLE -->
+                        <!-- SUBTITLE -->
                         <TextBlock Grid.Row="2" Text="Self Checkout Scanner" FontSize="22" Foreground="#E2E8F0" Opacity="0.95" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
                     </Grid>
                 </Button>
             </Viewbox>
-            <!-- ===================================================== -->
+
             <!-- PAYMENT OPTIONS CARD -->
-            <!-- ===================================================== -->
             <Viewbox Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button Width="400" Height="400" CornerRadius="28" Background="White" BorderBrush="#CBD5E1" BorderThickness="2" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Click="PaymentOptionsCard_Click">
                     <Button.Resources>
@@ -140,8 +205,8 @@
                         <!-- Floating payment icon animation -->
                         <Storyboard x:Name="PaymentIconAnimation" AutoReverse="True" RepeatBehavior="Forever">
                             <DoubleAnimation Storyboard.TargetName="PaymentIconTransform"
-                                 Storyboard.TargetProperty="Y"
-                                 From="-1" To="1.5" Duration="0:0:1.2">
+                                             Storyboard.TargetProperty="Y"
+                                             From="-1" To="1.5" Duration="0:0:1.2">
                                 <DoubleAnimation.EasingFunction>
                                     <SineEase EasingMode="EaseInOut"/>
                                 </DoubleAnimation.EasingFunction>
@@ -149,7 +214,6 @@
                         </Storyboard>
                     </Button.Resources>
 
-                    <!-- Container for Icon, Main Title, and Subtitle -->
                     <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -157,7 +221,7 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- 1. ICON (Starts animation on Loaded) -->
+                        <!-- ICON -->
                         <Viewbox Grid.Row="0" MaxWidth="120" MaxHeight="120" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,20">
                             <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" Foreground="#0067C0">
                                 <FontIcon.RenderTransform>
@@ -166,33 +230,36 @@
                             </FontIcon>
                         </Viewbox>
 
-                        <!-- 2. MAIN TITLE -->
+                        <!-- MAIN TITLE -->
                         <TextBlock Grid.Row="1" Text="Payment" FontWeight="Bold" FontSize="38" Foreground="#1E293B" HorizontalAlignment="Center" TextAlignment="Center"/>
 
-                        <!-- 3. SUBTITLE -->
+                        <!-- SUBTITLE -->
                         <TextBlock Grid.Row="2" Text="Cards, Cash &amp; KHQR" FontSize="22" Foreground="#64748B" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
                     </Grid>
                 </Button>
             </Viewbox>
         </Grid>
+
         <!-- ========================================================= -->
         <!-- 3. FOOTER -->
         <!-- ========================================================= -->
-        <Grid Grid.Row="3" Padding="28,0" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+        <Grid x:Name="FooterGrid" Grid.Row="3" Padding="28,0" HorizontalAlignment="Stretch" VerticalAlignment="Center">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
+
             <!-- STORE HOURS -->
-            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE823;" FontSize="16" Foreground="#94A3B8"/>
+            <StackPanel x:Name="StoreHoursStack" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                <FontIcon x:Name="StoreHoursIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE823;" FontSize="16" Foreground="#94A3B8"/>
                 <TextBlock x:Name="StoreHoursText" Text="Open until 9:00 PM" FontSize="14" Foreground="#94A3B8"/>
             </StackPanel>
+
             <!-- HELP BUTTON -->
             <Button Grid.Column="1" x:Name="HelpButton" HorizontalAlignment="Right" VerticalAlignment="Center" Background="Transparent" BorderBrush="#CBD5E1" BorderThickness="1.5" CornerRadius="24" Padding="20,10" Click="HelpButton_Click">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE9CE;" FontSize="16" Foreground="#334155"/>
-                    <TextBlock Text="Need help?" FontSize="14" FontWeight="SemiBold" Foreground="#334155"/>
+                <StackPanel x:Name="HelpButtonStack" Orientation="Horizontal" Spacing="8">
+                    <FontIcon x:Name="HelpButtonIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE9CE;" FontSize="16" Foreground="#334155"/>
+                    <TextBlock x:Name="HelpButtonText" Text="Need help?" FontSize="16" FontWeight="SemiBold" Foreground="#334155"/>
                 </StackPanel>
             </Button>
         </Grid>

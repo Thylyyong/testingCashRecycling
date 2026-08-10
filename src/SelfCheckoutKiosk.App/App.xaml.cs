@@ -29,6 +29,13 @@ namespace SelfCheckoutKiosk.App
 
             // Assign the static reference BEFORE window operations or navigation occur
             MainWindowInstance = mainWindow;
+            // Ensure the static reference is cleared when the window is closed so consumers
+            // do not attempt to access a disposed native window (avoids COMException).
+            mainWindow.Closed += (_, __) =>
+            {
+                MainWindowInstance = null;
+                _window = null;
+            };
 
             _window.Activate();
         }

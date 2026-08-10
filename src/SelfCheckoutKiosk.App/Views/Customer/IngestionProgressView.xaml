@@ -20,7 +20,7 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Padding" Value="16,6"/>
             <Setter Property="Height" Value="40"/>
         </Style>
 
@@ -41,30 +41,84 @@
     </Page.Resources>
 
     <Grid Background="#FFF4F6F8">
+        <!-- ========================================================= -->
+        <!-- VISUAL STATE MANAGER (ADAPTIVE KIOSK SCALING AT 1000px+) -->
+        <!-- ========================================================= -->
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="DisplayStates">
+                <VisualState x:Name="DefaultState" />
+                <VisualState x:Name="LargeKioskState">
+                    <VisualState.StateTriggers>
+                        <!-- Triggers when vertical height is 1000px or greater (27.5" 1080x1920 target) -->
+                        <AdaptiveTrigger MinWindowHeight="1000" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Header Scaling & Padding Alignment -->
+                        <Setter Target="HeaderBorder.Padding" Value="48,16" />
+                        <Setter Target="HeaderBorder.Height" Value="100" />
+                        <Setter Target="HeaderTitleText.FontSize" Value="34" />
+                        <Setter Target="BackButton.Height" Value="64" />
+                        <Setter Target="BackButtonIcon.FontSize" Value="26" />
+
+                        <!-- Main Layout & Padding Scaling -->
+                        <Setter Target="MainBodyGrid.Margin" Value="48,28,48,28" />
+
+                        <!-- Hero Balance & Metrics Scaling -->
+                        <Setter Target="RemainingDueCard.Padding" Value="24,20" />
+                        <Setter Target="RemainingDueLabel.FontSize" Value="15" />
+                        <Setter Target="RemainingDueText.FontSize" Value="48" />
+                        <Setter Target="PaidProgressBar.Height" Value="12" />
+
+                        <Setter Target="TotalDueCard.Padding" Value="20,16" />
+                        <Setter Target="TotalDueLabel.FontSize" Value="14" />
+                        <Setter Target="TotalDueText.FontSize" Value="22" />
+
+                        <Setter Target="TotalPaidCard.Padding" Value="20,16" />
+                        <Setter Target="TotalPaidLabel.FontSize" Value="14" />
+                        <Setter Target="TotalPaidText.FontSize" Value="22" />
+
+                        <!-- Note Insertion Sizing -->
+                        <Setter Target="InsertCashLabel.FontSize" Value="22" />
+                        <Setter Target="UsdNotesLabel.FontSize" Value="14" />
+                        <Setter Target="KhrNotesLabel.FontSize" Value="14" />
+
+                        <!-- Activity Feed Scaling -->
+                        <Setter Target="ActivityLabel.FontSize" Value="22" />
+                        <Setter Target="ActivityBorder.Padding" Value="8" />
+
+                        <!-- Footer Scaling -->
+                        <Setter Target="FooterBorder.Padding" Value="48,28,48,32" />
+                        <Setter Target="CurrencyInfoIcon.FontSize" Value="20" />
+                        <Setter Target="CurrencyInfoText.FontSize" Value="18" />
+                        <Setter Target="ConfirmPaymentButton.Height" Value="96" />
+                        <Setter Target="ConfirmPaymentButton.FontSize" Value="28" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 1. HEADER -->
-        <Border Grid.Row="0" Background="#0067C0" Padding="20,16" Height="80">
+        <!-- 1. HEADER (Padding aligned to 24px left/right to match Body & Footer) -->
+        <Border x:Name="HeaderBorder" Grid.Row="0" Background="#0067C0" Padding="24,16" Height="80">
             <Grid VerticalAlignment="Center">
 
-                <!-- 1. Centered Title (Stays dead-center of the entire header) -->
+                <!-- Centered Title -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
-                    <!--<FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" FontSize="24" Foreground="White"/>-->
-                    <TextBlock Text="Cash Payment" Foreground="White" FontSize="26" FontWeight="Bold"/>
+                    <TextBlock x:Name="HeaderTitleText" Text="Cash Payment" Foreground="White" FontSize="26" FontWeight="Bold"/>
                 </StackPanel>
 
-                <!-- 2. Left Floating Button (With Hover, Pressed, and Disabled states) -->
+                <!-- Left Floating Button (Width auto-adjusts to icon + padding for precise edge alignment) -->
                 <Button x:Name="BackButton" 
-                    Width="60" 
-                    Height="50" 
-                    HorizontalAlignment="Left" 
-                    VerticalAlignment="Center" 
-                    CornerRadius="10"
-                    Style="{StaticResource HeaderChipButtonStyle}">
+                        Height="50" 
+                        HorizontalAlignment="Left" 
+                        VerticalAlignment="Center" 
+                        CornerRadius="10"
+                        Style="{StaticResource HeaderChipButtonStyle}">
 
                     <Button.Resources>
                         <!-- Pointer Over & Pressed States -->
@@ -81,15 +135,15 @@
                     </Button.Resources>
 
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE830;" FontSize="20"/>
+                        <FontIcon x:Name="BackButtonIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE830;" FontSize="20"/>
                     </StackPanel>
                 </Button>
 
             </Grid>
         </Border>
 
-        <!-- 2. BODY (Fixed content on top, scrollable activity region taking remaining vertical space) -->
-        <Grid Grid.Row="1" RowSpacing="16" Margin="24,16">
+        <!-- 2. BODY -->
+        <Grid x:Name="MainBodyGrid" Grid.Row="1" RowSpacing="16" Margin="24,16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <!-- Balance Section -->
@@ -103,9 +157,9 @@
             <StackPanel Grid.Row="0" Spacing="10">
 
                 <!-- Hero: remaining balance -->
-                <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="16" Padding="16,12">
+                <Border x:Name="RemainingDueCard" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="16" Padding="16,12">
                     <StackPanel Spacing="6">
-                        <TextBlock Text="AMOUNT REMAINING" FontSize="12" FontWeight="SemiBold" Foreground="#A0AEC0" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="RemainingDueLabel" Text="AMOUNT REMAINING" FontSize="12" FontWeight="SemiBold" Foreground="#A0AEC0" HorizontalAlignment="Center"/>
                         <TextBlock x:Name="RemainingDueText" FontSize="32" FontWeight="Bold" Foreground="#DC2626" HorizontalAlignment="Center"/>
                         <ProgressBar x:Name="PaidProgressBar" Minimum="0" Maximum="100" Value="0" Height="8" CornerRadius="4"
                                      Foreground="#059669" Background="#E2E8F0"/>
@@ -119,16 +173,16 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Border Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10">
+                    <Border x:Name="TotalDueCard" Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="TOTAL DUE" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
+                            <TextBlock x:Name="TotalDueLabel" Text="TOTAL DUE" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
                             <TextBlock x:Name="TotalDueText" FontSize="16" FontWeight="Bold" Foreground="#2D3748"/>
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Column="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10">
+                    <Border x:Name="TotalPaidCard" Grid.Column="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="AMOUNT PAID" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
+                            <TextBlock x:Name="TotalPaidLabel" Text="AMOUNT PAID" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
                             <TextBlock x:Name="TotalPaidText" FontSize="16" FontWeight="Bold" Foreground="#059669"/>
                         </StackPanel>
                     </Border>
@@ -137,10 +191,10 @@
 
             <!-- NOTE SELECTION -->
             <StackPanel Grid.Row="1" Spacing="10">
-                <TextBlock Text="Insert Cash" FontSize="16" FontWeight="Bold" Foreground="#2D3748"/>
+                <TextBlock x:Name="InsertCashLabel" Text="Insert Cash" FontSize="16" FontWeight="Bold" Foreground="#2D3748"/>
 
                 <StackPanel Spacing="6">
-                    <TextBlock Text="USD NOTES" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
+                    <TextBlock x:Name="UsdNotesLabel" Text="USD NOTES" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
                     <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" HorizontalScrollMode="Enabled">
                         <StackPanel x:Name="UsdNotesPanel" Orientation="Horizontal" Spacing="8">
                             <Button Content="$1"    Tag="1"    Style="{StaticResource NoteButtonStyle}"/>
@@ -154,7 +208,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="6">
-                    <TextBlock Text="KHR NOTES" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
+                    <TextBlock x:Name="KhrNotesLabel" Text="KHR NOTES" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
                     <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" HorizontalScrollMode="Enabled">
                         <StackPanel x:Name="KhrNotesPanel" Orientation="Horizontal" Spacing="8">
                             <Button Content="៛100"     Tag="100"    Style="{StaticResource NoteButtonStyle}"/>
@@ -172,16 +226,16 @@
                 </StackPanel>
             </StackPanel>
 
-            <!-- ACTIVITY (Fills remaining space and scrolls internally when messages overflow) -->
+            <!-- ACTIVITY -->
             <Grid Grid.Row="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                
-                <TextBlock Grid.Row="0" Text="Activity" FontSize="16" FontWeight="Bold" Foreground="#2D3748" Margin="0,0,0,6"/>
 
-                <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="4">
+                <TextBlock x:Name="ActivityLabel" Grid.Row="0" Text="Activity" FontSize="16" FontWeight="Bold" Foreground="#2D3748" Margin="0,0,0,6"/>
+
+                <Border x:Name="ActivityBorder" Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="4">
                     <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
                         <ItemsControl x:Name="AttemptsListControl">
                             <ItemsControl.ItemTemplate>
@@ -210,22 +264,24 @@
             </Grid>
         </Grid>
 
-        <!-- 3. FOOTER -->
-        <Border Grid.Row="2" Background="White" Padding="20,20" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+        <!-- 3. FOOTER (Padding aligned to 24px left/right to match Body & Header) -->
+        <Border x:Name="FooterBorder" Grid.Row="2" Background="White" Padding="24,20" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
             <StackPanel Spacing="10">
 
                 <!-- Currency Acceptance Note -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
-                    <FontIcon FontFamily="Segoe Fluent Icons" 
-                          Glyph="&#xE946;" 
-                          FontSize="14" 
-                          Foreground="Green" 
-                          VerticalAlignment="Center"/>
-                    <TextBlock Text="USD ($) and KHR (៛) cash are both accepted" 
-                           FontSize="13" 
-                           FontWeight="SemiBold" 
-                           Foreground="Green"
-                           VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <FontIcon x:Name="CurrencyInfoIcon"
+                              FontFamily="Segoe Fluent Icons" 
+                              Glyph="&#xE946;" 
+                              FontSize="14" 
+                              Foreground="Green" 
+                              VerticalAlignment="Center"/>
+                    <TextBlock x:Name="CurrencyInfoText"
+                               Text="USD ($) and KHR (៛) cash are both accepted" 
+                               FontSize="13" 
+                               FontWeight="SemiBold" 
+                               Foreground="Green"
+                               VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Confirm Button -->

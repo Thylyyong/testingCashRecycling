@@ -124,8 +124,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     TextWrapping = TextWrapping.Wrap,
                     MaxWidth = 420
                 },
-                PrimaryButtonText = "Keep Going Back",
-                SecondaryButtonText = "Stay Here",
+                PrimaryButtonText = "Cancel & Go Back",
+                SecondaryButtonText = "Continue Payment",
                 PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"],
                 XamlRoot = this.Content?.XamlRoot ?? this.XamlRoot,
                 RequestedTheme = ElementTheme.Light

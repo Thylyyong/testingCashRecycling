@@ -9,6 +9,58 @@
       RequestedTheme="Light">
 
     <Grid Background="#F8FAFC">
+        <!-- ========================================================= -->
+        <!-- VISUAL STATE MANAGER (ADAPTIVE KIOSK SCALING AT 1000px+) -->
+        <!-- ========================================================= -->
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="DisplayStates">
+                <VisualState x:Name="DefaultState" />
+                <VisualState x:Name="LargeKioskState">
+                    <VisualState.StateTriggers>
+                        <!-- Triggers when vertical height is 1000px or greater (e.g., 1080x1920 27.5" Kiosk) -->
+                        <AdaptiveTrigger MinWindowHeight="1000" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Header Scaling -->
+                        <Setter Target="HeaderBorder.Height" Value="110" />
+                        <Setter Target="HeaderBorder.Padding" Value="36,20" />
+                        <Setter Target="HeaderIcon.FontSize" Value="36" />
+                        <Setter Target="HeaderTitleText.FontSize" Value="34" />
+
+                        <!-- Main Container Scaling -->
+                        <Setter Target="MainContainerStackPanel.Width" Value="680" />
+                        <Setter Target="MainContainerStackPanel.Spacing" Value="32" />
+
+                        <!-- Status Badge & Header -->
+                        <Setter Target="StatusIcon.FontSize" Value="120" />
+                        <Setter Target="StatusTitleText.FontSize" Value="42" />
+                        <Setter Target="TransactionIdText.FontSize" Value="18" />
+
+                        <!-- Receipt Card Scaling -->
+                        <Setter Target="ReceiptCardBorder.Padding" Value="48,40" />
+                        <Setter Target="TotalPaidLabel.FontSize" Value="16" />
+                        <Setter Target="TotalPaidText.FontSize" Value="64" />
+                        <Setter Target="TotalPaidKhrText.FontSize" Value="26" />
+                        <Setter Target="MethodIcon.FontSize" Value="22" />
+                        <Setter Target="MethodLabelText.FontSize" Value="20" />
+
+                        <!-- Warning Banner & Timer Scaling -->
+                        <Setter Target="PrinterWarningBanner.Padding" Value="24,18" />
+                        <Setter Target="PrinterWarningIcon.FontSize" Value="22" />
+                        <Setter Target="PrinterWarningText.FontSize" Value="18" />
+                        <Setter Target="TimerCountdownText.FontSize" Value="18" />
+                        <Setter Target="RedirectProgressBar.Height" Value="8" />
+                        <Setter Target="RedirectProgressBar.Width" Value="340" />
+
+                        <!-- Footer Scaling -->
+                        <Setter Target="FooterGrid.Padding" Value="48,32" />
+                        <Setter Target="DoneButton.Height" Value="96" />
+                        <Setter Target="DoneButtonText.FontSize" Value="30" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -16,37 +68,35 @@
         </Grid.RowDefinitions>
 
         <!-- KIOSK HEADER -->
-        <Border Grid.Row="0" Background="#0067C0" Padding="28,12" Height="80" MaxHeight="80">
+        <Border x:Name="HeaderBorder" Grid.Row="0" Background="#0067C0" Padding="28,12" Height="80">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
-                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEC61;" FontSize="28" Foreground="White"/>
-                <TextBlock Text="Payment Completed" Foreground="White" FontSize="26" FontWeight="Bold"/>
+                <FontIcon x:Name="HeaderIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xEC61;" FontSize="28" Foreground="White"/>
+                <TextBlock x:Name="HeaderTitleText" Text="Payment Completed" Foreground="White" FontSize="26" FontWeight="Bold"/>
             </StackPanel>
         </Border>
 
         <!-- MAIN BODY -->
-        <Grid Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
-            <StackPanel Width="460" Spacing="22" HorizontalAlignment="Center">
+        <Grid x:Name="MainBodyGrid" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel x:Name="MainContainerStackPanel" Width="460" Spacing="22" HorizontalAlignment="Center">
 
                 <!-- Status badge -->
-                <!--<Border Width="88" Height="88" CornerRadius="44" Background="#ECFDF5"
-                        BorderBrush="#059669" BorderThickness="2" HorizontalAlignment="Center">
-                </Border>-->
-                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEC61;" FontSize="80"
-                              Foreground="#059669" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <FontIcon x:Name="StatusIcon"
+                          FontFamily="Segoe Fluent Icons" Glyph="&#xEC61;" FontSize="80"
+                          Foreground="#059669" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
                 <!-- Status Header -->
                 <StackPanel HorizontalAlignment="Center" Spacing="4">
-                    <TextBlock Text="Payment Complete" FontSize="30" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="StatusTitleText" Text="Payment Complete" FontSize="30" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="TransactionIdText" FontFamily="Consolas" FontSize="13"
                                Foreground="#94A3B8" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- RECEIPT CARD -->
-                <Border Background="#FFFDF9" BorderBrush="#E7E2D6" BorderThickness="1"
+                <Border x:Name="ReceiptCardBorder" Background="#FFFDF9" BorderBrush="#E7E2D6" BorderThickness="1"
                         CornerRadius="16" Padding="32,28" HorizontalAlignment="Stretch">
                     <StackPanel HorizontalAlignment="Stretch">
 
-                        <TextBlock Text="TOTAL PAID" FontSize="12" FontWeight="Bold" Foreground="#64748B"
+                        <TextBlock x:Name="TotalPaidLabel" Text="TOTAL PAID" FontSize="12" FontWeight="Bold" Foreground="#64748B"
                                    HorizontalAlignment="Center" CharacterSpacing="80"/>
 
                         <!-- Primary amount: USD -->
@@ -64,7 +114,7 @@
 
                         <!-- Payment method -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" FontSize="16" Foreground="#0067C0"/>
+                            <FontIcon x:Name="MethodIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" FontSize="16" Foreground="#0067C0"/>
                             <TextBlock x:Name="MethodLabelText" Text="Paid with Cash" FontSize="15"
                                        FontWeight="SemiBold" Foreground="#475569"/>
                         </StackPanel>
@@ -76,7 +126,7 @@
                 <Border x:Name="PrinterWarningBanner" Background="#FFFBEB" BorderBrush="#FDE68A" BorderThickness="1"
                         CornerRadius="12" Padding="16,12" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7BA;" FontSize="16" Foreground="#B45309"/>
+                        <FontIcon x:Name="PrinterWarningIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE7BA;" FontSize="16" Foreground="#B45309"/>
                         <TextBlock x:Name="PrinterWarningText"
                                    Text="We couldn't print your receipt — please ask a staff member."
                                    FontSize="14" Foreground="#92400E" TextWrapping="Wrap" HorizontalAlignment="Center"/>
@@ -97,7 +147,7 @@
         </Grid>
 
         <!-- KIOSK FOOTER -->
-        <Grid Grid.Row="2" Background="White" Padding="32,20">
+        <Grid x:Name="FooterGrid" Grid.Row="2" Background="White" Padding="32,20">
             <Button x:Name="DoneButton" HorizontalAlignment="Stretch" Height="72" CornerRadius="16" Click="DoneButton_Click">
                 <Button.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -113,7 +163,7 @@
                     <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
                 </Button.Resources>
 
-                <TextBlock Text="DONE" FontWeight="Bold" FontSize="22" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" CharacterSpacing="60"/>
+                <TextBlock x:Name="DoneButtonText" Text="DONE" FontWeight="Bold" FontSize="22" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" CharacterSpacing="60"/>
             </Button>
         </Grid>
     </Grid>

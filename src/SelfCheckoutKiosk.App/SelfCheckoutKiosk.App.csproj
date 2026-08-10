@@ -14,25 +14,18 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-16.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-24.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-256.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-32.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-lightunplated_targetsize-48.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-16.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-256.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-32.png" />
-    <Content Remove="Assets\Square44x44Logo.altform-unplated_targetsize-48.png" />
-    <Content Remove="Assets\Square44x44Logo.scale-100.png" />
-    <Content Remove="Assets\Square44x44Logo.scale-125.png" />
-    <Content Remove="Assets\Square44x44Logo.scale-150.png" />
+    <Compile Remove="Resources\**" />
+    <EmbeddedResource Remove="Resources\**" />
+    <None Remove="Resources\**" />
+    <Page Remove="Resources\**" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Remove="Assets\Square44x44Logo.scale-200.png.png" />
-    <Content Remove="Assets\Square44x44Logo.scale-400.png" />
-    <Content Remove="Assets\Square44x44Logo.targetsize-16.png" />
-    <Content Remove="Assets\Square44x44Logo.targetsize-24.png" />
-    <Content Remove="Assets\Square44x44Logo.targetsize-256.png" />
-    <Content Remove="Assets\Square44x44Logo.targetsize-32.png" />
-    <Content Remove="Assets\Square44x44Logo.targetsize-48.png" />
+    <Content Remove="Assets\StoreLogo.scale-100.png" />
+    <Content Remove="Assets\StoreLogo.scale-125.png" />
+    <Content Remove="Assets\StoreLogo.scale-150.png" />
+    <Content Remove="Assets\StoreLogo.scale-200.png" />
+    <Content Remove="Assets\StoreLogo.scale-400.png" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Views\Admin\AdminLoginView.xaml" />
@@ -46,20 +39,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\..\..\..\..\Desktop\CA\ca.ico" Link="Assets\Logo\ca.ico" />
-    <Content Include="..\..\..\..\..\..\Desktop\CA\en-flag.png" Link="Assets\Images\Flag\en-flag.png" />
-    <Content Include="..\..\..\..\..\..\Desktop\CA\km-flag.png" Link="Assets\Images\Flag\km-flag.png" />
-    <Content Include="..\..\..\..\..\..\Desktop\Mockup Design Asset\banner4.jpg" Link="Assets\Images\Banner\banner4.jpg" />
-    <Content Include="..\..\..\..\..\..\Desktop\Mockup Design Asset\banner6.jpg" Link="Assets\Images\Banner\banner6.jpg" />
-    <Content Include="..\..\..\..\..\..\Desktop\Mockup Design Asset\banner7.jpg" Link="Assets\Images\Banner\banner7.jpg" />
-    <Content Include="..\..\..\..\..\..\Desktop\Mockup Design Asset\banner8.jpg" Link="Assets\Images\Banner\banner8.jpg" />
-    <Content Include="..\..\..\..\..\..\Desktop\Mockup Design Asset\banner9.jpg" Link="Assets\Images\Banner\banner9.jpg" />
-    <Content Include="Assets\SplashScreen.scale-200.png" />
-    <Content Include="Assets\LockScreenLogo.scale-200.png" />
-    <Content Include="Assets\Square150x150Logo.scale-200.png" />
-    <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
-    <Content Include="Assets\StoreLogo.png" />
-    <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+    <Content Include="..\..\..\..\..\Desktop\CA\ca.ico" Link="Assets\Logo\ca.ico" />
+    <Content Include="..\..\..\..\..\Desktop\CA\en-flag.png" Link="Assets\Images\Flag\en-flag.png" />
+    <Content Include="..\..\..\..\..\Desktop\CA\km-flag.png" Link="Assets\Images\Flag\km-flag.png" />
+    <Content Include="..\..\..\..\..\Desktop\Mockup Design Asset\banner4.jpg" Link="Assets\Images\Banner\banner4.jpg" />
+    <Content Include="..\..\..\..\..\Desktop\Mockup Design Asset\banner6.jpg" Link="Assets\Images\Banner\banner6.jpg" />
+    <Content Include="..\..\..\..\..\Desktop\Mockup Design Asset\banner7.jpg" Link="Assets\Images\Banner\banner7.jpg" />
+    <Content Include="..\..\..\..\..\Desktop\Mockup Design Asset\banner8.jpg" Link="Assets\Images\Banner\banner8.jpg" />
+    <Content Include="..\..\..\..\..\Desktop\Mockup Design Asset\banner9.jpg" Link="Assets\Images\Banner\banner9.jpg" />
     <Content Include="D:\My Data\Personal Project\wedding\public\fonts\NotoSansKhmer.ttf" Link="Assets\Fonts\NotoSansKhmer.ttf" />
   </ItemGroup>
 
@@ -103,11 +90,6 @@
     <Folder Include="Assets\Fonts\" />
     <Folder Include="Assets\Images\Flag\" />
     <Folder Include="Assets\Logo\" />
-    <Folder Include="Resources\Styles\" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\..\..\..\..\Desktop\CA\en-flag.webp" Link="Assets\Images\Flag\en-flag.webp" />
-    <None Include="..\..\..\..\..\..\Desktop\CA\km-flag.webp" Link="Assets\Images\Flag\km-flag.webp" />
   </ItemGroup>
   <ItemGroup>
     <Page Update="Views\Customer\IngestionProgressView.xaml">
@@ -146,4 +128,7 @@
     <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
     <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
   </PropertyGroup>
+  <ItemGroup>
+    <PRIResource Remove="Resources\**" />
+  </ItemGroup>
 </Project>

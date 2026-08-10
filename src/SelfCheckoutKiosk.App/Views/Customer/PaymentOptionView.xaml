@@ -53,6 +53,31 @@
     </Page.Resources>
 
     <Grid Background="White">
+        <!-- ========================================================= -->
+        <!-- VISUAL STATE MANAGER (UNIFORM ADAPTIVE PADDING & SCALING) -->
+        <!-- ========================================================= -->
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="DisplayStates">
+                <VisualState x:Name="DefaultState" />
+                <VisualState x:Name="LargeKioskState">
+                    <VisualState.StateTriggers>
+                        <!-- Triggers when vertical height is 1000px or greater -->
+                        <AdaptiveTrigger MinWindowHeight="1000" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Standardized Outer Edge Margins / Paddings (48px) -->
+                        <Setter Target="HeaderContainer.Margin" Value="48,28,48,28" />
+                        <Setter Target="CardsGrid.Padding" Value="48,32" />
+                        <Setter Target="FooterContainer.Padding" Value="48,0,48,32" />
+
+                        <!-- Typography adjustments -->
+                        <Setter Target="HeaderSubTitle.FontSize" Value="18" />
+                        <Setter Target="HeaderTitle.FontSize" Value="46" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
         <Grid.RowDefinitions>
             <!-- 0: Header -->
             <RowDefinition Height="Auto"/>
@@ -63,21 +88,27 @@
         </Grid.RowDefinitions>
 
         <!-- ========================================================= -->
-        <!-- 0. HEADER -->
+        <!-- 0. HEADER                                                 -->
         <!-- ========================================================= -->
         <Grid Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
-            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" Margin="40,32,40,24">
-                <StackPanel Spacing="4" HorizontalAlignment="Left">
-                    <TextBlock Text="OPTION" FontSize="14" FontWeight="SemiBold" Foreground="#94A3B8" CharacterSpacing="100"/>
-                    <TextBlock Text="Payment Method" FontSize="32" FontWeight="Bold" Foreground="#1A202C"/>
-                </StackPanel>
+            <Viewbox x:Name="HeaderViewbox" 
+                     Stretch="Uniform" 
+                     StretchDirection="DownOnly" 
+                     HorizontalAlignment="Left" 
+                     x:FieldModifier="public">
+                <Grid x:Name="HeaderContainer" Margin="40,24,40,20">
+                    <StackPanel Spacing="4" HorizontalAlignment="Left">
+                        <TextBlock x:Name="HeaderSubTitle" Text="OPTION" FontSize="14" FontWeight="SemiBold" Foreground="#94A3B8" CharacterSpacing="100"/>
+                        <TextBlock x:Name="HeaderTitle" Text="Payment Method" FontSize="32" FontWeight="Bold" Foreground="#1A202C"/>
+                    </StackPanel>
+                </Grid>
             </Viewbox>
         </Grid>
 
         <!-- ========================================================= -->
-        <!-- 1. PAYMENT CARDS: 2 columns x 3 rows, each card forced square via Viewbox -->
+        <!-- 1. PAYMENT CARDS: 2 columns x 3 rows                      -->
         <!-- ========================================================= -->
-        <Grid Grid.Row="1" Padding="40,32" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid x:Name="CardsGrid" Grid.Row="1" Padding="40,32" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="24"/>
@@ -194,18 +225,26 @@
         </Grid>
 
         <!-- ========================================================= -->
-        <!-- 2. BACK BUTTON (full-width, stretched at bottom) -->
+        <!-- 2. BACK BUTTON                                            -->
         <!-- ========================================================= -->
-        <Grid Grid.Row="2" Padding="40,0,40,32">
-            <Button Height="80" HorizontalAlignment="Stretch" Background="White" BorderBrush="#CBD5E1" BorderThickness="2" CornerRadius="16" Click="BackButton_Click">
+        <Grid x:Name="FooterContainer" Grid.Row="2" Padding="40,0,40,32">
+            <Button Height="80" 
+                    HorizontalAlignment="Stretch" 
+                    VerticalContentAlignment="Center"
+                    HorizontalContentAlignment="Center"
+                    Background="White" 
+                    BorderBrush="#CBD5E1" 
+                    BorderThickness="2" 
+                    CornerRadius="16" 
+                    Click="BackButton_Click">
                 <Button.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#F1F5F9"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#94A3B8"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#94A3B8"/>
                 </Button.Resources>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-                    <TextBlock Text="BACK" FontSize="24" FontWeight="Bold" Foreground="#334155"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                    <TextBlock Text="BACK" FontSize="24" FontWeight="Bold" Foreground="#334155" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
         </Grid>
