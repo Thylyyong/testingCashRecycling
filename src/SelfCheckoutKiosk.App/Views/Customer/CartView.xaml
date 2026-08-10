@@ -31,7 +31,7 @@
         </Style>
 
         <Storyboard x:Name="ScanAnimation" RepeatBehavior="Forever" AutoReverse="True">
-            <DoubleAnimation Storyboard.TargetName="ScanLineTransform" Storyboard.TargetProperty="Y" From="0" To="96" Duration="0:0:1.4">
+            <DoubleAnimation Storyboard.TargetName="ScanLineTransform" Storyboard.TargetProperty="Y" From="0" To="64" Duration="0:0:1.4">
                 <DoubleAnimation.EasingFunction>
                     <SineEase EasingMode="EaseInOut"/>
                 </DoubleAnimation.EasingFunction>
@@ -254,32 +254,118 @@
         <!-- EMPTY CART STATE -->
         <Border x:Name="EmptyCartState" Grid.Row="2" Background="#FFF4F6F8" Visibility="Visible">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-                <Grid Width="220" Height="140">
-                    <Border Background="White" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1.5" Padding="20,16">
-                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Rectangle Width="3" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="6" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="2" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="4" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="2" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="7" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="3" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="2" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="5" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="3" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="2" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="6" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="3" Height="70" Fill="#2D3748"/>
-                            <Rectangle Width="4" Height="70" Fill="#2D3748"/>
-                        </StackPanel>
-                    </Border>
 
-                    <Rectangle x:Name="ScanLine" Width="180" Height="3" Fill="#0067C0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,20">
-                        <Rectangle.RenderTransform>
-                            <TranslateTransform x:Name="ScanLineTransform" Y="0"/>
-                        </Rectangle.RenderTransform>
-                    </Rectangle>
-                </Grid>
+                <Border Background="White" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1.5" Padding="24,18">
+                    <Grid>
+
+                        <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                            <!-- BARCODE — no fixed Width, sizes to its actual bars -->
+                            <StackPanel Orientation="Horizontal" Spacing="3" Height="64" VerticalAlignment="Stretch">
+                                <Rectangle Width="3" Fill="#2D3748"/>
+                                <Rectangle Width="6" Fill="#2D3748"/>
+                                <Rectangle Width="2" Fill="#2D3748"/>
+                                <Rectangle Width="4" Fill="#2D3748"/>
+                                <Rectangle Width="2" Fill="#2D3748"/>
+                                <Rectangle Width="7" Fill="#2D3748"/>
+                                <Rectangle Width="3" Fill="#2D3748"/>
+                                <Rectangle Width="2" Fill="#2D3748"/>
+                                <Rectangle Width="5" Fill="#2D3748"/>
+                                <Rectangle Width="3" Fill="#2D3748"/>
+                            </StackPanel>
+
+                            <!-- Divider -->
+                            <Rectangle Width="1" Height="64" Fill="#E2E8F0"/>
+
+                            <!-- QR CODE — fixed 9x9 module grid -->
+                            <Grid Width="64" Height="64">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+
+                                <Rectangle Grid.Row="0" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="1" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="4" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="6" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="7" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="8" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="1" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="1" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="1" Grid.Column="6" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="1" Grid.Column="8" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="2" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="1" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="4" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="6" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="7" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="8" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="3" Grid.Column="4" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="4" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="4" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="4" Grid.Column="3" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="4" Grid.Column="5" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="4" Grid.Column="7" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="4" Grid.Column="8" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="5" Grid.Column="4" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="5" Grid.Column="6" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="6" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="6" Grid.Column="1" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="6" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="6" Grid.Column="5" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="6" Grid.Column="7" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="7" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="7" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="7" Grid.Column="4" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="7" Grid.Column="5" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="7" Grid.Column="7" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="7" Grid.Column="8" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="8" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="8" Grid.Column="1" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="8" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="8" Grid.Column="4" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="8" Grid.Column="6" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="8" Grid.Column="8" Fill="#2D3748"/>
+                            </Grid>
+
+                        </StackPanel>
+
+                        <Rectangle x:Name="ScanLine" Height="3" Fill="#0067C0" VerticalAlignment="Top" HorizontalAlignment="Stretch" Opacity="0.85">
+                            <Rectangle.RenderTransform>
+                                <TranslateTransform x:Name="ScanLineTransform" Y="0"/>
+                            </Rectangle.RenderTransform>
+                        </Rectangle>
+
+                    </Grid>
+                </Border>
 
                 <StackPanel Spacing="6" HorizontalAlignment="Center">
                     <TextBlock Text="Your Cart is Empty" FontWeight="Bold" FontSize="20" Foreground="#2D3748" HorizontalAlignment="Center"/>

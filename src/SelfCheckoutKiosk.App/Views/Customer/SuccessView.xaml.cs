@@ -4,20 +4,25 @@ using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
+using System;
 using System.Diagnostics;
 
 namespace SelfCheckoutKiosk.App.Views.Customer
 {
     public sealed partial class SuccessView : Page
     {
+        private const int AutoReturnSeconds = 60;
+        private static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(50);
+
         public SuccessViewModel? ViewModel { get; private set; }
+        private DispatcherTimer? _autoReturnTimer;
+        private double _secondsRemaining = AutoReturnSeconds;
+        private int _lastDisplayedSecond = AutoReturnSeconds;
 
         public SuccessView()
         {
             InitializeComponent();
-
             DoneButton.Click += DoneButton_Click;
-            //ViewReceiptButton.Click += ViewReceiptButton_Click;
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -27,7 +32,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             if (e.Parameter is not Payment payment)
             {
                 Debug.WriteLine("[WARN] SuccessView reached without a Payment parameter. Returning home.");
-
                 INavigationService fallbackNav = App.MainWindowInstance?.NavigationService
                     ?? new NavigationService(Frame);
                 fallbackNav.NavigateTo(typeof(HomeView), null);
@@ -43,63 +47,100 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 payment
             );
 
-            RenderReceipt();
+            RenderDetails();
+            StartAutoReturnTimer();
 
-            // Fire-and-forget stub print — matches "print automatically on success" behavior.
-            // Swap this for a button-triggered call instead if you want the user to control it.
-            ViewModel.PrintReceipt();
+            // PrintReceipt() is void, so there's no real success/failure signal here.
+            // This only catches thrown exceptions — if the printer service fails
+            // silently (logs internally, returns normally), this banner won't fire.
+            // Best real fix: have PrintReceipt() / IReceiptPrinterService.Print()
+            // return bool, or raise a PrintFailed event you can subscribe to.
+            try
+            {
+                ViewModel.PrintReceipt();
+                PrinterWarningBanner.Visibility = Visibility.Collapsed;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[WARN] Receipt print failed: {ex.Message}");
+                PrinterWarningBanner.Visibility = Visibility.Visible;
+            }
         }
 
-        private void RenderReceipt()
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            StopAutoReturnTimer();
+        }
+
+        private void RenderDetails()
         {
             if (ViewModel == null) return;
 
             TransactionIdText.Text = $"Transaction #{ViewModel.TransactionId}";
-            CompletedAtText.Text = ViewModel.CompletedAtText;
-            MethodLabelText.Text = ViewModel.MethodLabel;
+            MethodLabelText.Text = $"Paid with {ViewModel.MethodLabel}";
 
-            CashDetailsSection.Visibility = ViewModel.IsCash ? Visibility.Visible : Visibility.Collapsed;
+            // Split out instead of FormattedTotalPaid, which bundles USD + KHR together
+            TotalPaidText.Text = $"${ViewModel.Payment.TotalPaidUsd:0.00}";
+            TotalPaidKhrText.Text = $"≈ ៛{ViewModel.Payment.TotalPaidKhr:N0}";
+        }
 
-            if (ViewModel.IsCash)
+        private void StartAutoReturnTimer()
+        {
+            _secondsRemaining = AutoReturnSeconds;
+            _lastDisplayedSecond = AutoReturnSeconds;
+            UpdateTimerUI();
+
+            _autoReturnTimer = new DispatcherTimer
             {
-                TotalDueText.Text = ViewModel.FormattedTotalDue;
-                TotalPaidText.Text = ViewModel.FormattedTotalPaid;
+                Interval = TickInterval
+            };
+            _autoReturnTimer.Tick += AutoReturnTimer_Tick;
+            _autoReturnTimer.Start();
+        }
 
-                //ChangeDueRow.Visibility = ViewModel.HasChangeDue ? Visibility.Visible : Visibility.Collapsed;
-                //ChangeDueText.Text = ViewModel.FormattedChangeDue;
+        private void AutoReturnTimer_Tick(object? sender, object e)
+        {
+            _secondsRemaining -= TickInterval.TotalSeconds;
 
-                //AttemptsSummaryText.Text =
-                //    $"{ViewModel.AcceptedAttemptCount} accepted, {ViewModel.RejectedAttemptCount} rejected";
+            if (_secondsRemaining <= 0)
+            {
+                StopAutoReturnTimer();
+                ViewModel?.ReturnHome();
+            }
+            else
+            {
+                UpdateTimerUI();
             }
         }
 
-        private async void ViewReceiptButton_Click(object sender, RoutedEventArgs e)
+        private void UpdateTimerUI()
         {
-            if (ViewModel == null) return;
+            // Bar updates every tick (smooth drain)
+            RedirectProgressBar.Value = _secondsRemaining;
 
-            var dialog = new ContentDialog
+            // Text only updates once per whole second (avoids flicker)
+            int wholeSecond = (int)Math.Ceiling(_secondsRemaining);
+            if (wholeSecond != _lastDisplayedSecond)
             {
-                Title = "Receipt",
-                Content = new ScrollViewer
-                {
-                    Content = new TextBlock
-                    {
-                        Text = ViewModel.BuildVirtualReceiptText(),
-                        FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
-                        FontSize = 13,
-                        TextWrapping = TextWrapping.Wrap
-                    },
-                    MaxHeight = 400
-                },
-                CloseButtonText = "Close",
-                XamlRoot = this.Content?.XamlRoot ?? this.XamlRoot
-            };
+                _lastDisplayedSecond = wholeSecond;
+                TimerCountdownText.Text = $"This screen will return to the start in {wholeSecond} seconds";
+            }
+        }
 
-            await dialog.ShowAsync();
+        private void StopAutoReturnTimer()
+        {
+            if (_autoReturnTimer != null)
+            {
+                _autoReturnTimer.Stop();
+                _autoReturnTimer.Tick -= AutoReturnTimer_Tick;
+                _autoReturnTimer = null;
+            }
         }
 
         private void DoneButton_Click(object sender, RoutedEventArgs e)
         {
+            StopAutoReturnTimer();
             ViewModel?.ReturnHome();
         }
     }
