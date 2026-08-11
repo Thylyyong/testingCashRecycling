@@ -97,7 +97,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 {
                     _isCrossfading = true;
                     var lastBannerItem = ViewModel.BannerMediaPaths[_previousBannerIndex];
-                    string path = ((dynamic)lastBannerItem).Path;
+                    string path = lastBannerItem.Path;
 
                     if (!string.IsNullOrEmpty(path))
                     {
