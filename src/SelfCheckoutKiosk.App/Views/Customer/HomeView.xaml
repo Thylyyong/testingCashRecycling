@@ -35,43 +35,120 @@
         <!-- ========================================================= -->
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup x:Name="AdaptiveLayoutStates">
-                <VisualState x:Name="DefaultKioskState">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowHeight="0"/>
-                    </VisualState.StateTriggers>
-                </VisualState>
 
-                <!-- 27.5" 9:16 Vertical Screen (1080x1920) -->
-                <VisualState x:Name="LargeVerticalKioskState">
+                <!-- 1. Horizontal Kiosk: 16:9, 17.3 Inches (1920x1080) -->
+                <VisualState x:Name="Horizontal17InchState">
                     <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowHeight="1000"/>
+                        <AdaptiveTrigger MinWindowHeight="0" MinWindowWidth="0"/>
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <!-- 0. Language Switcher Scaling -->
-                        <Setter Target="LanguageDropDownButton.Padding" Value="24,12"/>
+                        <!-- Language Switcher Sizing -->
+                        <Setter Target="LanguageDropDownButton.Padding" Value="16,8"/>
+                        <Setter Target="LanguageDropDownButton.CornerRadius" Value="20"/>
+                        <Setter Target="CurrentLanguageFlag.Width" Value="24"/>
+                        <Setter Target="CurrentLanguageFlag.Height" Value="16"/>
+                        <Setter Target="CurrentLanguageText.FontSize" Value="16"/>
+
+                        <!-- MenuFlyout Item Sizing -->
+                        <Setter Target="EnglishMenuItem.FontSize" Value="16"/>
+                        <Setter Target="EnglishMenuItem.Padding" Value="16,10"/>
+                        <Setter Target="EnglishMenuIcon.Width" Value="24"/>
+                        <Setter Target="EnglishMenuIcon.Height" Value="16"/>
+                        <Setter Target="KhmerMenuItem.FontSize" Value="16"/>
+                        <Setter Target="KhmerMenuItem.Padding" Value="16,10"/>
+                        <Setter Target="KhmerMenuIcon.Width" Value="24"/>
+                        <Setter Target="KhmerMenuIcon.Height" Value="16"/>
+
+                        <!-- Welcome Heading Sizing -->
+                        <Setter Target="WelcomeStackPanel.Spacing" Value="6"/>
+                        <Setter Target="WelcomeSubheadingText.FontSize" Value="16"/>
+                        <Setter Target="WelcomeTitleText.FontSize" Value="38"/>
+
+                        <!-- Action Cards Grid Padding & Spacing -->
+                        <Setter Target="ActionCardsGrid.Padding" Value="36,0"/>
+                        <Setter Target="ActionCardsSpacer.Width" Value="28"/>
+
+                        <!-- Action Cards Internal Dimensions -->
+                        <Setter Target="ScanButton.Width" Value="360"/>
+                        <Setter Target="ScanButton.Height" Value="360"/>
+                        <Setter Target="ScanButton.CornerRadius" Value="24"/>
+                        <Setter Target="ScanIconViewbox.MaxWidth" Value="100"/>
+                        <Setter Target="ScanIconViewbox.MaxHeight" Value="100"/>
+                        <Setter Target="ScanTitleText.FontSize" Value="32"/>
+                        <Setter Target="ScanSubtitleText.FontSize" Value="18"/>
+
+                        <Setter Target="PaymentButton.Width" Value="360"/>
+                        <Setter Target="PaymentButton.Height" Value="360"/>
+                        <Setter Target="PaymentButton.CornerRadius" Value="24"/>
+                        <Setter Target="PaymentIconViewbox.MaxWidth" Value="100"/>
+                        <Setter Target="PaymentIconViewbox.MaxHeight" Value="100"/>
+                        <Setter Target="PaymentTitleText.FontSize" Value="32"/>
+                        <Setter Target="PaymentSubtitleText.FontSize" Value="18"/>
+
+                        <!-- Footer Sizing -->
+                        <Setter Target="FooterGrid.Padding" Value="36,0"/>
+                        <Setter Target="StoreHoursStack.Spacing" Value="8"/>
+                        <Setter Target="StoreHoursIcon.FontSize" Value="16"/>
+                        <Setter Target="StoreHoursText.FontSize" Value="15"/>
+                        <Setter Target="HelpButton.Padding" Value="20,10"/>
+                        <Setter Target="HelpButton.CornerRadius" Value="24"/>
+                        <Setter Target="HelpButtonStack.Spacing" Value="8"/>
+                        <Setter Target="HelpButtonIcon.FontSize" Value="16"/>
+                        <Setter Target="HelpButtonText.FontSize" Value="15"/>
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!-- 2. Vertical Kiosk: 9:16, 27.5 Inches (1080x1920) -->
+                <VisualState x:Name="Vertical27InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowHeight="1200" MinWindowWidth="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Language Switcher Sizing -->
+                        <Setter Target="LanguageDropDownButton.Padding" Value="26,14"/>
                         <Setter Target="LanguageDropDownButton.CornerRadius" Value="28"/>
                         <Setter Target="CurrentLanguageFlag.Width" Value="36"/>
                         <Setter Target="CurrentLanguageFlag.Height" Value="24"/>
                         <Setter Target="CurrentLanguageText.FontSize" Value="22"/>
 
-                        <!-- Dropdown Menu Scaling -->
+                        <!-- MenuFlyout Item Sizing -->
                         <Setter Target="EnglishMenuItem.FontSize" Value="22"/>
                         <Setter Target="EnglishMenuItem.Padding" Value="24,16"/>
                         <Setter Target="EnglishMenuIcon.Width" Value="36"/>
                         <Setter Target="EnglishMenuIcon.Height" Value="24"/>
-
                         <Setter Target="KhmerMenuItem.FontSize" Value="22"/>
                         <Setter Target="KhmerMenuItem.Padding" Value="24,16"/>
                         <Setter Target="KhmerMenuIcon.Width" Value="36"/>
                         <Setter Target="KhmerMenuIcon.Height" Value="24"/>
 
-                        <!-- 1. Welcome Heading Scaling -->
+                        <!-- Welcome Heading Sizing -->
                         <Setter Target="WelcomeStackPanel.Spacing" Value="10"/>
                         <Setter Target="WelcomeSubheadingText.FontSize" Value="22"/>
-                        <Setter Target="WelcomeTitleText.FontSize" Value="56"/>
+                        <Setter Target="WelcomeTitleText.FontSize" Value="58"/>
 
-                        <!-- 3. Footer Scaling -->
-                        <Setter Target="FooterGrid.Padding" Value="40,0"/>
+                        <!-- Action Cards Grid Padding & Spacing -->
+                        <Setter Target="ActionCardsGrid.Padding" Value="48,0"/>
+                        <Setter Target="ActionCardsSpacer.Width" Value="36"/>
+
+                        <!-- Action Cards Internal Dimensions -->
+                        <Setter Target="ScanButton.Width" Value="440"/>
+                        <Setter Target="ScanButton.Height" Value="440"/>
+                        <Setter Target="ScanButton.CornerRadius" Value="32"/>
+                        <Setter Target="ScanIconViewbox.MaxWidth" Value="130"/>
+                        <Setter Target="ScanIconViewbox.MaxHeight" Value="130"/>
+                        <Setter Target="ScanTitleText.FontSize" Value="42"/>
+                        <Setter Target="ScanSubtitleText.FontSize" Value="24"/>
+
+                        <Setter Target="PaymentButton.Width" Value="440"/>
+                        <Setter Target="PaymentButton.Height" Value="440"/>
+                        <Setter Target="PaymentButton.CornerRadius" Value="32"/>
+                        <Setter Target="PaymentIconViewbox.MaxWidth" Value="130"/>
+                        <Setter Target="PaymentIconViewbox.MaxHeight" Value="130"/>
+                        <Setter Target="PaymentTitleText.FontSize" Value="42"/>
+                        <Setter Target="PaymentSubtitleText.FontSize" Value="24"/>
+
+                        <!-- Footer Sizing -->
+                        <Setter Target="FooterGrid.Padding" Value="48,0"/>
                         <Setter Target="StoreHoursStack.Spacing" Value="12"/>
                         <Setter Target="StoreHoursIcon.FontSize" Value="24"/>
                         <Setter Target="StoreHoursText.FontSize" Value="20"/>
@@ -82,6 +159,7 @@
                         <Setter Target="HelpButtonText.FontSize" Value="20"/>
                     </VisualState.Setters>
                 </VisualState>
+
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
 
@@ -133,18 +211,18 @@
         </StackPanel>
 
         <!-- ========================================================= -->
-        <!-- 2. ACTION CARDS (UNCHANGED) -->
+        <!-- 2. ACTION CARDS -->
         <!-- ========================================================= -->
-        <Grid Grid.Row="2" Padding="40,0" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+        <Grid x:Name="ActionCardsGrid" Grid.Row="2" Padding="40,0" HorizontalAlignment="Stretch" VerticalAlignment="Top">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="32"/>
+                <ColumnDefinition x:Name="ActionCardsSpacer" Width="32"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- SCAN ITEM CARD -->
             <Viewbox Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <Button Width="400" Height="400" CornerRadius="28" BorderThickness="0" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Click="ScanItemCard_Click">
+                <Button x:Name="ScanButton" Width="400" Height="400" CornerRadius="28" BorderThickness="0" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Click="ScanItemCard_Click">
                     <Button.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                             <GradientStop Color="#2563EB" Offset="0"/>
@@ -176,7 +254,7 @@
                         </Grid.RowDefinitions>
 
                         <!-- ICON -->
-                        <Viewbox Grid.Row="0" MaxWidth="120" MaxHeight="120" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,20">
+                        <Viewbox x:Name="ScanIconViewbox" Grid.Row="0" MaxWidth="120" MaxHeight="120" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,20">
                             <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEC5A;" Foreground="White" Loaded="ScanIcon_Loaded">
                                 <FontIcon.RenderTransform>
                                     <TranslateTransform x:Name="IconTransform" Y="0"/>
@@ -185,17 +263,17 @@
                         </Viewbox>
 
                         <!-- MAIN TITLE -->
-                        <TextBlock Grid.Row="1" Text="Scan Item" FontWeight="Bold" FontSize="38" Foreground="White" HorizontalAlignment="Center" TextAlignment="Center"/>
+                        <TextBlock x:Name="ScanTitleText" Grid.Row="1" Text="Scan Item" FontWeight="Bold" FontSize="38" Foreground="White" HorizontalAlignment="Center" TextAlignment="Center"/>
 
                         <!-- SUBTITLE -->
-                        <TextBlock Grid.Row="2" Text="Self Checkout Scanner" FontSize="22" Foreground="#E2E8F0" Opacity="0.95" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
+                        <TextBlock x:Name="ScanSubtitleText" Grid.Row="2" Text="Self Checkout Scanner" FontSize="22" Foreground="#E2E8F0" Opacity="0.95" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
                     </Grid>
                 </Button>
             </Viewbox>
 
             <!-- PAYMENT OPTIONS CARD -->
             <Viewbox Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <Button Width="400" Height="400" CornerRadius="28" Background="White" BorderBrush="#CBD5E1" BorderThickness="2" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Click="PaymentOptionsCard_Click">
+                <Button x:Name="PaymentButton" Width="400" Height="400" CornerRadius="28" Background="White" BorderBrush="#CBD5E1" BorderThickness="2" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Click="PaymentOptionsCard_Click">
                     <Button.Resources>
                         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
                         <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#F1F5F9"/>
@@ -222,7 +300,7 @@
                         </Grid.RowDefinitions>
 
                         <!-- ICON -->
-                        <Viewbox Grid.Row="0" MaxWidth="120" MaxHeight="120" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,20">
+                        <Viewbox x:Name="PaymentIconViewbox" Grid.Row="0" MaxWidth="120" MaxHeight="120" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,20">
                             <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" Foreground="#0067C0">
                                 <FontIcon.RenderTransform>
                                     <TranslateTransform x:Name="PaymentIconTransform" Y="0"/>
@@ -231,10 +309,10 @@
                         </Viewbox>
 
                         <!-- MAIN TITLE -->
-                        <TextBlock Grid.Row="1" Text="Payment" FontWeight="Bold" FontSize="38" Foreground="#1E293B" HorizontalAlignment="Center" TextAlignment="Center"/>
+                        <TextBlock x:Name="PaymentTitleText" Grid.Row="1" Text="Payment" FontWeight="Bold" FontSize="38" Foreground="#1E293B" HorizontalAlignment="Center" TextAlignment="Center"/>
 
                         <!-- SUBTITLE -->
-                        <TextBlock Grid.Row="2" Text="Cards, Cash &amp; KHQR" FontSize="22" Foreground="#64748B" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
+                        <TextBlock x:Name="PaymentSubtitleText" Grid.Row="2" Text="Cards, Cash &amp; KHQR" FontSize="22" Foreground="#64748B" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
                     </Grid>
                 </Button>
             </Viewbox>

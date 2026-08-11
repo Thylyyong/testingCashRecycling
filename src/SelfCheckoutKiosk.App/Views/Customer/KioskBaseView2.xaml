@@ -22,34 +22,59 @@
 
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup x:Name="AdaptiveLayoutStates">
-                <VisualState x:Name="DefaultKioskState">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowHeight="0" />
-                    </VisualState.StateTriggers>
-                </VisualState>
 
-                <!-- 27.5" 9:16 Vertical Screen (1080x1920) -->
-                <VisualState x:Name="LargeVerticalKioskState">
+                <!-- 1. Horizontal Kiosk: 16:9, 17.3 Inches (1920x1080) -->
+                <VisualState x:Name="Horizontal17InchState">
                     <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowHeight="1000" />
+                        <AdaptiveTrigger MinWindowHeight="0" MinWindowWidth="0" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <!-- Banner Typography Sizing -->
-                        <Setter Target="WelcomeTextBlock.FontSize" Value="20" />
-                        <Setter Target="TitleTextBlock.FontSize" Value="52" />
+                        <!-- Banner Area Sizing -->
+                        <Setter Target="ScrimRectangle.Height" Value="200" />
+                        <Setter Target="BrandingStackPanel.Margin" Value="28,0,0,28" />
+                        <Setter Target="WelcomeTextBlock.FontSize" Value="14" />
+                        <Setter Target="TitleTextBlock.FontSize" Value="32" />
+                        <Setter Target="IndicatorDots.Margin" Value="0,0,28,32" />
 
                         <!-- Footer Layout Sizing -->
-                        <Setter Target="FooterGrid.Padding" Value="48,36,48,60" />
-                        <Setter Target="InstructionTextBlock.FontSize" Value="22" />
-                        <Setter Target="InstructionTextBlock.Margin" Value="0,0,0,24" />
+                        <Setter Target="FooterGrid.Padding" Value="36,16,36,24" />
+                        <Setter Target="InstructionTextBlock.FontSize" Value="16" />
+                        <Setter Target="InstructionTextBlock.Margin" Value="0,0,0,12" />
 
                         <!-- Start Button Sizing -->
-                        <Setter Target="StartButton.Height" Value="110" />
-                        <Setter Target="StartButton.MaxHeight" Value="110" />
-                        <Setter Target="StartButton.CornerRadius" Value="22" />
-                        <Setter Target="StartButtonTextBlock.FontSize" Value="30" />
+                        <Setter Target="StartButton.Height" Value="72" />
+                        <Setter Target="StartButton.MaxHeight" Value="72" />
+                        <Setter Target="StartButton.CornerRadius" Value="16" />
+                        <Setter Target="StartButtonTextBlock.FontSize" Value="22" />
                     </VisualState.Setters>
                 </VisualState>
+
+                <!-- 2. Vertical Kiosk: 9:16, 27.5 Inches (1080x1920) -->
+                <VisualState x:Name="Vertical27InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowHeight="1200" MinWindowWidth="0" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Banner Area Sizing -->
+                        <Setter Target="ScrimRectangle.Height" Value="340" />
+                        <Setter Target="BrandingStackPanel.Margin" Value="40,0,0,48" />
+                        <Setter Target="WelcomeTextBlock.FontSize" Value="22" />
+                        <Setter Target="TitleTextBlock.FontSize" Value="58" />
+                        <Setter Target="IndicatorDots.Margin" Value="0,0,40,52" />
+
+                        <!-- Footer Layout Sizing -->
+                        <Setter Target="FooterGrid.Padding" Value="56,40,56,64" />
+                        <Setter Target="InstructionTextBlock.FontSize" Value="24" />
+                        <Setter Target="InstructionTextBlock.Margin" Value="0,0,0,28" />
+
+                        <!-- Start Button Sizing -->
+                        <Setter Target="StartButton.Height" Value="120" />
+                        <Setter Target="StartButton.MaxHeight" Value="120" />
+                        <Setter Target="StartButton.CornerRadius" Value="24" />
+                        <Setter Target="StartButtonTextBlock.FontSize" Value="32" />
+                    </VisualState.Setters>
+                </VisualState>
+
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
 
@@ -70,7 +95,7 @@
                     <Image x:Name="CrossfadeOverlay" Stretch="UniformToFill" Opacity="0" IsHitTestVisible="False"/>
 
                     <!-- Gradient scrim so overlay text stays legible over any image -->
-                    <Rectangle VerticalAlignment="Bottom" Height="260" IsHitTestVisible="False">
+                    <Rectangle x:Name="ScrimRectangle" VerticalAlignment="Bottom" Height="260" IsHitTestVisible="False">
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                 <GradientStop Color="Transparent" Offset="0"/>
@@ -80,7 +105,7 @@
                     </Rectangle>
 
                     <!-- Store branding overlay, bottom-left -->
-                    <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="28,0,0,36" Spacing="4" IsHitTestVisible="False">
+                    <StackPanel x:Name="BrandingStackPanel" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="28,0,0,36" Spacing="4" IsHitTestVisible="False">
                         <TextBlock x:Name="WelcomeTextBlock" Text="WELCOME TO" FontSize="14" FontWeight="SemiBold" Foreground="#E2E8F0" CharacterSpacing="80"/>
                         <TextBlock x:Name="TitleTextBlock" Text="Self-Checkout" FontSize="34" FontWeight="Bold" Foreground="White"/>
                     </StackPanel>

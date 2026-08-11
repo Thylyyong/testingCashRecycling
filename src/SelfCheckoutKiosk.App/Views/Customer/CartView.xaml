@@ -47,7 +47,7 @@
                     Loaded="CartItemRow_Loaded" 
                     BorderBrush="#E2E8F0" 
                     BorderThickness="0,0,0,1" 
-                    Padding="12,22">
+                    Padding="12,12">
 
                 <Border.Background>
                     <SolidColorBrush x:Name="RowBackground" Color="Transparent" />
@@ -136,20 +136,81 @@
     <Grid Background="#FFF4F6F8">
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup x:Name="LayoutStates">
-                <!-- DEFAULT STATE -->
-                <VisualState x:Name="DefaultState">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowHeight="0" />
-                    </VisualState.StateTriggers>
-                </VisualState>
 
-                <!-- LARGE KIOSK DISPLAY STATE (27.5" Vertical 1080x1920) -->
-                <VisualState x:Name="LargeKioskState">
+                <!-- 1. SMALL VERTICAL TEST STATE (Compact portrait test window, base/default) -->
+                <VisualState x:Name="SmallVerticalTestState">
                     <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowHeight="1000" />
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="0"/>
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <!-- Header Scaling -->
+                        <Setter Target="HeaderBorder.Padding" Value="16,10"/>
+                        <Setter Target="HeaderTitle.FontSize" Value="16"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="22"/>
+                        <Setter Target="ItemCountLabel.FontSize" Value="11"/>
+                        <Setter Target="NetworkIcon.FontSize" Value="13"/>
+                        <Setter Target="NetworkStatusLabel.FontSize" Value="10"/>
+                        <Setter Target="BannerText.FontSize" Value="11"/>
+
+                        <Setter Target="EmptyCardBorder.Padding" Value="24,18"/>
+                        <Setter Target="EmptyTitleText.FontSize" Value="18"/>
+                        <Setter Target="EmptySubText.FontSize" Value="13"/>
+
+                        <Setter Target="TotalsBorder.Padding" Value="16,10"/>
+                        <Setter Target="TotalToPayLabel.FontSize" Value="13"/>
+                        <Setter Target="ItemCountSubLabel.FontSize" Value="11"/>
+                        <Setter Target="TotalUSDLabel.FontSize" Value="22"/>
+                        <Setter Target="TotalKHRLabel.FontSize" Value="13"/>
+    1
+                        <Setter Target="FooterArea.Padding" Value="12,10"/>
+                        <Setter Target="BackToScanButton.Width" Value="52"/>
+                        <Setter Target="BackToScanButton.Height" Value="52"/>
+                        <Setter Target="BackIcon.FontSize" Value="17"/>
+                        <Setter Target="CheckoutButton.Height" Value="52"/>
+                        <Setter Target="PayNowText.FontSize" Value="17"/>
+                        <Setter Target="RowBorder.Padding" Value="0,12"/>
+                        
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!-- 2. HORIZONTAL KIOSK STATE: 16:9, 17.3 Inches (1920x1080) -->
+                <VisualState x:Name="Horizontal17InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1400" MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="HeaderBorder.Padding" Value="24,14"/>
+                        <Setter Target="HeaderTitle.FontSize" Value="20"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="26"/>
+                        <Setter Target="ItemCountLabel.FontSize" Value="13"/>
+                        <Setter Target="NetworkIcon.FontSize" Value="16"/>
+                        <Setter Target="NetworkStatusLabel.FontSize" Value="12"/>
+                        <Setter Target="BannerText.FontSize" Value="13"/>
+
+                        <Setter Target="EmptyCardBorder.Padding" Value="44,34"/>
+                        <Setter Target="EmptyTitleText.FontSize" Value="24"/>
+                        <Setter Target="EmptySubText.FontSize" Value="16"/>
+
+                        <Setter Target="TotalsBorder.Padding" Value="24,12"/>
+                        <Setter Target="TotalToPayLabel.FontSize" Value="16"/>
+                        <Setter Target="ItemCountSubLabel.FontSize" Value="14"/>
+                        <Setter Target="TotalUSDLabel.FontSize" Value="30"/>
+                        <Setter Target="TotalKHRLabel.FontSize" Value="16"/>
+
+                        <Setter Target="FooterArea.Padding" Value="18,10"/>
+                        <Setter Target="BackToScanButton.Width" Value="64"/>
+                        <Setter Target="BackToScanButton.Height" Value="64"/>
+                        <Setter Target="BackIcon.FontSize" Value="20"/>
+                        <Setter Target="CheckoutButton.Height" Value="64"/>
+                        <Setter Target="PayNowText.FontSize" Value="20"/>
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!-- 3. VERTICAL KIOSK STATE: 9:16, 27.5 Inches (1080x1920) -->
+                <VisualState x:Name="Vertical27InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="1200"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
                         <Setter Target="HeaderBorder.Padding" Value="24,20"/>
                         <Setter Target="HeaderTitle.FontSize" Value="26"/>
                         <Setter Target="HeaderIcon.FontSize" Value="34"/>
@@ -158,19 +219,17 @@
                         <Setter Target="NetworkStatusLabel.FontSize" Value="15"/>
                         <Setter Target="BannerText.FontSize" Value="16"/>
 
-                        <!-- Empty State Scaling -->
                         <Setter Target="EmptyCardBorder.Padding" Value="56,40"/>
                         <Setter Target="EmptyTitleText.FontSize" Value="28"/>
                         <Setter Target="EmptySubText.FontSize" Value="18"/>
 
-                        <!-- Footer Scaling -->
-                        <Setter Target="FooterArea.Padding" Value="24,20"/>
+                        <Setter Target="TotalsBorder.Padding" Value="28,16"/>
                         <Setter Target="TotalToPayLabel.FontSize" Value="20"/>
                         <Setter Target="ItemCountSubLabel.FontSize" Value="16"/>
                         <Setter Target="TotalUSDLabel.FontSize" Value="38"/>
                         <Setter Target="TotalKHRLabel.FontSize" Value="20"/>
 
-                        <!-- Action Controls Scaling -->
+                        <Setter Target="FooterArea.Padding" Value="24,20"/>
                         <Setter Target="BackToScanButton.Width" Value="100"/>
                         <Setter Target="BackToScanButton.Height" Value="100"/>
                         <Setter Target="BackIcon.FontSize" Value="32"/>
@@ -178,6 +237,7 @@
                         <Setter Target="PayNowText.FontSize" Value="30"/>
                     </VisualState.Setters>
                 </VisualState>
+
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
 
@@ -430,7 +490,7 @@
         </Border>
 
         <!-- 3. TOTALS SUMMARY BREAKDOWN -->
-        <Border Grid.Row="3" Background="White" Padding="24,12" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+        <Border x:Name="TotalsBorder" Grid.Row="3" Background="White" Padding="24,12" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

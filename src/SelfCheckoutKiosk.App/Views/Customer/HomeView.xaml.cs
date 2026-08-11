@@ -33,7 +33,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             _inactivityTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(120)
+                Interval = TimeSpan.FromSeconds(20)
             };
 
             _inactivityTimer.Tick += InactivityTimer_Tick;

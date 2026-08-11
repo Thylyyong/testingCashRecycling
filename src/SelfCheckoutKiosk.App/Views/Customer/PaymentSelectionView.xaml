@@ -54,25 +54,42 @@
 
     <Grid Background="White">
         <!-- ========================================================= -->
-        <!-- VISUAL STATE MANAGER (UNIFORM ADAPTIVE PADDING & SCALING) -->
+        <!-- VISUAL STATE MANAGER (EXACT OPTIONVIEW STRUCTURE)         -->
         <!-- ========================================================= -->
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup x:Name="DisplayStates">
-                <VisualState x:Name="DefaultState" />
-                <VisualState x:Name="LargeKioskState">
+                <!-- DEFAULT STATE: Optimized for Small Vertical Testing Displays (< 1200px Height) -->
+                <VisualState x:Name="SmallVerticalState" />
+
+                <!-- LARGE VERTICAL KIOSK STATE: 27.5 Inch (1080x1920) -->
+                <VisualState x:Name="LargeVerticalKioskState">
                     <VisualState.StateTriggers>
-                        <!-- Triggers when vertical height is 1200px or greater (27.5" 1080x1920 target) -->
                         <AdaptiveTrigger MinWindowHeight="1200" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <!-- Standardized Outer Edge Margins / Paddings (48px) -->
-                        <Setter Target="HeaderContainer.Margin" Value="48,28,48,28" />
-                        <Setter Target="CardsGrid.Padding" Value="48,32" />
-                        <Setter Target="FooterContainer.Padding" Value="48,0,48,32" />
+                        <Setter Target="HeaderContainer.Margin" Value="64,48,64,36" />
+                        <Setter Target="CardsGrid.Padding" Value="64,40" />
+                        <Setter Target="FooterContainer.Padding" Value="64,0,64,48" />
+                        <Setter Target="HeaderTitle.FontSize" Value="48" />
+                        <Setter Target="HeaderSubTitle.FontSize" Value="20" />
+                        <Setter Target="CancelButton.Height" Value="96" />
+                        <Setter Target="CancelButtonText.FontSize" Value="28" />
+                    </VisualState.Setters>
+                </VisualState>
 
-                        <!-- Typography adjustments -->
-                        <Setter Target="HeaderSubTitle.FontSize" Value="18" />
-                        <Setter Target="HeaderTitle.FontSize" Value="46" />
+                <!-- HORIZONTAL KIOSK STATE: 17.3 Inch (1920x1080) -->
+                <VisualState x:Name="HorizontalKioskState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1200" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="HeaderContainer.Margin" Value="48,16,48,12" />
+                        <Setter Target="CardsGrid.Padding" Value="48,16" />
+                        <Setter Target="FooterContainer.Padding" Value="48,0,48,20" />
+                        <Setter Target="HeaderTitle.FontSize" Value="32" />
+                        <Setter Target="HeaderSubTitle.FontSize" Value="14" />
+                        <Setter Target="CancelButton.Height" Value="64" />
+                        <Setter Target="CancelButtonText.FontSize" Value="20" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -81,7 +98,7 @@
         <Grid.RowDefinitions>
             <!-- 0: Header -->
             <RowDefinition Height="Auto"/>
-            <!-- 1: Payment cards (3 rows) -->
+            <!-- 1: Payment cards grid -->
             <RowDefinition Height="*"/>
             <!-- 2: Cancel button -->
             <RowDefinition Height="Auto"/>
@@ -91,15 +108,11 @@
         <!-- 0. HEADER                                                 -->
         <!-- ========================================================= -->
         <Grid Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
-            <Viewbox x:Name="HeaderViewbox" 
-                     Stretch="Uniform" 
-                     StretchDirection="DownOnly" 
-                     HorizontalAlignment="Left" 
-                     x:FieldModifier="public">
-                <Grid x:Name="HeaderContainer" Margin="40,24,40,20">
+            <Viewbox x:Name="HeaderViewbox" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" x:FieldModifier="public">
+                <Grid x:Name="HeaderContainer" Margin="32,20,32,16">
                     <StackPanel Spacing="4" HorizontalAlignment="Left">
                         <TextBlock x:Name="HeaderSubTitle" Text="CHECKOUT" FontSize="14" FontWeight="SemiBold" Foreground="#94A3B8" CharacterSpacing="100"/>
-                        <TextBlock x:Name="HeaderTitle" Text="Choose a Payment Method" FontSize="32" FontWeight="Bold" Foreground="#1A202C"/>
+                        <TextBlock x:Name="HeaderTitle" Text="Choose a Payment Method" FontSize="36" FontWeight="Bold" Foreground="#1A202C"/>
                     </StackPanel>
                 </Grid>
             </Viewbox>
@@ -108,17 +121,17 @@
         <!-- ========================================================= -->
         <!-- 1. PAYMENT CARDS: 2 columns x 3 rows                      -->
         <!-- ========================================================= -->
-        <Grid x:Name="CardsGrid" Grid.Row="1" Padding="40,32" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid x:Name="CardsGrid" Grid.Row="1" Padding="32,20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="20"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="24"/>
+                <RowDefinition Height="20"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="24"/>
+                <RowDefinition Height="20"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -207,15 +220,18 @@
         <!-- ========================================================= -->
         <!-- 2. CANCEL BUTTON                                          -->
         <!-- ========================================================= -->
-        <Grid x:Name="FooterContainer" Grid.Row="2" Padding="40,0,40,32">
-            <Button x:Name="CancelButton" Height="80" HorizontalAlignment="Stretch" Background="White" BorderBrush="#EF4444" BorderThickness="2" CornerRadius="16" Click="CancelButton_Click">
+        <Grid x:Name="FooterContainer" Grid.Row="2" Padding="32,0,32,24">
+            <Button x:Name="CancelButton" Height="72" HorizontalAlignment="Stretch" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Background="White"
+                    BorderBrush="#EF4444" BorderThickness="2" CornerRadius="16" Click="CancelButton_Click">
                 <Button.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FEF2F2"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FEE2E2"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#EF4444"/>
                     <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#EF4444"/>
                 </Button.Resources>
-                <TextBlock Text="RETURN TO CART" FontSize="24" FontWeight="Bold" Foreground="#EF4444"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                    <TextBlock x:Name="CancelButtonText" Text="RETURN TO CART" FontSize="22" FontWeight="Bold" Foreground="#EF4444" VerticalAlignment="Center"/>
+                </StackPanel>
             </Button>
         </Grid>
     </Grid>

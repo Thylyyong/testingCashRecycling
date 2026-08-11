@@ -42,58 +42,155 @@
 
     <Grid Background="#FFF4F6F8">
         <!-- ========================================================= -->
-        <!-- VISUAL STATE MANAGER (ADAPTIVE KIOSK SCALING AT 1000px+) -->
+        <!-- VISUAL STATE MANAGER (ADAPTIVE KIOSK SCALING) -->
         <!-- ========================================================= -->
         <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup x:Name="DisplayStates">
-                <VisualState x:Name="DefaultState" />
-                <VisualState x:Name="LargeKioskState">
+            <VisualStateGroup x:Name="LayoutStates">
+
+                <!-- 1. SMALL VERTICAL TEST STATE (Compact portrait test window, base/default) -->
+                <VisualState x:Name="SmallVerticalTestState">
                     <VisualState.StateTriggers>
-                        <!-- Triggers when vertical height is 1000px or greater (27.5" 1080x1920 target) -->
-                        <AdaptiveTrigger MinWindowHeight="1000" />
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="0"/>
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <!-- Header Scaling & Padding Alignment -->
-                        <Setter Target="HeaderBorder.Padding" Value="48,16" />
-                        <Setter Target="HeaderBorder.Height" Value="100" />
-                        <Setter Target="HeaderTitleText.FontSize" Value="34" />
-                        <Setter Target="BackButton.Height" Value="64" />
-                        <Setter Target="BackButtonIcon.FontSize" Value="26" />
+                        <!-- Header -->
+                        <Setter Target="HeaderBorder.Padding" Value="16,10"/>
+                        <Setter Target="HeaderBorder.Height" Value="64"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="18"/>
+                        <Setter Target="BackButton.Height" Value="40"/>
+                        <Setter Target="BackButtonIcon.FontSize" Value="16"/>
 
-                        <!-- Main Layout & Padding Scaling -->
-                        <Setter Target="MainBodyGrid.Margin" Value="48,28,48,28" />
+                        <!-- Main Layout -->
+                        <Setter Target="MainBodyGrid.Margin" Value="14,10,14,10"/>
 
-                        <!-- Hero Balance & Metrics Scaling -->
-                        <Setter Target="RemainingDueCard.Padding" Value="24,20" />
-                        <Setter Target="RemainingDueLabel.FontSize" Value="15" />
-                        <Setter Target="RemainingDueText.FontSize" Value="48" />
-                        <Setter Target="PaidProgressBar.Height" Value="12" />
+                        <!-- Hero Balance & Metrics -->
+                        <Setter Target="RemainingDueCard.Padding" Value="14,10"/>
+                        <Setter Target="RemainingDueLabel.FontSize" Value="11"/>
+                        <Setter Target="RemainingDueText.FontSize" Value="26"/>
+                        <Setter Target="PaidProgressBar.Height" Value="6"/>
 
-                        <Setter Target="TotalDueCard.Padding" Value="20,16" />
-                        <Setter Target="TotalDueLabel.FontSize" Value="14" />
-                        <Setter Target="TotalDueText.FontSize" Value="22" />
+                        <Setter Target="TotalDueCard.Padding" Value="10,8"/>
+                        <Setter Target="TotalDueLabel.FontSize" Value="10"/>
+                        <Setter Target="TotalDueText.FontSize" Value="14"/>
 
-                        <Setter Target="TotalPaidCard.Padding" Value="20,16" />
-                        <Setter Target="TotalPaidLabel.FontSize" Value="14" />
-                        <Setter Target="TotalPaidText.FontSize" Value="22" />
+                        <Setter Target="TotalPaidCard.Padding" Value="10,8"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="10"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="14"/>
 
-                        <!-- Note Insertion Sizing -->
-                        <Setter Target="InsertCashLabel.FontSize" Value="22" />
-                        <Setter Target="UsdNotesLabel.FontSize" Value="14" />
-                        <Setter Target="KhrNotesLabel.FontSize" Value="14" />
+                        <!-- Note Insertion -->
+                        <Setter Target="InsertCashLabel.FontSize" Value="13"/>
+                        <Setter Target="UsdNotesLabel.FontSize" Value="10"/>
+                        <Setter Target="KhrNotesLabel.FontSize" Value="10"/>
 
-                        <!-- Activity Feed Scaling -->
-                        <Setter Target="ActivityLabel.FontSize" Value="22" />
-                        <Setter Target="ActivityBorder.Padding" Value="8" />
+                        <!-- Activity Feed -->
+                        <Setter Target="ActivityLabel.FontSize" Value="13"/>
+                        <Setter Target="ActivityBorder.Padding" Value="3"/>
 
-                        <!-- Footer Scaling -->
-                        <Setter Target="FooterBorder.Padding" Value="48,28,48,32" />
-                        <Setter Target="CurrencyInfoIcon.FontSize" Value="20" />
-                        <Setter Target="CurrencyInfoText.FontSize" Value="18" />
-                        <Setter Target="ConfirmPaymentButton.Height" Value="96" />
-                        <Setter Target="ConfirmPaymentButton.FontSize" Value="28" />
+                        <!-- Footer -->
+                        <Setter Target="FooterBorder.Padding" Value="16,12,16,14"/>
+                        <Setter Target="CurrencyInfoIcon.FontSize" Value="12"/>
+                        <Setter Target="CurrencyInfoText.FontSize" Value="11"/>
+                        <Setter Target="ConfirmPaymentButton.Height" Value="52"/>
+                        <Setter Target="ConfirmPaymentButton.FontSize" Value="17"/>
                     </VisualState.Setters>
                 </VisualState>
+
+                <!-- 2. HORIZONTAL KIOSK STATE: 16:9, 17.3 Inches (1920x1080) -->
+                <VisualState x:Name="Horizontal17InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1400" MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Header -->
+                        <Setter Target="HeaderBorder.Padding" Value="32,14"/>
+                        <Setter Target="HeaderBorder.Height" Value="84"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="26"/>
+                        <Setter Target="BackButton.Height" Value="54"/>
+                        <Setter Target="BackButtonIcon.FontSize" Value="21"/>
+
+                        <!-- Main Layout -->
+                        <Setter Target="MainBodyGrid.Margin" Value="32,18,32,18"/>
+
+                        <!-- Hero Balance & Metrics -->
+                        <Setter Target="RemainingDueCard.Padding" Value="20,14"/>
+                        <Setter Target="RemainingDueLabel.FontSize" Value="13"/>
+                        <Setter Target="RemainingDueText.FontSize" Value="36"/>
+                        <Setter Target="PaidProgressBar.Height" Value="9"/>
+
+                        <Setter Target="TotalDueCard.Padding" Value="16,12"/>
+                        <Setter Target="TotalDueLabel.FontSize" Value="12"/>
+                        <Setter Target="TotalDueText.FontSize" Value="18"/>
+
+                        <Setter Target="TotalPaidCard.Padding" Value="16,12"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="12"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="18"/>
+
+                        <!-- Note Insertion -->
+                        <Setter Target="InsertCashLabel.FontSize" Value="18"/>
+                        <Setter Target="UsdNotesLabel.FontSize" Value="12"/>
+                        <Setter Target="KhrNotesLabel.FontSize" Value="12"/>
+
+                        <!-- Activity Feed -->
+                        <Setter Target="ActivityLabel.FontSize" Value="18"/>
+                        <Setter Target="ActivityBorder.Padding" Value="6"/>
+
+                        <!-- Footer -->
+                        <Setter Target="FooterBorder.Padding" Value="32,18,32,20"/>
+                        <Setter Target="CurrencyInfoIcon.FontSize" Value="16"/>
+                        <Setter Target="CurrencyInfoText.FontSize" Value="14"/>
+                        <Setter Target="ConfirmPaymentButton.Height" Value="70"/>
+                        <Setter Target="ConfirmPaymentButton.FontSize" Value="22"/>
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!-- 3. VERTICAL KIOSK STATE: 9:16, 27.5 Inches (1080x1920) -->
+                <VisualState x:Name="Vertical27InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="1200"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Header -->
+                        <Setter Target="HeaderBorder.Padding" Value="48,16"/>
+                        <Setter Target="HeaderBorder.Height" Value="100"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="34"/>
+                        <Setter Target="BackButton.Height" Value="64"/>
+                        <Setter Target="BackButtonIcon.FontSize" Value="26"/>
+
+                        <!-- Main Layout -->
+                        <Setter Target="MainBodyGrid.Margin" Value="48,28,48,28"/>
+
+                        <!-- Hero Balance & Metrics -->
+                        <Setter Target="RemainingDueCard.Padding" Value="24,20"/>
+                        <Setter Target="RemainingDueLabel.FontSize" Value="15"/>
+                        <Setter Target="RemainingDueText.FontSize" Value="48"/>
+                        <Setter Target="PaidProgressBar.Height" Value="12"/>
+
+                        <Setter Target="TotalDueCard.Padding" Value="20,16"/>
+                        <Setter Target="TotalDueLabel.FontSize" Value="14"/>
+                        <Setter Target="TotalDueText.FontSize" Value="22"/>
+
+                        <Setter Target="TotalPaidCard.Padding" Value="20,16"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="14"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="22"/>
+
+                        <!-- Note Insertion -->
+                        <Setter Target="InsertCashLabel.FontSize" Value="22"/>
+                        <Setter Target="UsdNotesLabel.FontSize" Value="14"/>
+                        <Setter Target="KhrNotesLabel.FontSize" Value="14"/>
+
+                        <!-- Activity Feed -->
+                        <Setter Target="ActivityLabel.FontSize" Value="22"/>
+                        <Setter Target="ActivityBorder.Padding" Value="8"/>
+
+                        <!-- Footer -->
+                        <Setter Target="FooterBorder.Padding" Value="48,28,48,32"/>
+                        <Setter Target="CurrencyInfoIcon.FontSize" Value="20"/>
+                        <Setter Target="CurrencyInfoText.FontSize" Value="18"/>
+                        <Setter Target="ConfirmPaymentButton.Height" Value="96"/>
+                        <Setter Target="ConfirmPaymentButton.FontSize" Value="28"/>
+                    </VisualState.Setters>
+                </VisualState>
+
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
 
@@ -103,7 +200,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 1. HEADER (Padding aligned to 24px left/right to match Body & Footer) -->
+        <!-- 1. HEADER -->
         <Border x:Name="HeaderBorder" Grid.Row="0" Background="#0067C0" Padding="24,16" Height="80">
             <Grid VerticalAlignment="Center">
 
@@ -112,7 +209,7 @@
                     <TextBlock x:Name="HeaderTitleText" Text="Cash Payment" Foreground="White" FontSize="26" FontWeight="Bold"/>
                 </StackPanel>
 
-                <!-- Left Floating Button (Width auto-adjusts to icon + padding for precise edge alignment) -->
+                <!-- Left Floating Button -->
                 <Button x:Name="BackButton" 
                         Height="50" 
                         HorizontalAlignment="Left" 
@@ -264,7 +361,7 @@
             </Grid>
         </Grid>
 
-        <!-- 3. FOOTER (Padding aligned to 24px left/right to match Body & Header) -->
+        <!-- 3. FOOTER -->
         <Border x:Name="FooterBorder" Grid.Row="2" Background="White" Padding="24,20" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
             <StackPanel Spacing="10">
 

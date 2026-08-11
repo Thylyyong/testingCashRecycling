@@ -13,51 +13,140 @@
         <!-- VISUAL STATE MANAGER (ADAPTIVE KIOSK SCALING AT 1000px+) -->
         <!-- ========================================================= -->
         <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup x:Name="DisplayStates">
-                <VisualState x:Name="DefaultState" />
-                <VisualState x:Name="LargeKioskState">
+            <VisualStateGroup x:Name="LayoutStates">
+
+                <!-- 1. SMALL VERTICAL TEST STATE (Compact portrait test window, base/default) -->
+                <VisualState x:Name="SmallVerticalTestState">
                     <VisualState.StateTriggers>
-                        <!-- Triggers when vertical height is 1000px or greater (e.g., 1080x1920 27.5" Kiosk) -->
-                        <AdaptiveTrigger MinWindowHeight="1000" />
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="0"/>
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <!-- Header Scaling -->
-                        <Setter Target="HeaderBorder.Height" Value="110" />
-                        <Setter Target="HeaderBorder.Padding" Value="36,20" />
-                        <Setter Target="HeaderIcon.FontSize" Value="36" />
-                        <Setter Target="HeaderTitleText.FontSize" Value="34" />
+                        <!-- Header -->
+                        <Setter Target="HeaderBorder.Height" Value="76"/>
+                        <Setter Target="HeaderBorder.Padding" Value="22,14"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="24"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="21"/>
 
-                        <!-- Main Container Scaling -->
-                        <Setter Target="MainContainerStackPanel.Width" Value="680" />
-                        <Setter Target="MainContainerStackPanel.Spacing" Value="32" />
+                        <!-- Main Container -->
+                        <Setter Target="MainContainerStackPanel.Width" Value="360"/>
+                        <Setter Target="MainContainerStackPanel.Spacing" Value="18"/>
 
                         <!-- Status Badge & Header -->
-                        <Setter Target="StatusIcon.FontSize" Value="120" />
-                        <Setter Target="StatusTitleText.FontSize" Value="42" />
-                        <Setter Target="TransactionIdText.FontSize" Value="18" />
+                        <Setter Target="StatusIcon.FontSize" Value="68"/>
+                        <Setter Target="StatusTitleText.FontSize" Value="25"/>
+                        <Setter Target="TransactionIdText.FontSize" Value="12"/>
 
-                        <!-- Receipt Card Scaling -->
-                        <Setter Target="ReceiptCardBorder.Padding" Value="48,40" />
-                        <Setter Target="TotalPaidLabel.FontSize" Value="16" />
-                        <Setter Target="TotalPaidText.FontSize" Value="64" />
-                        <Setter Target="TotalPaidKhrText.FontSize" Value="26" />
-                        <Setter Target="MethodIcon.FontSize" Value="22" />
-                        <Setter Target="MethodLabelText.FontSize" Value="20" />
+                        <!-- Receipt Card -->
+                        <Setter Target="ReceiptCardBorder.Padding" Value="26,22"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="12"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="36"/>
+                        <Setter Target="TotalPaidKhrText.FontSize" Value="15"/>
+                        <Setter Target="MethodIcon.FontSize" Value="15"/>
+                        <Setter Target="MethodLabelText.FontSize" Value="14"/>
 
-                        <!-- Warning Banner & Timer Scaling -->
-                        <Setter Target="PrinterWarningBanner.Padding" Value="24,18" />
-                        <Setter Target="PrinterWarningIcon.FontSize" Value="22" />
-                        <Setter Target="PrinterWarningText.FontSize" Value="18" />
-                        <Setter Target="TimerCountdownText.FontSize" Value="18" />
-                        <Setter Target="RedirectProgressBar.Height" Value="8" />
-                        <Setter Target="RedirectProgressBar.Width" Value="340" />
+                        <!-- Warning Banner & Timer -->
+                        <Setter Target="PrinterWarningBanner.Padding" Value="14,10"/>
+                        <Setter Target="PrinterWarningIcon.FontSize" Value="15"/>
+                        <Setter Target="PrinterWarningText.FontSize" Value="13"/>
+                        <Setter Target="TimerCountdownText.FontSize" Value="12"/>
+                        <Setter Target="RedirectProgressBar.Height" Value="4"/>
+                        <Setter Target="RedirectProgressBar.Width" Value="180"/>
 
-                        <!-- Footer Scaling -->
-                        <Setter Target="FooterGrid.Padding" Value="48,32" />
-                        <Setter Target="DoneButton.Height" Value="96" />
-                        <Setter Target="DoneButtonText.FontSize" Value="30" />
+                        <!-- Footer -->
+                        <Setter Target="FooterGrid.Padding" Value="22,16"/>
+                        <Setter Target="DoneButton.Height" Value="60"/>
+                        <Setter Target="DoneButtonText.FontSize" Value="19"/>
                     </VisualState.Setters>
                 </VisualState>
+
+                <!-- 2. HORIZONTAL KIOSK STATE: 16:9, 17.3 Inches (1920x1080) -->
+                <VisualState x:Name="Horizontal17InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1400" MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Header -->
+                        <Setter Target="HeaderBorder.Height" Value="88"/>
+                        <Setter Target="HeaderBorder.Padding" Value="32,16"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="30"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="28"/>
+
+                        <!-- Main Container -->
+                        <Setter Target="MainContainerStackPanel.Width" Value="480"/>
+                        <Setter Target="MainContainerStackPanel.Spacing" Value="24"/>
+
+                        <!-- Status Badge & Header -->
+                        <Setter Target="StatusIcon.FontSize" Value="88"/>
+                        <Setter Target="StatusTitleText.FontSize" Value="32"/>
+                        <Setter Target="TransactionIdText.FontSize" Value="14"/>
+
+                        <!-- Receipt Card -->
+                        <Setter Target="ReceiptCardBorder.Padding" Value="36,30"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="13"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="48"/>
+                        <Setter Target="TotalPaidKhrText.FontSize" Value="19"/>
+                        <Setter Target="MethodIcon.FontSize" Value="18"/>
+                        <Setter Target="MethodLabelText.FontSize" Value="16"/>
+
+                        <!-- Warning Banner & Timer -->
+                        <Setter Target="PrinterWarningBanner.Padding" Value="18,14"/>
+                        <Setter Target="PrinterWarningIcon.FontSize" Value="18"/>
+                        <Setter Target="PrinterWarningText.FontSize" Value="15"/>
+                        <Setter Target="TimerCountdownText.FontSize" Value="14"/>
+                        <Setter Target="RedirectProgressBar.Height" Value="6"/>
+                        <Setter Target="RedirectProgressBar.Width" Value="260"/>
+
+                        <!-- Footer -->
+                        <Setter Target="FooterGrid.Padding" Value="36,24"/>
+                        <Setter Target="DoneButton.Height" Value="80"/>
+                        <Setter Target="DoneButtonText.FontSize" Value="24"/>
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!-- 3. VERTICAL KIOSK STATE: 9:16, 27.5 Inches (1080x1920) -->
+                <VisualState x:Name="Vertical27InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="1200"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Header -->
+                        <Setter Target="HeaderBorder.Height" Value="110"/>
+                        <Setter Target="HeaderBorder.Padding" Value="36,20"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="36"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="34"/>
+
+                        <!-- Main Container -->
+                        <Setter Target="MainContainerStackPanel.Width" Value="680"/>
+                        <Setter Target="MainContainerStackPanel.Spacing" Value="32"/>
+
+                        <!-- Status Badge & Header -->
+                        <Setter Target="StatusIcon.FontSize" Value="120"/>
+                        <Setter Target="StatusTitleText.FontSize" Value="42"/>
+                        <Setter Target="TransactionIdText.FontSize" Value="18"/>
+
+                        <!-- Receipt Card -->
+                        <Setter Target="ReceiptCardBorder.Padding" Value="48,40"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="16"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="64"/>
+                        <Setter Target="TotalPaidKhrText.FontSize" Value="26"/>
+                        <Setter Target="MethodIcon.FontSize" Value="22"/>
+                        <Setter Target="MethodLabelText.FontSize" Value="20"/>
+
+                        <!-- Warning Banner & Timer -->
+                        <Setter Target="PrinterWarningBanner.Padding" Value="24,18"/>
+                        <Setter Target="PrinterWarningIcon.FontSize" Value="22"/>
+                        <Setter Target="PrinterWarningText.FontSize" Value="18"/>
+                        <Setter Target="TimerCountdownText.FontSize" Value="18"/>
+                        <Setter Target="RedirectProgressBar.Height" Value="8"/>
+                        <Setter Target="RedirectProgressBar.Width" Value="340"/>
+
+                        <!-- Footer -->
+                        <Setter Target="FooterGrid.Padding" Value="48,32"/>
+                        <Setter Target="DoneButton.Height" Value="96"/>
+                        <Setter Target="DoneButtonText.FontSize" Value="30"/>
+                    </VisualState.Setters>
+                </VisualState>
+
             </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
 

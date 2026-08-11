@@ -54,25 +54,62 @@
 
     <Grid Background="White">
         <!-- ========================================================= -->
-        <!-- VISUAL STATE MANAGER (UNIFORM ADAPTIVE PADDING & SCALING) -->
+        <!-- VISUAL STATE MANAGER (ADAPTIVE RESPONSIVE STATES)          -->
         <!-- ========================================================= -->
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup x:Name="DisplayStates">
-                <VisualState x:Name="DefaultState" />
-                <VisualState x:Name="LargeKioskState">
+                <!-- DEFAULT STATE: Optimized for Small Vertical Testing Displays (< 1200px Height) -->
+                <VisualState x:Name="SmallVerticalState" />
+
+                <!-- LARGE VERTICAL KIOSK STATE: 27.5 Inch (1080x1920) -->
+                <VisualState x:Name="LargeVerticalKioskState">
                     <VisualState.StateTriggers>
-                        <!-- Triggers when vertical height is 1000px or greater -->
-                        <AdaptiveTrigger MinWindowHeight="1000" />
+                        <AdaptiveTrigger MinWindowHeight="1200" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <!-- Standardized Outer Edge Margins / Paddings (48px) -->
-                        <Setter Target="HeaderContainer.Margin" Value="48,28,48,28" />
-                        <Setter Target="CardsGrid.Padding" Value="48,32" />
-                        <Setter Target="FooterContainer.Padding" Value="48,0,48,32" />
+                        <Setter Target="HeaderContainer.Margin" Value="64,48,64,36" />
+                        <Setter Target="CardsGrid.Padding" Value="64,40" />
+                        <Setter Target="FooterContainer.Padding" Value="64,0,64,48" />
+                        <Setter Target="HeaderTitle.FontSize" Value="48" />
+                        <Setter Target="HeaderSubTitle.FontSize" Value="20" />
+                        <Setter Target="BackButton.Height" Value="96" />
+                        <Setter Target="BackButtonText.FontSize" Value="28" />
+                    </VisualState.Setters>
+                </VisualState>
 
-                        <!-- Typography adjustments -->
-                        <Setter Target="HeaderSubTitle.FontSize" Value="18" />
-                        <Setter Target="HeaderTitle.FontSize" Value="46" />
+                <!-- HORIZONTAL KIOSK STATE: 17.3 Inch (1920x1080) -->
+                <VisualState x:Name="HorizontalKioskState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1200" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="HeaderContainer.Margin" Value="48,16,48,12" />
+                        <Setter Target="CardsGrid.Padding" Value="48,16" />
+                        <Setter Target="FooterContainer.Padding" Value="48,0,48,20" />
+                        <Setter Target="HeaderTitle.FontSize" Value="32" />
+                        <Setter Target="HeaderSubTitle.FontSize" Value="14" />
+                        <Setter Target="BackButton.Height" Value="64" />
+                        <Setter Target="BackButtonText.FontSize" Value="20" />
+                        <!-- Switch Cards to 3 Columns x 2 Rows for Horizontal Display -->
+                        <Setter Target="CardsGrid.ColumnDefinitions[0].Width" Value="*" />
+                        <Setter Target="CardsGrid.ColumnDefinitions[1].Width" Value="20" />
+                        <Setter Target="CardsGrid.ColumnDefinitions[2].Width" Value="*" />
+                        <Setter Target="CardsGrid.ColumnDefinitions[3].Width" Value="20" />
+                        <Setter Target="CardsGrid.ColumnDefinitions[4].Width" Value="*" />
+                        <Setter Target="CardsGrid.RowDefinitions[0].Height" Value="*" />
+                        <Setter Target="CardsGrid.RowDefinitions[1].Height" Value="20" />
+                        <Setter Target="CardsGrid.RowDefinitions[2].Height" Value="*" />
+                        <Setter Target="CardsGrid.RowDefinitions[3].Height" Value="0" />
+                        <Setter Target="CardsGrid.RowDefinitions[4].Height" Value="0" />
+                        <!-- Reposition Cards for 3x2 Grid Placement -->
+                        <Setter Target="CardViewbox.Grid.Row" Value="0" />
+                        <Setter Target="CardViewbox.Grid.Column" Value="4" />
+                        <Setter Target="IntlQrViewbox.Grid.Row" Value="2" />
+                        <Setter Target="IntlQrViewbox.Grid.Column" Value="0" />
+                        <Setter Target="MembershipViewbox.Grid.Row" Value="2" />
+                        <Setter Target="MembershipViewbox.Grid.Column" Value="2" />
+                        <Setter Target="CouponViewbox.Grid.Row" Value="2" />
+                        <Setter Target="CouponViewbox.Grid.Column" Value="4" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -81,7 +118,7 @@
         <Grid.RowDefinitions>
             <!-- 0: Header -->
             <RowDefinition Height="Auto"/>
-            <!-- 1: Payment cards (3 rows) -->
+            <!-- 1: Payment cards grid -->
             <RowDefinition Height="*"/>
             <!-- 2: Back button -->
             <RowDefinition Height="Auto"/>
@@ -91,40 +128,38 @@
         <!-- 0. HEADER                                                 -->
         <!-- ========================================================= -->
         <Grid Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
-            <Viewbox x:Name="HeaderViewbox" 
-                     Stretch="Uniform" 
-                     StretchDirection="DownOnly" 
-                     HorizontalAlignment="Left" 
-                     x:FieldModifier="public">
-                <Grid x:Name="HeaderContainer" Margin="40,24,40,20">
+            <Viewbox x:Name="HeaderViewbox" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" x:FieldModifier="public">
+                <Grid x:Name="HeaderContainer" Margin="32,20,32,16">
                     <StackPanel Spacing="4" HorizontalAlignment="Left">
                         <TextBlock x:Name="HeaderSubTitle" Text="OPTION" FontSize="14" FontWeight="SemiBold" Foreground="#94A3B8" CharacterSpacing="100"/>
-                        <TextBlock x:Name="HeaderTitle" Text="Payment Method" FontSize="32" FontWeight="Bold" Foreground="#1A202C"/>
+                        <TextBlock x:Name="HeaderTitle" Text="Payment Method" FontSize="36" FontWeight="Bold" Foreground="#1A202C"/>
                     </StackPanel>
                 </Grid>
             </Viewbox>
         </Grid>
 
         <!-- ========================================================= -->
-        <!-- 1. PAYMENT CARDS: 2 columns x 3 rows                      -->
+        <!-- 1. PAYMENT CARDS                                          -->
+        <!-- Dynamic Layout: 2x3 (Vertical) or 3x2 (Horizontal)         -->
         <!-- ========================================================= -->
-        <Grid x:Name="CardsGrid" Grid.Row="1" Padding="40,32" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid x:Name="CardsGrid" Grid.Row="1" Padding="32,20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="20"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="0"/>
+                <ColumnDefinition Width="0"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="24"/>
+                <RowDefinition Height="20"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="24"/>
+                <RowDefinition Height="20"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- ===== ROW 1 ===== -->
-            <!-- CASH -->
-            <Viewbox Grid.Row="0" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== CASH CARD ===== -->
+            <Viewbox x:Name="CashViewbox" Grid.Row="0" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="CashCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}">
                     <Button.Resources>
                         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
@@ -140,8 +175,8 @@
                 </Button>
             </Viewbox>
 
-            <!-- KHQR -->
-            <Viewbox Grid.Row="0" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== KHQR CARD ===== -->
+            <Viewbox x:Name="KhqrViewbox" Grid.Row="0" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="KhqrCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}">
                     <Button.Resources>
                         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
@@ -157,9 +192,8 @@
                 </Button>
             </Viewbox>
 
-            <!-- ===== ROW 2 ===== -->
-            <!-- DEBIT / CREDIT CARD -->
-            <Viewbox Grid.Row="2" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== DEBIT / CREDIT CARD ===== -->
+            <Viewbox x:Name="CardViewbox" Grid.Row="2" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="CardCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}">
                     <Button.Resources>
                         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
@@ -174,8 +208,8 @@
                 </Button>
             </Viewbox>
 
-            <!-- INTERNATIONAL QR -->
-            <Viewbox Grid.Row="2" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== INTERNATIONAL QR CARD ===== -->
+            <Viewbox x:Name="IntlQrViewbox" Grid.Row="2" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="IntlQrCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}">
                     <Button.Resources>
                         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
@@ -190,9 +224,8 @@
                 </Button>
             </Viewbox>
 
-            <!-- ===== ROW 3 ===== -->
-            <!-- MEMBERSHIP CARD -->
-            <Viewbox Grid.Row="4" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== MEMBERSHIP CARD ===== -->
+            <Viewbox x:Name="MembershipViewbox" Grid.Row="4" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="MembershipCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}">
                     <Button.Resources>
                         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
@@ -207,8 +240,8 @@
                 </Button>
             </Viewbox>
 
-            <!-- COUPON -->
-            <Viewbox Grid.Row="4" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== COUPON CARD ===== -->
+            <Viewbox x:Name="CouponViewbox" Grid.Row="4" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="CouponCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}">
                     <Button.Resources>
                         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
@@ -227,16 +260,9 @@
         <!-- ========================================================= -->
         <!-- 2. BACK BUTTON                                            -->
         <!-- ========================================================= -->
-        <Grid x:Name="FooterContainer" Grid.Row="2" Padding="40,0,40,32">
-            <Button Height="80" 
-                    HorizontalAlignment="Stretch" 
-                    VerticalContentAlignment="Center"
-                    HorizontalContentAlignment="Center"
-                    Background="White" 
-                    BorderBrush="#CBD5E1" 
-                    BorderThickness="2" 
-                    CornerRadius="16" 
-                    Click="BackButton_Click">
+        <Grid x:Name="FooterContainer" Grid.Row="2" Padding="32,0,32,24">
+            <Button x:Name="BackButton" Height="72" HorizontalAlignment="Stretch" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Background="White"
+                    BorderBrush="#CBD5E1" BorderThickness="2"  CornerRadius="16" Click="BackButton_Click">
                 <Button.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#F1F5F9"/>
@@ -244,7 +270,7 @@
                     <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#94A3B8"/>
                 </Button.Resources>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
-                    <TextBlock Text="BACK" FontSize="24" FontWeight="Bold" Foreground="#334155" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="BackButtonText" Text="BACK" FontSize="22" FontWeight="Bold" Foreground="#334155" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
         </Grid>
