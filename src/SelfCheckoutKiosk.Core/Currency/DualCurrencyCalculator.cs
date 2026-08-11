@@ -6,7 +6,7 @@ using SelfCheckoutKiosk.Domain.ValueObjects;
 namespace SelfCheckoutKiosk.Core.Currency;
 
 /// <summary>
-/// Calculates deterministic dual-currency cash change.
+/// Calculates deterministic dual-currency cash change (Blueprint §3).
 ///
 /// Policy:
 /// - USD is the transaction ledger currency.
@@ -15,11 +15,63 @@ namespace SelfCheckoutKiosk.Core.Currency;
 /// - KHR change is always rounded down.
 /// - Only available denominations may be selected.
 /// - The calculated value never exceeds the value owed.
+///
+/// RATE POLICY (Blueprint §4 offline-first):
+///   1 USD = 4 100 KHR (<see cref="DefaultUsdToKhrRate"/>) is the hardcoded
+///   operational default. Every method accepts an explicit rate override for
+///   the day the Lead wires a cached rate from the sync worker.
+///
+/// MIXED PAYMENT:
+///   Use <see cref="MixedPaymentAccumulator"/> to accumulate USD + KHR notes
+///   across multiple note insertions before calling CalculateChange.
 /// </summary>
 public sealed class DualCurrencyCalculator
 {
+    // -----------------------------------------------------------------------
+    // Rate — hardcoded operational default (Blueprint §4)
+    // -----------------------------------------------------------------------
     /// <summary>
-    /// Calculates the physical notes that should be dispensed as change.
+    /// Operational exchange rate: 1 USD = 4 100 KHR.
+    /// Hardcoded default — no live API, offline-first kiosk (Blueprint §4).
+    /// Lead may configure a per-transaction override via the sync worker cache.
+    /// </summary>
+    public const decimal DefaultUsdToKhrRate = 4_100m;
+
+    // -----------------------------------------------------------------------
+    // Dispensable denominations (descending — greedy largest-first)
+    // -----------------------------------------------------------------------
+    /// <summary>USD note denominations the recycler can dispense (whole dollars).</summary>
+    public static readonly IReadOnlyList<int> UsdDenominations = [100, 50, 20, 10, 5, 1];
+
+    /// <summary>KHR note denominations the recycler can dispense.</summary>
+    public static readonly IReadOnlyList<int> KhrDenominations =
+        [100_000, 50_000, 10_000, 5_000, 2_000, 1_000, 500, 100];
+
+    // -----------------------------------------------------------------------
+    // Conversion helpers
+    // -----------------------------------------------------------------------
+    /// <summary>
+    /// Converts any Money note to its USD equivalent at the given rate.
+    /// USD notes are returned at face value; KHR notes are divided by the rate.
+    /// </summary>
+    public static decimal ToUsdEquivalent(
+        Money note,
+        decimal usdToKhrRate = DefaultUsdToKhrRate)
+        => note.Currency == CurrencyCode.Usd
+            ? note.Amount
+            : note.Amount / usdToKhrRate;
+
+    // -----------------------------------------------------------------------
+    // Change calculation — cassette-inventory-aware (authoritative)
+    // -----------------------------------------------------------------------
+    /// <summary>
+    /// Calculates the physical notes that should be dispensed as change,
+    /// bounded by what is actually available in the cassette.
+    ///
+    /// This is the authoritative overload for real dispensing: it never
+    /// selects a denomination or count the cassette does not have
+    /// (Blueprint §3 — "the kiosk must never manufacture money it doesn't
+    /// have in the cassette").
     /// </summary>
     /// <param name="totalUsd">
     /// Transaction total in USD.
@@ -28,7 +80,8 @@ public sealed class DualCurrencyCalculator
     /// Total amount tendered by the customer in USD.
     /// </param>
     /// <param name="usdToKhrRate">
-    /// Number of KHR represented by one USD.
+    /// Number of KHR represented by one USD. Defaults to
+    /// <see cref="DefaultUsdToKhrRate"/>.
     /// </param>
     /// <param name="availableUsdNotes">
     /// Available USD denomination and note-count pairs.
@@ -229,6 +282,101 @@ public sealed class DualCurrencyCalculator
             usdNotes,
             khrNotes
         );
+    }
+
+    /// <summary>
+    /// Overload of <see cref="CalculateChange(decimal, decimal, decimal, IReadOnlyList{KeyValuePair{Money, int}}, IReadOnlyList{KeyValuePair{Money, int}})"/>
+    /// using <see cref="DefaultUsdToKhrRate"/>.
+    /// </summary>
+    public ChangeBreakdown CalculateChange(
+        decimal totalUsd,
+        decimal tenderedUsd,
+        IReadOnlyList<KeyValuePair<Money, int>> availableUsdNotes,
+        IReadOnlyList<KeyValuePair<Money, int>> availableKhrNotes)
+        => CalculateChange(
+            totalUsd,
+            tenderedUsd,
+            DefaultUsdToKhrRate,
+            availableUsdNotes,
+            availableKhrNotes
+        );
+
+    // -----------------------------------------------------------------------
+    // Change calculation — unbounded greedy (mixed-payment convenience path)
+    // -----------------------------------------------------------------------
+    /// <summary>
+    /// Calculates change using a simple largest-first greedy breakdown with
+    /// NO cassette-inventory check — every denomination is assumed available
+    /// in unlimited quantity.
+    ///
+    /// USE WITH CARE: this does NOT satisfy Blueprint §3's "never manufacture
+    /// money it doesn't have in the cassette" guarantee. It exists for
+    /// <see cref="MixedPaymentAccumulator"/>'s pre-dispense estimate, where a
+    /// cassette inventory snapshot is not yet threaded through. Real dispense
+    /// authorization must go through the inventory-aware
+    /// <see cref="CalculateChange(decimal, decimal, decimal, IReadOnlyList{KeyValuePair{Money, int}}, IReadOnlyList{KeyValuePair{Money, int}})"/>
+    /// overload once actual cassette counts are available.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    ///   Thrown when <paramref name="tenderedUsd"/> is less than <paramref name="totalUsd"/>.
+    /// </exception>
+    public ChangeBreakdown CalculateChange(
+        decimal totalUsd,
+        decimal tenderedUsd,
+        decimal usdToKhrRate = DefaultUsdToKhrRate)
+    {
+        if (tenderedUsd < totalUsd)
+            throw new ArgumentException(
+                $"Tendered {tenderedUsd:F2} USD is less than total {totalUsd:F2} USD.",
+                nameof(tenderedUsd));
+
+        var overpaymentUsd = tenderedUsd - totalUsd;
+
+        // Step 1 — whole-dollar change in USD
+        var wholeUsd = Math.Floor(overpaymentUsd);
+
+        // Step 2 — sub-dollar remainder → KHR, always round down to nearest 100 KHR
+        var remainderUsd  = overpaymentUsd - wholeUsd;
+        var rawKhr        = remainderUsd * usdToKhrRate;
+        var dispensableKhr = FloorToNearest100((int)rawKhr);   // Blueprint §3: always round down
+
+        var usdNotes = BuildNotes((int)wholeUsd, UsdDenominations, CurrencyCode.Usd);
+        var khrNotes = BuildNotes(dispensableKhr, KhrDenominations, CurrencyCode.Khr);
+
+        return new ChangeBreakdown(usdNotes, khrNotes);
+    }
+
+    /// <summary>
+    /// Floors <paramref name="amount"/> to the nearest multiple of 100
+    /// (smallest dispensable KHR denomination — Blueprint §3).
+    /// </summary>
+    private static int FloorToNearest100(int amount) => (amount / 100) * 100;
+
+    /// <summary>
+    /// Greedy denomination breakdown. Returns largest-first note counts
+    /// until <paramref name="amount"/> is exhausted or denominations run out.
+    /// Assumes unlimited note supply — see the overload's warning above.
+    /// </summary>
+    private static List<KeyValuePair<Money, int>> BuildNotes(
+        int amount,
+        IReadOnlyList<int> denominations,
+        CurrencyCode currency)
+    {
+        var result    = new List<KeyValuePair<Money, int>>();
+        var remaining = amount;
+
+        foreach (var denom in denominations)
+        {
+            if (remaining <= 0) break;
+            var count = remaining / denom;
+            if (count > 0)
+            {
+                result.Add(KeyValuePair.Create(new Money(denom, currency), count));
+                remaining -= count * denom;
+            }
+        }
+
+        return result;
     }
 
     /// <summary>

@@ -848,6 +848,13 @@ public sealed class LLCoreLogicEngineTests
         var balanceEventCount =
             0;
 
+        CashNoteRejectedEventArgs? rejectedEventArgs =
+            null;
+
+        fixture.Engine.OnCashNoteRejected +=
+            (_, e) =>
+                rejectedEventArgs = e;
+
         var committedBalanceEvent =
             new TaskCompletionSource<object?>(
                 TaskCreationOptions
@@ -987,6 +994,17 @@ public sealed class LLCoreLogicEngineTests
         Assert.Equal(
             3,
             balanceEventCount
+        );
+
+        Assert.NotNull(
+            rejectedEventArgs
+        );
+
+        Assert.Equal(
+            Money.Khr(
+                500m
+            ),
+            rejectedEventArgs!.Note
         );
 
         Assert.Equal(

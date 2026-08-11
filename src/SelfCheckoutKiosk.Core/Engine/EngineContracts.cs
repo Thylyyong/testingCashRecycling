@@ -23,5 +23,23 @@ public sealed class BalanceChangedEventArgs(decimal totalUsd, decimal tenderedUs
     public decimal RemainingUsd { get; } = remainingUsd;
 }
 
+/// <summary>
+/// Raised when a physically escrowed cash note is rejected because
+/// accepting it would overpay the transaction beyond tolerance.
+///
+/// The rejected note never enters the accepted running total — the
+/// session stays open in ProcessingCash, and OnBalanceChanged is not
+/// raised for this note. This is the only public signal that
+/// distinguishes "note physically returned" from "no note yet inserted".
+/// </summary>
+public sealed class CashNoteRejectedEventArgs(Money note, Money remainingKhr) : EventArgs
+{
+    /// <summary>The note that was rejected and physically returned.</summary>
+    public Money Note { get; } = note;
+
+    /// <summary>Amount still owed, in KHR, unchanged by the rejected note.</summary>
+    public Money RemainingKhr { get; } = remainingKhr;
+}
+
 /// <summary>Result of routing + handling a single raw scan.</summary>
 public sealed record ScanResult(ScanCategory Category, bool Accepted, string? Message = null);

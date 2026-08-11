@@ -262,6 +262,9 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
     public event EventHandler<HardwareFaultEventArgs>?
         OnHardwareFault;
 
+    public event EventHandler<CashNoteRejectedEventArgs>?
+        OnCashNoteRejected;
+
     /// <summary>
     /// Creates the default production hardware audit log.
     /// </summary>
@@ -1427,6 +1430,14 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
                     null;
 
                 PublishCashBalance();
+
+                OnCashNoteRejected?.Invoke(
+                    this,
+                    new CashNoteRejectedEventArgs(
+                        pending.Note,
+                        pending.Result.RemainingKhr
+                    )
+                );
 
                 return;
             }

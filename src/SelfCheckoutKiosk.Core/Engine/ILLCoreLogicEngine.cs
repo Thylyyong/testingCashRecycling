@@ -42,6 +42,14 @@ public interface ILLCoreLogicEngine
         OnHardwareFault;
 
     /// <summary>
+    /// Raised when a physically escrowed cash note is rejected for
+    /// exceeding the overpayment tolerance. See
+    /// <see cref="CashNoteRejectedEventArgs"/>.
+    /// </summary>
+    event EventHandler<CashNoteRejectedEventArgs>?
+        OnCashNoteRejected;
+
+    /// <summary>
     /// Validates the offline license, subscribes to HAL events,
     /// and connects the configured hardware devices.
     /// </summary>
