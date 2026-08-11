@@ -160,7 +160,7 @@
                         <Setter Target="ItemCountSubLabel.FontSize" Value="11"/>
                         <Setter Target="TotalUSDLabel.FontSize" Value="22"/>
                         <Setter Target="TotalKHRLabel.FontSize" Value="13"/>
-    1
+                        
                         <Setter Target="FooterArea.Padding" Value="12,10"/>
                         <Setter Target="BackToScanButton.Width" Value="52"/>
                         <Setter Target="BackToScanButton.Height" Value="52"/>
