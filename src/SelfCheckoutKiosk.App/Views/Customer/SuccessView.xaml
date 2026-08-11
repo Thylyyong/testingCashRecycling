@@ -157,12 +157,12 @@
         </Grid.RowDefinitions>
 
         <!-- KIOSK HEADER -->
-        <Border x:Name="HeaderBorder" Grid.Row="0" Background="#0067C0" Padding="28,12" Height="80">
+        <!--<Border x:Name="HeaderBorder" Grid.Row="0" Background="#0067C0" Padding="28,12" Height="80">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
                 <FontIcon x:Name="HeaderIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xEC61;" FontSize="28" Foreground="White"/>
-                <TextBlock x:Name="HeaderTitleText" Text="Payment Completed" Foreground="White" FontSize="26" FontWeight="Bold"/>
+                <TextBlock x:Name="HeaderTitleText" Text="Payment Successful" Foreground="White" FontSize="26" FontWeight="Bold"/>
             </StackPanel>
-        </Border>
+        </Border>-->
 
         <!-- MAIN BODY -->
         <Grid x:Name="MainBodyGrid" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">

@@ -83,7 +83,6 @@
                 <TextBlock x:Name="TitleTextBlock" Text="Self-Checkout" FontSize="42" FontWeight="Bold" Foreground="White"/>
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
                     <TextBlock x:Name="TapPromptTextBlock" Text="Tap anywhere to start" FontSize="18" FontWeight="SemiBold" Foreground="#60A5FA"/>
-                    <!--<FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE76C;" FontSize="16" Foreground="#60A5FA" VerticalAlignment="Center"/>-->
                 </StackPanel>
             </StackPanel>
 
