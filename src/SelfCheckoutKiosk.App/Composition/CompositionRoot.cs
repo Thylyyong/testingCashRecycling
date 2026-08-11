@@ -12,6 +12,7 @@ namespace SelfCheckoutKiosk.App.Composition;
 public sealed class KioskServices
 {
     public required ILLCoreLogicEngine Engine { get; init; }
+    public required ICashRecycler CashRecycler { get; init; }
 }
 
 /// <summary>
@@ -45,7 +46,22 @@ public static class CompositionRoot
         var hardwareAppendLog = new HardwareAppendLog(logPath);
 
         // 4. Concrete HAL adapters — the ONLY vendor-assembly references anywhere.
-        ICashRecycler   cashRecycler   = new VendorXCashRecycler();
+        // ICashRecycler cashRecycler = new VendorXCashRecycler();
+        // For real physical hardware testing on COM7, uncomment the line below:
+        string? apiKey = null;
+        try
+        {
+            apiKey = File.ReadAllText("api_key.secret").Trim();
+        }
+        catch (Exception)
+        {
+            // Fail gracefully if the key file is missing. The HAL will report the error.
+        }
+
+        ICashRecycler cashRecycler = new VendorXCashRecycler(
+            "http://localhost:5000",
+            apiKey: apiKey,
+            useRealApi: true);
         IBarcodeScanner barcodeScanner = new DatalogicBarcodeScanner();
         IReceiptPrinter receiptPrinter = new EpsonReceiptPrinter();
 
@@ -61,7 +77,11 @@ public static class CompositionRoot
         // 7. TODO(UI): construct ViewModels + Tailscale sync worker, each
         //    depending ONLY on the engine (+ db factory) — never on a HAL type.
 
-        return new KioskServices { Engine = engine };
+        return new KioskServices
+        {
+            Engine = engine,
+            CashRecycler = cashRecycler
+        };
     }
 }
 

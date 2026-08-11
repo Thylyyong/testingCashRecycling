@@ -1,6 +1,12 @@
 using SelfCheckoutKiosk.App;
 using SelfCheckoutKiosk.App.Composition;
 
+if (args.Contains("--live") || args.Contains("--live-hardware"))
+{
+    await HardwareVerificationHarness.RunLiveListenerAsync();
+    return;
+}
+
 if (args.Contains("--verify-hardware"))
 {
     await HardwareVerificationHarness.RunAsync();

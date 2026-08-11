@@ -1,11 +1,16 @@
+using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
 using SelfCheckoutKiosk.Core.Abstractions;
 using SelfCheckoutKiosk.Domain.ValueObjects;
 
 // Grant the integration-test project access to internal simulation helpers.
 // Production code never calls these — only test fakes do.
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("SelfCheckoutKiosk.Integration.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("SelfCheckoutKiosk.App")]
 
 namespace SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX;
 
@@ -35,19 +40,31 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
 
     private readonly HttpClient _httpClient;
     private readonly string _apiBaseUrl;
-    private readonly bool _useRealApi;
+    private readonly string? _apiKey;
+    private bool _useRealApi;
 
     /// <summary>
     /// Initializes a new instance of <see cref="VendorXCashRecycler"/>.
     /// </summary>
     /// <param name="apiBaseUrl">Base address of the running vendor REST server (default: http://localhost:5000).</param>
+    /// <param name="apiKey">The API key required by the vendor's REST server for authentication.</param>
     /// <param name="useRealApi">If set to <c>true</c>, actual HTTP commands are dispatched to the machine; otherwise runs in test simulation mode.</param>
     /// <param name="httpClient">Optional custom <see cref="HttpClient"/> instance.</param>
-    public VendorXCashRecycler(string apiBaseUrl = "http://localhost:5000", bool useRealApi = false, HttpClient? httpClient = null)
+    public VendorXCashRecycler(
+        string apiBaseUrl = "http://localhost:5000",
+        string? apiKey = null,
+        bool useRealApi = false,
+        HttpClient? httpClient = null)
     {
         _apiBaseUrl = apiBaseUrl.TrimEnd('/');
+        _apiKey = apiKey;
         _useRealApi = useRealApi;
-        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+        _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+
+        if (!string.IsNullOrEmpty(_apiKey))
+        {
+            // We will generate the token dynamically inside ConnectAsync to test different Audiences
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -69,13 +86,37 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         {
             try
             {
-                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/connect", null, cancellationToken);
-                response.EnsureSuccessStatusCode();
+                if (!string.IsNullOrEmpty(_apiKey))
+                {
+                    var keyBytes = Encoding.UTF8.GetBytes(_apiKey);
+                    var tokenDescriptor = new SecurityTokenDescriptor
+                    {
+                        Expires = DateTime.UtcNow.AddHours(24),
+                        Issuer = "INNOVATIVETECHNOLOGY",
+                        Audience = "INNOVATIVETECHNOLOGY",
+                        SigningCredentials = new SigningCredentials(
+                            new SymmetricSecurityKey(keyBytes),
+                            SecurityAlgorithms.HmacSha256Signature)
+                    };
+                    var tokenHandler = new JwtSecurityTokenHandler();
+                    var jwtString = tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
+                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtString);
+                }
+
+                // Send OpenConnection for COM7
+                using var openContent = new StringContent("{\"comPort\":\"COM7\"}", Encoding.UTF8, "application/json");
+                using var openResponse = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/OpenConnection", openContent, cancellationToken);
+                openResponse.EnsureSuccessStatusCode();
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("\n  [SUCCESS] Connected to Physical NOTE_VALIDATOR on COM7 over REST API! ✓\n");
+                Console.ResetColor();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException || ex is InvalidOperationException)
             {
-                OnFault?.Invoke(this, new HardwareFaultEventArgs("CashRecyclerX", $"REST API Connect error: {ex.Message}"));
-                throw;
+                var errorMessage = $"Failed to connect to CashRecyclerX API at '{_apiBaseUrl}'. {ex.Message}";
+                OnFault?.Invoke(this, new HardwareFaultEventArgs("CashRecyclerX", errorMessage));
+                throw new InvalidOperationException(errorMessage, ex);
             }
         }
 
@@ -96,8 +137,20 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
     {
         if (_useRealApi)
         {
-            using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/enable", null, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            try
+            {
+                using var content = new StringContent("{\"deviceID\":\"NOTE_VALIDATOR-COM7\"}", Encoding.UTF8, "application/json");
+                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/EnableAcceptor?deviceID=NOTE_VALIDATOR-COM7", content, cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("\n  [SUCCESS] Physical Intake Shutter ARMED & Green LED Lights ON! Ready for banknotes. ✓\n");
+                Console.ResetColor();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[VendorXCashRecycler] ArmAcceptanceAsync failed: {ex.Message}");
+            }
         }
 
         lock (_stateLock)
@@ -112,8 +165,16 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
     {
         if (_useRealApi)
         {
-            using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/disable", null, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            try
+            {
+                using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/DisableAcceptor", content, cancellationToken);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[VendorXCashRecycler] DisarmAcceptanceAsync failed: {ex.Message}");
+            }
         }
 
         lock (_stateLock)
@@ -134,11 +195,13 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         {
             try
             {
-                await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/disable", null, cancellationToken);
+                using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/disable", content, cancellationToken);
+                response.EnsureSuccessStatusCode();
             }
-            catch
+            catch (Exception ex)
             {
-                // Best-effort attempt during hard safeguard stop
+                Console.Error.WriteLine($"[VendorXCashRecycler] StopAcceptingCashAsync failed: {ex.Message}");
             }
         }
 
@@ -159,8 +222,12 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         {
             try
             {
+                // Calculate totals from denomination lists
+                decimal totalUsd = change.UsdNotes.Sum(kvp => kvp.Key.Amount * kvp.Value);
+                decimal totalKhr = change.KhrNotes.Sum(kvp => kvp.Key.Amount * kvp.Value);
+
                 // Construct simple JSON payload without reflection for Native AOT safety
-                string jsonPayload = $"{{\"totalUsd\": {change.TotalUsd.Amount}, \"totalKhr\": {change.TotalKhr.Amount}}}";
+                string jsonPayload = $"{{\"totalUsd\": {totalUsd}, \"totalKhr\": {totalKhr}}}";
                 using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/dispense", content, cancellationToken);
@@ -185,7 +252,8 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
     {
         if (_useRealApi)
         {
-            using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/escrow/reject", null, cancellationToken);
+            using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+            using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/escrow/reject", content, cancellationToken);
             response.EnsureSuccessStatusCode();
         }
 
@@ -232,4 +300,3 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
     internal void SimulateFault(string message)
         => OnFault?.Invoke(this, new HardwareFaultEventArgs("CashRecyclerX", message));
 }
-
