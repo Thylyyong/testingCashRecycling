@@ -26,7 +26,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public void ProceedToKioskBaseView()
         {
             NavigationService.NavigateTo(
-                typeof(KioskBaseView2),
+                typeof(KioskBaseView),
                 null,
                 SlideNavigationTransitionEffect.FromLeft);
         }

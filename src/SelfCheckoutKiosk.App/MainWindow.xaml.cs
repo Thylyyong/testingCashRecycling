@@ -102,7 +102,7 @@ namespace SelfCheckoutKiosk.App
             NavigationService = new NavigationService(RootFrame);
 
             // Navigate to the initial page using the service
-            NavigationService.NavigateTo(typeof(KioskBaseView2));
+            NavigationService.NavigateTo(typeof(KioskBaseView));
         }
 
         private void EnforceInitialAspectRatio(int initialWidth, int initialHeight)
@@ -167,7 +167,7 @@ namespace SelfCheckoutKiosk.App
             if (ctrl && shift && e.Key == VirtualKey.Back)
             {
                 NavigationService.NavigateTo(
-                    typeof(KioskBaseView2),
+                    typeof(KioskBaseView),
                     null,
                     new SuppressNavigationTransitionInfo()
                 );

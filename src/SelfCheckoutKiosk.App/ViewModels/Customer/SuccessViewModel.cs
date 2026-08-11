@@ -90,7 +90,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         public void ReturnHome()
         {
-            NavigationService.NavigateTo(typeof(KioskBaseView2), null, SlideNavigationTransitionEffect.FromLeft);
+            NavigationService.NavigateTo(typeof(KioskBaseView), null, SlideNavigationTransitionEffect.FromLeft);
         }
 
         protected void OnPropertyChanged(string name) =>
