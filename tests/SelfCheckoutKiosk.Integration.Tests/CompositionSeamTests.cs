@@ -279,11 +279,6 @@ public sealed class CompositionSeamTests : IDisposable
         Assert.Contains("COMMITTED_TO_VAULT", logText);
     }
 
-    /// <summary>
-    /// Full seam: Coca-Cola scenario — $0.75 product, customer inserts $2.
-    /// Overpayment = 5 125 KHR > 500 KHR → note must be rejected.
-    /// Log must record IN_ESCROW then REJECTED (never COMMITTED_TO_VAULT).
-    /// </summary>
     [Fact]
     public async Task CashPayment_LargeOverpayment_SeamRejectsAndLogsReject()
     {

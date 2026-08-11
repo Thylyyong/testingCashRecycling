@@ -213,6 +213,91 @@ public sealed class CashPaymentConfirmationTests : IDisposable
     }
 
     /// <summary>
+    /// User rule test: $2.00 product total.
+    /// Customer inserts $1.00 USD note → Pending ($1.00 / 4,100 KHR remaining).
+    /// Customer inserts 4,100 KHR note → Confirmed (exact $2.00 paid, 0 KHR overpayment).
+    /// </summary>
+    [Fact]
+    public async Task MixedCurrency_2UsdProduct_PaidWith_1Usd_And_4100Khr_Confirms()
+    {
+        var (engine, recycler, log) = await BuildAsync();
+        _tempLogs.Add(log);
+
+        // $2.00 product total
+        await engine.BeginCashPaymentAsync(2.00m);
+
+        CashPaymentPendingEventArgs?   pending   = null;
+        CashPaymentConfirmedEventArgs? confirmed = null;
+        engine.OnCashPaymentPending   += (_, e) => pending   = e;
+        engine.OnCashPaymentConfirmed += (_, e) => confirmed = e;
+
+        // Step 1: Customer inserts $1.00 USD note
+        recycler.FireNoteInEscrow(Money.Usd(1.00m));
+
+        // Assert Step 1: Pending state, $1.00 / 4,100 KHR remaining
+        Assert.NotNull(pending);
+        Assert.Equal(1.00m, pending!.TenderedUsd);
+        Assert.Equal(1.00m, pending.RemainingUsd);
+        Assert.Equal(4100m, pending.RemainingKhr);
+        Assert.Null(confirmed);
+        Assert.Equal(KioskState.ProcessingCash, engine.CurrentState);
+
+        // Step 2: Customer inserts 4,100 KHR note
+        recycler.FireNoteInEscrow(Money.Khr(4100m));
+
+        // Assert Step 2: Transaction complete, confirmed at $2.00 USD total
+        Assert.NotNull(confirmed);
+        Assert.Equal(2.00m, confirmed!.TotalUsd);
+        Assert.Equal(2.00m, confirmed.TenderedUsd);
+        Assert.Equal(0m, confirmed.OverpaymentKhr);
+        Assert.Equal(KioskState.TransactionComplete, engine.CurrentState);
+        Assert.True(recycler.DisarmCalled);
+    }
+
+    /// <summary>
+    /// User rule test: No change-dispensing hardware.
+    /// Product total = $1.25 USD (~5,125 KHR).
+    /// Step 1: Customer inserts $2.00 USD note → Overpayment = $0.75 USD = 3,075 KHR > 500 KHR limit.
+    ///         Engine REJECTS & EJECTS $2.00 note, session stays PENDING, engine stays ProcessingCash.
+    /// Step 2: Customer inserts $1.25 USD note → Overpayment = 0 KHR ≤ 500 KHR limit.
+    ///         Engine CONFIRMS payment, session transitions to TransactionComplete!
+    /// </summary>
+    [Fact]
+    public async Task NoChangeHardware_1Point25UsdProduct_Rejects2UsdNote_And_ConfirmsExactNote()
+    {
+        var (engine, recycler, log) = await BuildAsync();
+        _tempLogs.Add(log);
+
+        // $1.25 product total
+        await engine.BeginCashPaymentAsync(1.25m);
+
+        CashPaymentRejectedEventArgs?  rejected  = null;
+        CashPaymentConfirmedEventArgs? confirmed = null;
+        engine.OnCashPaymentRejected  += (_, e) => rejected  = e;
+        engine.OnCashPaymentConfirmed += (_, e) => confirmed = e;
+
+        // Step 1: Customer inserts $2.00 USD note (overpayment = $0.75 = 3,075 KHR > 500 KHR limit)
+        recycler.FireNoteInEscrow(Money.Usd(2.00m));
+
+        // Assert Step 1: Note rejected, physically pushed back, session stays ProcessingCash
+        Assert.NotNull(rejected);
+        Assert.True(recycler.RejectCalled, "Engine must physically eject $2.00 note.");
+        Assert.Null(confirmed);
+        Assert.Equal(KioskState.ProcessingCash, engine.CurrentState);
+
+        // Step 2: Customer inserts exact $1.25 USD note
+        recycler.FireNoteInEscrow(Money.Usd(1.25m));
+
+        // Assert Step 2: Confirmed payment, transaction complete
+        Assert.NotNull(confirmed);
+        Assert.Equal(1.25m, confirmed!.TotalUsd);
+        Assert.Equal(1.25m, confirmed.TenderedUsd);
+        Assert.Equal(0m, confirmed.OverpaymentKhr);
+        Assert.Equal(KioskState.TransactionComplete, engine.CurrentState);
+        Assert.True(recycler.DisarmCalled);
+    }
+
+    /// <summary>
     /// $0.75 product, customer inserts $0.90.
     /// Overpayment = $0.15 = 615 KHR > 500 KHR → rejected.
     /// </summary>

@@ -13,6 +13,8 @@ public sealed class KioskServices
 {
     public required ILLCoreLogicEngine Engine { get; init; }
     public required ICashRecycler CashRecycler { get; init; }
+    public required IBarcodeScanner BarcodeScanner { get; init; }
+    public required IReceiptPrinter ReceiptPrinter { get; init; }
 }
 
 /// <summary>
@@ -80,7 +82,9 @@ public static class CompositionRoot
         return new KioskServices
         {
             Engine = engine,
-            CashRecycler = cashRecycler
+            CashRecycler = cashRecycler,
+            BarcodeScanner = barcodeScanner,
+            ReceiptPrinter = receiptPrinter
         };
     }
 }

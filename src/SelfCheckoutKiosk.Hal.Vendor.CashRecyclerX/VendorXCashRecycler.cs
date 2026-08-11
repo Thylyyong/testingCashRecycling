@@ -43,6 +43,9 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
     private readonly string? _apiKey;
     private bool _useRealApi;
 
+    private CancellationTokenSource? _pollCts;
+    private Task? _pollTask;
+
     /// <summary>
     /// Initializes a new instance of <see cref="VendorXCashRecycler"/>.
     /// </summary>
@@ -103,10 +106,17 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
                     _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtString);
                 }
 
-                // Send OpenConnection for COM7
-                using var openContent = new StringContent("{\"comPort\":\"COM7\"}", Encoding.UTF8, "application/json");
-                using var openResponse = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/OpenConnection", openContent, cancellationToken);
-                openResponse.EnsureSuccessStatusCode();
+                // Try OpenConnection for COM7 (if already open, server returns 400 which we handle gracefully)
+                try
+                {
+                    using var openContent = new StringContent("{\"comPort\":\"COM7\"}", Encoding.UTF8, "application/json");
+                    await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/OpenConnection", openContent, cancellationToken);
+                }
+                catch { }
+
+                // Ping REST API server to verify connection status
+                using var statusResponse = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetDeviceStatus?deviceID=NOTE_VALIDATOR-COM7", cancellationToken);
+                statusResponse.EnsureSuccessStatusCode();
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("\n  [SUCCESS] Connected to Physical NOTE_VALIDATOR on COM7 over REST API! ✓\n");
@@ -139,12 +149,17 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         {
             try
             {
+                // 1. Enable SetAutoAccept so ALL currency denominations (USD & KHR, small & large) are accepted automatically
+                using var autoContent = new StringContent("true", Encoding.UTF8, "application/json");
+                await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/SetAutoAccept?deviceID=NOTE_VALIDATOR-COM7", autoContent, cancellationToken);
+
+                // 2. Enable Acceptor to open shutter and turn ON intake green LED light
                 using var content = new StringContent("{\"deviceID\":\"NOTE_VALIDATOR-COM7\"}", Encoding.UTF8, "application/json");
                 using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/EnableAcceptor?deviceID=NOTE_VALIDATOR-COM7", content, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("\n  [SUCCESS] Physical Intake Shutter ARMED & Green LED Lights ON! Ready for banknotes. ✓\n");
+                Console.WriteLine("\n  [SUCCESS] Physical Intake Shutter ARMED & Green LED Lights ON! Auto-Accept ALL Denominations (USD & KHR) Active. ✓\n");
                 Console.ResetColor();
             }
             catch (Exception ex)
@@ -158,18 +173,31 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
             if (_state == RecyclerState.Connected)
                 _state = RecyclerState.Armed;
         }
+
+        if (_useRealApi)
+        {
+            _pollCts?.Cancel();
+            _pollCts = new CancellationTokenSource();
+            _pollTask = Task.Run(() => PollHardwareLoopAsync(_pollCts.Token));
+        }
     }
 
     /// <summary>Normal disarm — device stops accepting notes and closes intake slot via REST API.</summary>
     public async Task DisarmAcceptanceAsync(CancellationToken cancellationToken = default)
     {
+        _pollCts?.Cancel();
+
         if (_useRealApi)
         {
             try
             {
-                using var content = new StringContent("{}", Encoding.UTF8, "application/json");
-                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/DisableAcceptor", content, cancellationToken);
+                using var content = new StringContent("{\"deviceID\":\"NOTE_VALIDATOR-COM7\"}", Encoding.UTF8, "application/json");
+                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/DisableAcceptor?deviceID=NOTE_VALIDATOR-COM7", content, cancellationToken);
                 response.EnsureSuccessStatusCode();
+
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                Console.WriteLine("\n  [SUCCESS] Physical Intake Shutter CLOSED & Green LED Light OFF. Device Disarmed. 🔴\n");
+                Console.ResetColor();
             }
             catch (Exception ex)
             {
@@ -181,6 +209,54 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         {
             if (_state == RecyclerState.Armed)
                 _state = RecyclerState.Connected;
+        }
+    }
+
+    private async Task PollHardwareLoopAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested && _state == RecyclerState.Armed)
+        {
+            try
+            {
+                using var response = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetDeviceStatus?deviceID=NOTE_VALIDATOR-COM7", cancellationToken).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                {
+                    string json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+
+                    if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        foreach (var elem in doc.RootElement.EnumerateArray())
+                        {
+                            string stateStr = elem.TryGetProperty("stateAsString", out var s) ? s.GetString() ?? "" : "";
+                            
+                            if (stateStr.Contains("NOTE_ESCROW", StringComparison.OrdinalIgnoreCase) ||
+                                stateStr.Contains("NOTE_CREDIT", StringComparison.OrdinalIgnoreCase) ||
+                                stateStr.Contains("NOTE_READ", StringComparison.OrdinalIgnoreCase))
+                            {
+                                decimal val = elem.TryGetProperty("value", out var v) ? v.GetDecimal() : 0m;
+                                string countryCode = elem.TryGetProperty("countryCode", out var c) ? c.GetString() ?? "USD" : "USD";
+
+                                Money note = countryCode.Equals("KHR", StringComparison.OrdinalIgnoreCase)
+                                    ? Money.Khr(val / 100m)
+                                    : Money.Usd(val / 100m);
+
+                                Console.ForegroundColor = ConsoleColor.Cyan;
+                                Console.WriteLine($"\n  💵 [HARDWARE SCAN] Physical validator scanned: {note.Amount} {note.Currency}");
+                                Console.ResetColor();
+
+                                OnNoteInEscrow?.Invoke(this, new NoteInEscrowEventArgs(note));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Background polling resiliency
+            }
+
+            await Task.Delay(250, cancellationToken).ConfigureAwait(false);
         }
     }
 

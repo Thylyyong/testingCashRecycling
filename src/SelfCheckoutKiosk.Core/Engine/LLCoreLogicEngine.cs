@@ -226,8 +226,6 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
         if (overpaymentKhr < 0m)
         {
             _hardwareAppendLog.CommitToVault(escrowId);
-            // Note physically stays in machine vault. No DisarmAcceptance —
-            // the recycler remains Armed and ready for the next insertion.
 
             var remainingUsd = _paymentSession.RemainingUsd;
             var remainingKhr = remainingUsd * DualCurrencyCalculator.DefaultUsdToKhrRate;
@@ -238,15 +236,18 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
                 remainingUsd,
                 remainingKhr));
 
+            // Re-arm the physical cash recycler so the intake shutter & green LED light turn back ON for the next note
+            _ = _cashRecycler.ArmAcceptanceAsync();
+
             return;
         }
 
-        // --- CASE B: Overpayment within tolerance — confirm ------------------
+        // --- CASE B: Overpayment within 500 KHR tolerance — confirm ------------------
         if (overpaymentKhr <= MaxAcceptableOverpaymentKhr)
         {
             _hardwareAppendLog.CommitToVault(escrowId);
 
-            // Disarm the recycler — session is complete.
+            // Disarm the recycler — shutter CLOSES & Green LED Light TURNS OFF
             _ = _cashRecycler.DisarmAcceptanceAsync();
 
             _paymentSession = null;
@@ -255,28 +256,29 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
             OnCashPaymentConfirmed?.Invoke(this, new CashPaymentConfirmedEventArgs(
                 totalUsd,
                 tenderedUsd,
-                overpaymentKhr));
+                Math.Max(0m, overpaymentKhr)));
 
             return;
         }
 
-        // --- CASE C: Overpayment exceeds tolerance — reject this note --------
-        // Roll back the speculative accumulation so the session total is correct.
+        // --- CASE C: Overpayment exceeds 500 KHR limit — reject this note --------
+        // Roll back speculative accumulation so session total remains accurate
         _paymentSession.RollBackLastNote(e.Note);
 
         _hardwareAppendLog.Reject(escrowId);
 
-        // Fire-and-forget is safe: RejectEscrowedNoteAsync is idempotent and the
-        // physical note will be returned to the customer regardless.
+        // Physically push note back out of validator slot to customer
         _ = _cashRecycler.RejectEscrowedNoteAsync();
 
-        // Recompute tendered after rollback for accurate event data.
         var tenderedAfterRollback = _paymentSession.AccumulatedUsdEquivalent;
 
         OnCashPaymentRejected?.Invoke(this, new CashPaymentRejectedEventArgs(
             totalUsd,
             tenderedAfterRollback,
             overpaymentKhr));
+
+        // Re-arm physical cash recycler so green LED light stays ON for correct note insertion
+        _ = _cashRecycler.ArmAcceptanceAsync();
     }
 
     /// <summary>
@@ -319,9 +321,26 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
     public Task<ScanResult> SubmitScanAsync(string rawScan, CancellationToken cancellationToken = default)
         => throw new NotImplementedException("TODO(Backend): route via RegexRouter and dispatch.");
 
-    public Task SelectPaymentMethodAsync(PaymentMethod method, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException("TODO(Backend): transition to AwaitingPayment / arm cash.");
+    public async Task SelectPaymentMethodAsync(PaymentMethod method, CancellationToken cancellationToken = default)
+    {
+        if (method == PaymentMethod.Cash)
+        {
+            TransitionState(KioskState.ProcessingCash);
+            await _cashRecycler.ArmAcceptanceAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            // For non-cash payments (KHQR Digital), disarm physical cash recycler so machine shutter STAYS CLOSED & GREEN LED LIGHT STAYS OFF
+            await _cashRecycler.DisarmAcceptanceAsync(cancellationToken).ConfigureAwait(false);
+            TransitionState(KioskState.AwaitingPayment);
+        }
+    }
 
-    public Task ResetToIdleAsync(CancellationToken cancellationToken = default)
-        => throw new NotImplementedException("TODO(Backend): tear down transaction, return to Idle.");
+    public async Task ResetToIdleAsync(CancellationToken cancellationToken = default)
+    {
+        // Close cash intake shutter and turn OFF green LED light when returning to Home Page (Idle)
+        await _cashRecycler.DisarmAcceptanceAsync(cancellationToken).ConfigureAwait(false);
+        _paymentSession = null;
+        TransitionState(KioskState.Idle);
+    }
 }

@@ -27,7 +27,7 @@
 ## Project Overview
 
 | Property | Value |
-|---|---|
+| --- | --- |
 | **Platform** | Windows 11 IoT Enterprise |
 | **Runtime** | .NET 10 — Native AOT |
 | **Architecture** | Clean / Onion — offline-first |
@@ -135,7 +135,7 @@ SelfCheckoutKiosk.sln
 ## Team Ownership
 
 | Layer | Team | Scope |
-|---|---|---|
+| --- | --- | --- |
 | `Domain` | Backend | Entities, enums, value objects — zero dependencies |
 | `Core/Engine` | Backend | State machine, RegexRouter, HardwareAppendLog |
 | `Core/Currency` | Backend + **Systems** | DualCurrencyCalculator, LowFloatMonitor |
@@ -158,7 +158,7 @@ SelfCheckoutKiosk.sln
 ### ✅ Sprint 0 — Complete (Systems Team)
 
 | Component | File | Status | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `ICashRecycler` contract review | `Core/Abstractions/ICashRecycler.cs` | ✅ Done | Surface aligned; extensions deferred to Sprint 1 |
 | `HardwareAppendLog` | `Core/Engine/HardwareAppendLog.cs` | ✅ Done | **New file** — `WriteThrough` + `Flush(flushToDisk:true)` |
 | `LowFloatMonitor` | `Core/Currency/LowFloatMonitor.cs` | ✅ Done | Stub replaced with full thread-safe implementation |
@@ -174,7 +174,7 @@ SelfCheckoutKiosk.sln
 ### 🔄 Sprint 1 — Pending (Systems Team)
 
 | Component | Owner | Blocker |
-|---|---|---|
+| --- | --- | --- |
 | `VendorXCashRecycler` — real vendor SDK | Systems | SDK package / DLL needed from vendor |
 | `DatalogicBarcodeScanner` — serial port | Systems | `System.IO.Ports` + COM port assignment |
 | `EpsonReceiptPrinter` — ESC/POS | Systems | TCP vs USB connection decision (Lead) |
@@ -184,7 +184,7 @@ SelfCheckoutKiosk.sln
 ### 🔄 Sprint 1 — Pending (Other Teams)
 
 | Component | Owner | Blocker |
-|---|---|---|
+| --- | --- | --- |
 | `OfflineLicenseManager` full implementation | Lead / Backend | Cryptographic key material |
 | License gate in `InitializeAsync` | Systems (call site ready) | Backend must implement `EnforceFeatureAccess` |
 | `KioskDbContext` — EF Core + SQLCipher | Backend | SQLCipher NuGet bundle |
@@ -199,7 +199,7 @@ SelfCheckoutKiosk.sln
 ### Prerequisites
 
 | Tool | Minimum Version |
-|---|---|
+| --- | --- |
 | .NET SDK | **10.0.110** or later |
 | Visual Studio | 2022 v17.12+ |
 | Windows | 11 (production) · any OS (dev builds) |
@@ -222,7 +222,7 @@ All commands run from `SelfCheckoutKiosk-V2/SelfCheckoutKiosk-V2/`.
 # Build the full solution (0 errors, 0 warnings required)
 dotnet build SelfCheckoutKiosk.sln --configuration Release
 
-# Run all tests
+# Run all test 
 dotnet test SelfCheckoutKiosk.sln --configuration Release
 
 # Run with verbose test output
@@ -231,6 +231,13 @@ dotnet test SelfCheckoutKiosk.sln --configuration Release --logger "console;verb
 # Native AOT publish (Windows x64)
 dotnet publish src/SelfCheckoutKiosk.App --configuration Release --runtime win-x64 -p:PublishAot=true
 ```
+
+# test with hardware
+
+cd src/SelfCheckoutKiosk.App
+dotnet run --project SelfCheckoutKiosk.App -- --verify-hardware
+
+dotnet run --project src/SelfCheckoutKiosk.App -- --verify-hardware
 
 > **`TreatWarningsAsErrors=true` is solution-wide.**
 > Every compiler warning is a build failure. Never suppress a warning without Lead approval.
@@ -245,7 +252,7 @@ The following rules are **mandatory** for all Systems Team code. Violating them 
 ### 1 — Architecture Boundary Rules
 
 | Rule | Enforcement |
-|---|---|
+| --- | --- |
 | `Hal.Vendor.*` references `Core` only — never `Infrastructure` | Build fails if violated (`.csproj` reference guard) |
 | No business logic in adapters | Code review gate |
 | `LLCoreLogicEngine` is the **sole** HAL event subscriber | Architecture rule — documented in every adapter |
@@ -254,7 +261,7 @@ The following rules are **mandatory** for all Systems Team code. Violating them 
 ### 2 — Financial Audit (HardwareAppendLog)
 
 | Rule | How |
-|---|---|
+| --- | --- |
 | Must be **first** subscriber on `OnNoteInEscrow` | Wired before engine handler in `InitializeAsync` |
 | Uses `FileOptions.WriteThrough` | Bypasses OS write cache |
 | Uses `Flush(flushToDisk: true)` | Issues `FlushFileBuffers` — record survives power loss |
@@ -282,12 +289,13 @@ InitializeAsync():
 ## Hardware Peripherals
 
 | Device | SKU | Interface | Adapter Project | Status |
-|---|---|---|---|---|
-| Cash Recycler | CashRecyclerX | Vendor SDK / USB-Serial | `Hal.Vendor.CashRecyclerX` | ✅ Simulation adapter |
-| Barcode Scanner | Datalogic | USB-COM virtual serial | `Hal.Vendor.DatalogicScanner` | 🔄 Stub |
-| Receipt Printer | Epson m30 | ESC/POS — TCP or USB | `Hal.Vendor.EpsonM30` | 🔄 Stub |
+| --- | --- | --- | --- | --- |
+| Cash Recycler | CashRecyclerX (ITL) | REST API / USB-COM7 | `Hal.Vendor.CashRecyclerX` | ✅ Fully Implemented (Real REST API + JWT + Hardware Polling) |
+| Barcode Scanner | Datalogic | USB-COM virtual serial / HID | `Hal.Vendor.DatalogicScanner` | ✅ Fully Implemented (`DatalogicBarcodeScanner`) |
+| Receipt Printer | Epson m30 | ESC/POS — USB / Serial / Spooler | `Hal.Vendor.EpsonM30` | ✅ Fully Implemented (`EpsonReceiptPrinter`) |
 
 **Adding a new hardware SKU:**
+
 1. Create a new `SelfCheckoutKiosk.Hal.Vendor.<Name>/` project.
 2. Implement the relevant Core interface (`ICashRecycler`, `IBarcodeScanner`, or `IReceiptPrinter`).
 3. Add one `ProjectReference` in `SelfCheckoutKiosk.App.csproj`.
@@ -329,7 +337,7 @@ The following items are explicitly outside Systems Team scope for Sprint 0.
 They are documented here so the handoff is unambiguous.
 
 | Item | Required By | Current State |
-|---|---|---|
+| --- | --- | --- |
 | `OfflineLicenseManager.EnforceFeatureAccess` | Systems `InitializeAsync` (call site ready) | Throws `NotImplementedException` — Backend scope |
 | Log file path policy | `HardwareAppendLog` constructor | Must be on BitLocker volume — Lead §5 provisioning |
 | Per-denomination KHR threshold configuration | `LowFloatMonitor` | Currently uniform 15 — Lead decision pending |
@@ -341,7 +349,7 @@ They are documented here so the handoff is unambiguous.
 ## Roadmap
 
 | Feature | Category | Team |
-|---|---|---|
+| --- | --- | --- |
 | Card / EMV contactless | New `ICardPaymentTerminal` abstraction | Systems (adapter) + Backend |
 | Age-restricted item approval | New `AwaitingAttendantApproval` state branch | Backend + Frontend |
 | PLU lookup for untagged produce | `RegexRouter` PLU category + Product table | Backend |
