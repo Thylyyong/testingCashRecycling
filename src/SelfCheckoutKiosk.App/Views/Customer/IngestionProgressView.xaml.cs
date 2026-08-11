@@ -124,15 +124,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     TextWrapping = TextWrapping.Wrap,
                     MaxWidth = 420
                 },
-                PrimaryButtonText = "Cancel & Go Back",
-                SecondaryButtonText = "Continue Payment",
+                PrimaryButtonText = "Continue Payment",
+                SecondaryButtonText = "Cancel Payment",
                 PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"],
                 XamlRoot = this.Content?.XamlRoot ?? this.XamlRoot,
                 RequestedTheme = ElementTheme.Light
             };
 
             var result = await dialog.ShowAsync();
-            if (result == ContentDialogResult.Primary)
+            if (result == ContentDialogResult.Secondary)
             {
                 ViewModel.NavigateBackToPaymentSelection();
             }
