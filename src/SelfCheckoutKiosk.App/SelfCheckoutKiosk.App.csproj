@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>SelfCheckoutKiosk.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -52,6 +52,15 @@
 
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Domain\SelfCheckoutKiosk.Domain.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Infrastructure\SelfCheckoutKiosk.Infrastructure.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Presentation\SelfCheckoutKiosk.Presentation.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.EpsonM30\SelfCheckoutKiosk.Hal.Vendor.EpsonM30.csproj" />
   </ItemGroup>
 
   <!--
