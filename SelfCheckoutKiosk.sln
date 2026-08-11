@@ -197,4 +197,7 @@ Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4BC4B4BA-772D-4D56-B3B3-05E61613D8C0}
 	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D543F60C-90B2-4820-A140-F9DD55DCA614}
+	EndGlobalSection
 EndGlobal

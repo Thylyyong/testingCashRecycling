@@ -1,9 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- DOMAIN LAYER — centre of the onion. References NOTHING.
-       No frameworks, no EF Core, no hardware, no DI. Pure C#.
-       Owner: Back-End Developer. -->
+
+  <!--
+    DOMAIN LAYER — centre of the onion.
+
+    References nothing:
+    - No EF Core
+    - No SQLite
+    - No hardware SDK
+    - No WinUI
+    - No dependency injection framework
+  -->
+
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk.Domain</RootNamespace>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
+
 </Project>
