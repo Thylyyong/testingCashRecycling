@@ -106,9 +106,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 _wasManipulated = true;
 
                 if (delta < 0)
-                    AdvanceBanner(forward: true);
-                else
                     AdvanceBanner(forward: false);
+                else
+                    AdvanceBanner(forward: true);
 
                 ResetTimer();
                 e.Handled = true;
