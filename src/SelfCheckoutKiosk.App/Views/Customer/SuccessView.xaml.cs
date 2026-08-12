@@ -116,8 +116,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void UpdateTimerUI()
         {
-            // Bar updates every tick (smooth drain)
-            RedirectProgressBar.Value = _secondsRemaining;
+            // Bar smoothly shrinks from both left and right toward the center
+            double progressRatio = Math.Clamp(_secondsRemaining / AutoReturnSeconds, 0.0, 1.0);
+            RedirectProgressScale.ScaleX = progressRatio;
 
             // Text only updates once per whole second (avoids flicker)
             int wholeSecond = (int)Math.Ceiling(_secondsRemaining);

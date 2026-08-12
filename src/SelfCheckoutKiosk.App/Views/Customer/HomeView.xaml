@@ -10,8 +10,8 @@
     <Page.Resources>
         <!-- LANGUAGE DROPDOWN -->
         <Style x:Key="LanguageDropDownButtonStyle" TargetType="DropDownButton">
-            <Setter Property="Background" Value="#F1F5F9"/>
-            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="Background" Value="{StaticResource SurfaceLightBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextDarkSlateBrush}"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="20"/>
@@ -20,11 +20,11 @@
         <Style x:Key="LanguageMenuItemStyle" TargetType="MenuFlyoutItem">
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="Foreground" Value="{StaticResource TextDarkSlateBrush}"/>
             <Setter Property="Padding" Value="16,10"/>
             <Setter Property="MinWidth" Value="160"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="FontFamily" Value="{StaticResource KhmerFont}"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppKhmerFont}"/>
         </Style>
     </Page.Resources>
 
@@ -181,7 +181,7 @@
             <DropDownButton x:Name="LanguageDropDownButton" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource LanguageDropDownButtonStyle}" RequestedTheme="Light">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Image x:Name="CurrentLanguageFlag" Width="24" Height="16" Stretch="Uniform" Source="ms-appx:///Assets/Images/Flag/en-flag.png"/>
-                    <TextBlock x:Name="CurrentLanguageText" Text="English" FontSize="16" FontWeight="SemiBold" Foreground="#334155"/>
+                    <TextBlock x:Name="CurrentLanguageText" Text="English" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}"/>
                 </StackPanel>
                 <DropDownButton.Flyout>
                     <MenuFlyout Placement="Bottom">
@@ -206,8 +206,8 @@
         <!-- 1. WELCOME HEADING -->
         <!-- ========================================================= -->
         <StackPanel x:Name="WelcomeStackPanel" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
-            <TextBlock x:Name="WelcomeSubheadingText" Text="WELCOME TO" FontSize="16" FontWeight="SemiBold" Foreground="#94A3B8" CharacterSpacing="100" HorizontalAlignment="Center"/>
-            <TextBlock x:Name="WelcomeTitleText" Text="Self-Checkout" FontSize="38" FontWeight="Bold" Foreground="#1A202C" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="WelcomeSubheadingText" Text="WELCOME TO" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="100" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="WelcomeTitleText" Text="Self-Checkout" FontSize="38" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
         </StackPanel>
 
         <!-- ========================================================= -->
@@ -222,17 +222,11 @@
 
             <!-- SCAN ITEM CARD -->
             <Viewbox Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <Button x:Name="ScanButton" Width="400" Height="400" CornerRadius="28" BorderThickness="0" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Click="ScanItemCard_Click">
-                    <Button.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#2563EB" Offset="0"/>
-                            <GradientStop Color="#1D4ED8" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Button.Background>
+                <Button x:Name="ScanButton" Width="400" Height="400" CornerRadius="28" BorderThickness="0" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Background="{StaticResource PrimaryCardGradientBrush}" Click="ScanItemCard_Click">
 
                     <Button.Resources>
-                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#1D4ED8"/>
-                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#1E40AF"/>
+                        <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="PrimaryBrandHoverBrush"/>
+                        <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="PrimaryBrandPressedBrush"/>
 
                         <!-- Floating & pulse scan animation -->
                         <Storyboard x:Name="ScanIconAnimation" AutoReverse="True" RepeatBehavior="Forever">
@@ -255,7 +249,7 @@
 
                         <!-- ICON -->
                         <Viewbox x:Name="ScanIconViewbox" Grid.Row="0" MaxWidth="120" MaxHeight="120" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,20">
-                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEC5A;" Foreground="White" Loaded="ScanIcon_Loaded">
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEE6F;" Foreground="White" Loaded="ScanIcon_Loaded">
                                 <FontIcon.RenderTransform>
                                     <TranslateTransform x:Name="IconTransform" Y="0"/>
                                 </FontIcon.RenderTransform>
@@ -273,12 +267,12 @@
 
             <!-- PAYMENT OPTIONS CARD -->
             <Viewbox Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <Button x:Name="PaymentButton" Width="400" Height="400" CornerRadius="28" Background="White" BorderBrush="#CBD5E1" BorderThickness="2" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Click="PaymentOptionsCard_Click">
+                <Button x:Name="PaymentButton" Width="400" Height="400" CornerRadius="28" Background="White" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="2" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Click="PaymentOptionsCard_Click">
                     <Button.Resources>
-                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F8FAFC"/>
-                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#F1F5F9"/>
-                        <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#CBD5E1"/>
-                        <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#CBD5E1"/>
+                        <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="SurfaceHoverBrush"/>
+                        <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="SurfaceLightBrush"/>
+                        <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="BorderLightBrush"/>
+                        <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="BorderLightBrush"/>
 
                         <!-- Floating payment icon animation -->
                         <Storyboard x:Name="PaymentIconAnimation" AutoReverse="True" RepeatBehavior="Forever">
@@ -301,7 +295,7 @@
 
                         <!-- ICON -->
                         <Viewbox x:Name="PaymentIconViewbox" Grid.Row="0" MaxWidth="120" MaxHeight="120" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,20">
-                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" Foreground="#0067C0">
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" Foreground="{StaticResource AccentBlueBrush}">
                                 <FontIcon.RenderTransform>
                                     <TranslateTransform x:Name="PaymentIconTransform" Y="0"/>
                                 </FontIcon.RenderTransform>
@@ -312,7 +306,7 @@
                         <TextBlock x:Name="PaymentTitleText" Grid.Row="1" Text="Payment" FontWeight="Bold" FontSize="38" Foreground="#1E293B" HorizontalAlignment="Center" TextAlignment="Center"/>
 
                         <!-- SUBTITLE -->
-                        <TextBlock x:Name="PaymentSubtitleText" Grid.Row="2" Text="Cards, Cash &amp; KHQR" FontSize="22" Foreground="#64748B" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
+                        <TextBlock x:Name="PaymentSubtitleText" Grid.Row="2" Text="Cards, Cash &amp; KHQR" FontSize="22" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
                     </Grid>
                 </Button>
             </Viewbox>
@@ -329,15 +323,15 @@
 
             <!-- STORE HOURS -->
             <StackPanel x:Name="StoreHoursStack" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-                <FontIcon x:Name="StoreHoursIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE823;" FontSize="16" Foreground="#94A3B8"/>
-                <TextBlock x:Name="StoreHoursText" Text="Open until 9:00 PM" FontSize="14" Foreground="#94A3B8"/>
+                <FontIcon x:Name="StoreHoursIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE823;" FontSize="16" Foreground="{StaticResource TextMutedBrush}"/>
+                <TextBlock x:Name="StoreHoursText" Text="Open until 9:00 PM" FontSize="14" Foreground="{StaticResource TextMutedBrush}"/>
             </StackPanel>
 
             <!-- HELP BUTTON -->
-            <Button Grid.Column="1" x:Name="HelpButton" HorizontalAlignment="Right" VerticalAlignment="Center" Background="Transparent" BorderBrush="#CBD5E1" BorderThickness="1.5" CornerRadius="24" Padding="20,10" Click="HelpButton_Click">
+            <Button Grid.Column="1" x:Name="HelpButton" HorizontalAlignment="Right" VerticalAlignment="Center" Background="Transparent" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1.5" CornerRadius="24" Padding="20,10" Click="HelpButton_Click">
                 <StackPanel x:Name="HelpButtonStack" Orientation="Horizontal" Spacing="8">
-                    <FontIcon x:Name="HelpButtonIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE9CE;" FontSize="16" Foreground="#334155"/>
-                    <TextBlock x:Name="HelpButtonText" Text="Need help?" FontSize="16" FontWeight="SemiBold" Foreground="#334155"/>
+                    <FontIcon x:Name="HelpButtonIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE9CE;" FontSize="16" Foreground="{StaticResource TextDarkSlateBrush}"/>
+                    <TextBlock x:Name="HelpButtonText" Text="Need help?" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}"/>
                 </StackPanel>
             </Button>
         </Grid>

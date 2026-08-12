@@ -12,35 +12,32 @@
 
     <Page.Resources>
 
-        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#EFF6FF"/>
-        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#DBEAFE"/>
-
         <Style x:Key="HeaderChipButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#1F7FCB"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource AccentBlueBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="CornerRadius" Value="{StaticResource KioskChipCornerRadius}"/>
             <Setter Property="Padding" Value="16,6"/>
             <Setter Property="Height" Value="40"/>
         </Style>
 
         <!-- Kiosk-sized touch target note button style -->
         <Style x:Key="NoteButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#2D3748"/>
+            <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextItemNameBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="17"/>
-            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="CornerRadius" Value="{StaticResource KioskButtonCornerRadius}"/>
             <Setter Property="Padding" Value="18,14"/>
             <Setter Property="MinWidth" Value="92"/>
             <Setter Property="Height" Value="64"/>
-            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
             <Setter Property="BorderThickness" Value="1.5"/>
         </Style>
 
     </Page.Resources>
 
-    <Grid Background="#FFF4F6F8">
+    <Grid Background="{StaticResource PageBackgroundBrush}">
         <!-- ========================================================= -->
         <!-- VISUAL STATE MANAGER (ADAPTIVE KIOSK SCALING) -->
         <!-- ========================================================= -->
@@ -56,7 +53,7 @@
                         <!-- Header -->
                         <Setter Target="HeaderBorder.Padding" Value="16,10"/>
                         <Setter Target="HeaderBorder.Height" Value="64"/>
-                        <Setter Target="HeaderTitleText.FontSize" Value="18"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="{StaticResource FontSizeTitle}"/>
                         <Setter Target="BackButton.Height" Value="40"/>
                         <Setter Target="BackButtonIcon.FontSize" Value="16"/>
 
@@ -65,31 +62,31 @@
 
                         <!-- Hero Balance & Metrics -->
                         <Setter Target="RemainingDueCard.Padding" Value="14,10"/>
-                        <Setter Target="RemainingDueLabel.FontSize" Value="11"/>
+                        <Setter Target="RemainingDueLabel.FontSize" Value="{StaticResource FontSizeSubLabel}"/>
                         <Setter Target="RemainingDueText.FontSize" Value="26"/>
                         <Setter Target="PaidProgressBar.Height" Value="6"/>
 
                         <Setter Target="TotalDueCard.Padding" Value="10,8"/>
-                        <Setter Target="TotalDueLabel.FontSize" Value="10"/>
-                        <Setter Target="TotalDueText.FontSize" Value="14"/>
+                        <Setter Target="TotalDueLabel.FontSize" Value="{StaticResource FontSizeCaption}"/>
+                        <Setter Target="TotalDueText.FontSize" Value="{StaticResource FontSizeSubtitle}"/>
 
                         <Setter Target="TotalPaidCard.Padding" Value="10,8"/>
-                        <Setter Target="TotalPaidLabel.FontSize" Value="10"/>
-                        <Setter Target="TotalPaidText.FontSize" Value="14"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="{StaticResource FontSizeCaption}"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="{StaticResource FontSizeSubtitle}"/>
 
                         <!-- Note Insertion -->
-                        <Setter Target="InsertCashLabel.FontSize" Value="13"/>
-                        <Setter Target="UsdNotesLabel.FontSize" Value="10"/>
-                        <Setter Target="KhrNotesLabel.FontSize" Value="10"/>
+                        <Setter Target="InsertCashLabel.FontSize" Value="{StaticResource FontSizeBodyLarge}"/>
+                        <Setter Target="UsdNotesLabel.FontSize" Value="{StaticResource FontSizeCaption}"/>
+                        <Setter Target="KhrNotesLabel.FontSize" Value="{StaticResource FontSizeCaption}"/>
 
                         <!-- Activity Feed -->
-                        <Setter Target="ActivityLabel.FontSize" Value="13"/>
+                        <Setter Target="ActivityLabel.FontSize" Value="{StaticResource FontSizeBodyLarge}"/>
                         <Setter Target="ActivityBorder.Padding" Value="3"/>
 
                         <!-- Footer -->
                         <Setter Target="FooterBorder.Padding" Value="16,12,16,14"/>
-                        <Setter Target="CurrencyInfoIcon.FontSize" Value="12"/>
-                        <Setter Target="CurrencyInfoText.FontSize" Value="11"/>
+                        <Setter Target="CurrencyInfoIcon.FontSize" Value="{StaticResource FontSizeBody}"/>
+                        <Setter Target="CurrencyInfoText.FontSize" Value="{StaticResource FontSizeSubLabel}"/>
                         <Setter Target="ConfirmPaymentButton.Height" Value="52"/>
                         <Setter Target="ConfirmPaymentButton.FontSize" Value="17"/>
                     </VisualState.Setters>
@@ -104,7 +101,7 @@
                         <!-- Header -->
                         <Setter Target="HeaderBorder.Padding" Value="32,14"/>
                         <Setter Target="HeaderBorder.Height" Value="84"/>
-                        <Setter Target="HeaderTitleText.FontSize" Value="26"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="{StaticResource FontSizeHeroMedium}"/>
                         <Setter Target="BackButton.Height" Value="54"/>
                         <Setter Target="BackButtonIcon.FontSize" Value="21"/>
 
@@ -113,31 +110,31 @@
 
                         <!-- Hero Balance & Metrics -->
                         <Setter Target="RemainingDueCard.Padding" Value="20,14"/>
-                        <Setter Target="RemainingDueLabel.FontSize" Value="13"/>
+                        <Setter Target="RemainingDueLabel.FontSize" Value="{StaticResource FontSizeBodyLarge}"/>
                         <Setter Target="RemainingDueText.FontSize" Value="36"/>
                         <Setter Target="PaidProgressBar.Height" Value="9"/>
 
                         <Setter Target="TotalDueCard.Padding" Value="16,12"/>
-                        <Setter Target="TotalDueLabel.FontSize" Value="12"/>
-                        <Setter Target="TotalDueText.FontSize" Value="18"/>
+                        <Setter Target="TotalDueLabel.FontSize" Value="{StaticResource FontSizeBody}"/>
+                        <Setter Target="TotalDueText.FontSize" Value="{StaticResource FontSizeTitle}"/>
 
                         <Setter Target="TotalPaidCard.Padding" Value="16,12"/>
-                        <Setter Target="TotalPaidLabel.FontSize" Value="12"/>
-                        <Setter Target="TotalPaidText.FontSize" Value="18"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="{StaticResource FontSizeBody}"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="{StaticResource FontSizeTitle}"/>
 
                         <!-- Note Insertion -->
-                        <Setter Target="InsertCashLabel.FontSize" Value="18"/>
-                        <Setter Target="UsdNotesLabel.FontSize" Value="12"/>
-                        <Setter Target="KhrNotesLabel.FontSize" Value="12"/>
+                        <Setter Target="InsertCashLabel.FontSize" Value="{StaticResource FontSizeTitle}"/>
+                        <Setter Target="UsdNotesLabel.FontSize" Value="{StaticResource FontSizeBody}"/>
+                        <Setter Target="KhrNotesLabel.FontSize" Value="{StaticResource FontSizeBody}"/>
 
                         <!-- Activity Feed -->
-                        <Setter Target="ActivityLabel.FontSize" Value="18"/>
+                        <Setter Target="ActivityLabel.FontSize" Value="{StaticResource FontSizeTitle}"/>
                         <Setter Target="ActivityBorder.Padding" Value="6"/>
 
                         <!-- Footer -->
                         <Setter Target="FooterBorder.Padding" Value="32,18,32,20"/>
-                        <Setter Target="CurrencyInfoIcon.FontSize" Value="16"/>
-                        <Setter Target="CurrencyInfoText.FontSize" Value="14"/>
+                        <Setter Target="CurrencyInfoIcon.FontSize" Value="{StaticResource FontSizeTitleSmall}"/>
+                        <Setter Target="CurrencyInfoText.FontSize" Value="{StaticResource FontSizeSubtitle}"/>
                         <Setter Target="ConfirmPaymentButton.Height" Value="70"/>
                         <Setter Target="ConfirmPaymentButton.FontSize" Value="22"/>
                     </VisualState.Setters>
@@ -166,26 +163,26 @@
                         <Setter Target="PaidProgressBar.Height" Value="12"/>
 
                         <Setter Target="TotalDueCard.Padding" Value="20,16"/>
-                        <Setter Target="TotalDueLabel.FontSize" Value="14"/>
-                        <Setter Target="TotalDueText.FontSize" Value="22"/>
+                        <Setter Target="TotalDueLabel.FontSize" Value="{StaticResource FontSizeSubtitle}"/>
+                        <Setter Target="TotalDueText.FontSize" Value="{StaticResource FontSizeHeroSmall}"/>
 
                         <Setter Target="TotalPaidCard.Padding" Value="20,16"/>
-                        <Setter Target="TotalPaidLabel.FontSize" Value="14"/>
-                        <Setter Target="TotalPaidText.FontSize" Value="22"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="{StaticResource FontSizeSubtitle}"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="{StaticResource FontSizeHeroSmall}"/>
 
                         <!-- Note Insertion -->
-                        <Setter Target="InsertCashLabel.FontSize" Value="22"/>
-                        <Setter Target="UsdNotesLabel.FontSize" Value="14"/>
-                        <Setter Target="KhrNotesLabel.FontSize" Value="14"/>
+                        <Setter Target="InsertCashLabel.FontSize" Value="{StaticResource FontSizeHeroSmall}"/>
+                        <Setter Target="UsdNotesLabel.FontSize" Value="{StaticResource FontSizeSubtitle}"/>
+                        <Setter Target="KhrNotesLabel.FontSize" Value="{StaticResource FontSizeSubtitle}"/>
 
                         <!-- Activity Feed -->
-                        <Setter Target="ActivityLabel.FontSize" Value="22"/>
+                        <Setter Target="ActivityLabel.FontSize" Value="{StaticResource FontSizeHeroSmall}"/>
                         <Setter Target="ActivityBorder.Padding" Value="8"/>
 
                         <!-- Footer -->
                         <Setter Target="FooterBorder.Padding" Value="48,28,48,32"/>
                         <Setter Target="CurrencyInfoIcon.FontSize" Value="20"/>
-                        <Setter Target="CurrencyInfoText.FontSize" Value="18"/>
+                        <Setter Target="CurrencyInfoText.FontSize" Value="{StaticResource FontSizeTitle}"/>
                         <Setter Target="ConfirmPaymentButton.Height" Value="96"/>
                         <Setter Target="ConfirmPaymentButton.FontSize" Value="28"/>
                     </VisualState.Setters>
@@ -201,12 +198,12 @@
         </Grid.RowDefinitions>
 
         <!-- 1. HEADER -->
-        <Border x:Name="HeaderBorder" Grid.Row="0" Background="#0067C0" Padding="24,16" Height="80">
+        <Border x:Name="HeaderBorder" Grid.Row="0" Background="{StaticResource AccentBlueBrush}" Padding="24,16" Height="80">
             <Grid VerticalAlignment="Center">
 
                 <!-- Centered Title -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
-                    <TextBlock x:Name="HeaderTitleText" Text="Cash Payment" Foreground="White" FontSize="26" FontWeight="Bold"/>
+                    <TextBlock x:Name="HeaderTitleText" Text="Cash Payment" Foreground="{StaticResource TextOnAccentBrush}" FontSize="{StaticResource FontSizeHeroMedium}" FontWeight="Bold"/>
                 </StackPanel>
 
                 <!-- Left Floating Button -->
@@ -254,12 +251,12 @@
             <StackPanel Grid.Row="0" Spacing="10">
 
                 <!-- Hero: remaining balance -->
-                <Border x:Name="RemainingDueCard" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="16" Padding="16,12">
+                <Border x:Name="RemainingDueCard" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" Padding="16,12">
                     <StackPanel Spacing="6">
-                        <TextBlock x:Name="RemainingDueLabel" Text="AMOUNT REMAINING" FontSize="12" FontWeight="SemiBold" Foreground="#A0AEC0" HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="RemainingDueText" FontSize="32" FontWeight="Bold" Foreground="#DC2626" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="RemainingDueLabel" Text="AMOUNT REMAINING" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="RemainingDueText" FontSize="{StaticResource FontSizeHeroLarge}" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" HorizontalAlignment="Center"/>
                         <ProgressBar x:Name="PaidProgressBar" Minimum="0" Maximum="100" Value="0" Height="8" CornerRadius="4"
-                                     Foreground="#059669" Background="#E2E8F0"/>
+                                     Foreground="{StaticResource SuccessBrush}" Background="{StaticResource CardBorderBrush}"/>
                     </StackPanel>
                 </Border>
 
@@ -270,17 +267,17 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Border x:Name="TotalDueCard" Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10">
+                    <Border x:Name="TotalDueCard" Grid.Column="0" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="12,10">
                         <StackPanel Spacing="2">
-                            <TextBlock x:Name="TotalDueLabel" Text="TOTAL DUE" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
-                            <TextBlock x:Name="TotalDueText" FontSize="16" FontWeight="Bold" Foreground="#2D3748"/>
+                            <TextBlock x:Name="TotalDueLabel" Text="TOTAL DUE" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
+                            <TextBlock x:Name="TotalDueText" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource TextItemNameBrush}"/>
                         </StackPanel>
                     </Border>
 
-                    <Border x:Name="TotalPaidCard" Grid.Column="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="12,10">
+                    <Border x:Name="TotalPaidCard" Grid.Column="1" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="12,10">
                         <StackPanel Spacing="2">
-                            <TextBlock x:Name="TotalPaidLabel" Text="AMOUNT PAID" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
-                            <TextBlock x:Name="TotalPaidText" FontSize="16" FontWeight="Bold" Foreground="#059669"/>
+                            <TextBlock x:Name="TotalPaidLabel" Text="AMOUNT PAID" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
+                            <TextBlock x:Name="TotalPaidText" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}"/>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -288,10 +285,10 @@
 
             <!-- NOTE SELECTION -->
             <StackPanel Grid.Row="1" Spacing="10">
-                <TextBlock x:Name="InsertCashLabel" Text="Insert Cash" FontSize="16" FontWeight="Bold" Foreground="#2D3748"/>
+                <TextBlock x:Name="InsertCashLabel" Text="Insert Cash" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource TextItemNameBrush}"/>
 
                 <StackPanel Spacing="6">
-                    <TextBlock x:Name="UsdNotesLabel" Text="USD NOTES" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
+                    <TextBlock x:Name="UsdNotesLabel" Text="USD NOTES" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
                     <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" HorizontalScrollMode="Enabled">
                         <StackPanel x:Name="UsdNotesPanel" Orientation="Horizontal" Spacing="8">
                             <Button Content="$1"    Tag="1"    Style="{StaticResource NoteButtonStyle}"/>
@@ -305,7 +302,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="6">
-                    <TextBlock x:Name="KhrNotesLabel" Text="KHR NOTES" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0"/>
+                    <TextBlock x:Name="KhrNotesLabel" Text="KHR NOTES" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
                     <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" HorizontalScrollMode="Enabled">
                         <StackPanel x:Name="KhrNotesPanel" Orientation="Horizontal" Spacing="8">
                             <Button Content="៛100"     Tag="100"    Style="{StaticResource NoteButtonStyle}"/>
@@ -330,9 +327,9 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock x:Name="ActivityLabel" Grid.Row="0" Text="Activity" FontSize="16" FontWeight="Bold" Foreground="#2D3748" Margin="0,0,0,6"/>
+                <TextBlock x:Name="ActivityLabel" Grid.Row="0" Text="Activity" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource TextItemNameBrush}" Margin="0,0,0,6"/>
 
-                <Border x:Name="ActivityBorder" Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="4">
+                <Border x:Name="ActivityBorder" Grid.Row="1" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="4">
                     <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
                         <ItemsControl x:Name="AttemptsListControl">
                             <ItemsControl.ItemTemplate>
@@ -349,7 +346,7 @@
 
                                             <StackPanel Grid.Column="1" Spacing="2">
                                                 <TextBlock x:Name="AmountText" Text="{x:Bind DisplayAmount}" FontWeight="Bold" FontSize="15"/>
-                                                <TextBlock x:Name="ReasonText" Text="{x:Bind Reason}" FontSize="12" Foreground="#718096" TextWrapping="Wrap"/>
+                                                <TextBlock x:Name="ReasonText" Text="{x:Bind Reason}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource TextQuantityBrush}" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -362,7 +359,7 @@
         </Grid>
 
         <!-- 3. FOOTER -->
-        <Border x:Name="FooterBorder" Grid.Row="2" Background="White" Padding="24,20" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+        <Border x:Name="FooterBorder" Grid.Row="2" Background="{StaticResource CardBackgroundBrush}" Padding="24,20" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
             <StackPanel Spacing="10">
 
                 <!-- Currency Acceptance Note -->
@@ -370,14 +367,14 @@
                     <FontIcon x:Name="CurrencyInfoIcon"
                               FontFamily="Segoe Fluent Icons" 
                               Glyph="&#xE946;" 
-                              FontSize="14" 
-                              Foreground="Green" 
+                              FontSize="{StaticResource FontSizeSubtitle}" 
+                              Foreground="{StaticResource SuccessBrush}" 
                               VerticalAlignment="Center"/>
                     <TextBlock x:Name="CurrencyInfoText"
                                Text="USD ($) and KHR (៛) cash are both accepted" 
-                               FontSize="13" 
+                               FontSize="{StaticResource FontSizeBodyLarge}" 
                                FontWeight="SemiBold" 
-                               Foreground="Green"
+                               Foreground="{StaticResource SuccessBrush}"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
@@ -388,15 +385,10 @@
                         Height="80"
                         FontSize="24"
                         FontWeight="Bold"
-                        Foreground="White"
-                        CornerRadius="16"
-                        IsEnabled="False">
-                    <Button.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#2563EB" Offset="0"/>
-                            <GradientStop Color="#1D4ED8" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Button.Background>
+                        Foreground="{StaticResource TextOnAccentBrush}"
+                        CornerRadius="{StaticResource KioskHeroCardCornerRadius}"
+                        IsEnabled="False"
+                        Background="{StaticResource PrimaryCardGradientBrush}">
                     <Button.Resources>
                         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#005A9E"/>
                         <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#004578"/>
