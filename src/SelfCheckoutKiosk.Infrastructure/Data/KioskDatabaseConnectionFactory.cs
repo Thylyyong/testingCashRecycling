@@ -26,6 +26,34 @@ namespace SelfCheckoutKiosk.Infrastructure.Data;
 /// </summary>
 public sealed class KioskDatabaseConnectionFactory
 {
+    /*
+     * This project deliberately references SQLitePCLRaw.provider.winsqlite3
+     * directly rather than a SQLitePCLRaw.bundle_* package (see
+     * SelfCheckoutKiosk.Infrastructure.csproj comment on Sqlite.Core) so the
+     * native SQLCipher provider can be swapped in later without pulling in
+     * plain SQLite. The bundle packages carry SQLitePCLRaw.batteries_v2,
+     * which auto-registers a provider via Batteries_v2.Init() — that package
+     * is NOT referenced here, so Microsoft.Data.Sqlite has no provider
+     * registered until we set one explicitly. Without this, the first
+     * SqliteConnection touches SQLitePCL.raw's static state uninitialized
+     * and throws a TypeInitializationException that unwinds past any normal
+     * try/catch because it happens inside a type initializer, not inside
+     * this method's own logic.
+     *
+     * A static constructor runs exactly once, guaranteed before any other
+     * member of this type is touched — including the first
+     * CreateOpenConnection call — so this fixes the ordering regardless of
+     * caller. SetProvider takes a concrete, directly-referenced type
+     * (no reflection, no assembly scanning), so it is not a trimming/AOT
+     * risk: the trimmer only removes types nothing reaches, and this type
+     * is always reached because CreateOpenConnection constructs a
+     * SqliteConnection every time it runs.
+     */
+    static KioskDatabaseConnectionFactory()
+    {
+        SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_winsqlite3());
+    }
+
     /// <summary>
     /// Creates and opens a hardened SQLCipher connection.
     /// </summary>

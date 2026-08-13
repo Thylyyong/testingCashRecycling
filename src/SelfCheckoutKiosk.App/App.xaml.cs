@@ -1,5 +1,8 @@
-﻿using Microsoft.UI.Xaml;
+﻿using System.Diagnostics;
+using Microsoft.UI.Xaml;
+using SelfCheckoutKiosk.App.Composition;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Views;
 
 namespace SelfCheckoutKiosk.App
 {
@@ -12,6 +15,14 @@ namespace SelfCheckoutKiosk.App
 
         public static MainWindow? MainWindowInstance { get; private set; }
 
+        /// <summary>
+        /// Resolved engine/services from CompositionRoot.Build(). Populated during
+        /// OnLaunched regardless of whether InitializeAsync() below succeeds —
+        /// consumers must not assume the engine is actually initialized just
+        /// because this is non-null.
+        /// </summary>
+        public static KioskServices? Services { get; private set; }
+
         // Application-wide singletons initialized at startup
         public static ICartService CartServiceInstance { get; } = new CartService();
         public static IProductService ProductServiceInstance { get; } = new MockProductService();
@@ -22,7 +33,7 @@ namespace SelfCheckoutKiosk.App
             InitializeComponent();
         }
 
-        protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             var mainWindow = new MainWindow();
             _window = mainWindow;
@@ -36,6 +47,33 @@ namespace SelfCheckoutKiosk.App
                 MainWindowInstance = null;
                 _window = null;
             };
+
+            // Blueprint §6 step 2: license/hardware failure is a hard stop, not a
+            // degraded mode. mainWindow's own constructor already navigated to the
+            // normal Home flow (KioskBaseView2) — if anything in this block fails,
+            // that navigation is overridden with the blocking FaultView BEFORE the
+            // window is ever activated/shown, so the user never sees the normal UI.
+            //
+            // CompositionRoot.Build() is inside this try, not just InitializeAsync():
+            // it opens a real SQLite connection while constructing the license
+            // source (LicenseConfigurationSource needs a live KioskDbContext), so
+            // it can throw for the same reasons InitializeAsync() can. Nothing
+            // between "window constructed" and "window activated" is allowed to
+            // throw unhandled past this point.
+            try
+            {
+                Services = CompositionRoot.Build();
+
+                await Services.Engine.InitializeAsync();
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine($"[FATAL] Kiosk engine failed to start: {exception}");
+
+                mainWindow.NavigationService.NavigateTo(
+                    typeof(FaultView),
+                    $"{exception.GetType().Name}: {exception.Message}");
+            }
 
             _window.Activate();
         }
