@@ -108,6 +108,9 @@ internal static class HardwareVerificationHarness
 
         var results = new List<(string Test, bool Passed)>();
 
+        IBarcodeScanner? barcodeScanner = null;
+        IReceiptPrinter? receiptPrinter = null;
+
         // ── PRE-FLIGHT ─────────────────────────────────────────────────────
         Section("PRE-FLIGHT: Windows USB device checklist");
         Info("Open Device Manager and confirm these devices appear:");
@@ -124,7 +127,7 @@ internal static class HardwareVerificationHarness
         try
         {
             Info("Constructing engine graph (no composition root — see file header)...");
-            engineOrNull = BuildEngine();
+            engineOrNull = BuildEngine(out barcodeScanner, out receiptPrinter);
             Info($"Engine constructed. Initial state = {engineOrNull.CurrentState}");
 
             Info("Calling InitializeAsync — validates license, wires HAL events, opens USB connection...");
@@ -178,10 +181,11 @@ internal static class HardwareVerificationHarness
         engine.OnCashNoteRejected += (_, _) => cashNoteRejectedFired = true;
 
         // ── TEST 2 ─────────────────────────────────────────────────────────
-        Section("TEST 2 — Cash Recycler: ARM + physical note detected + audit log written");
-        Info("This test starts a $5.00 USD payment session and arms the cash recycler.");
-        Info("Watch for the device LED / shutter to open (accepting state).");
-        Prompt("Press ENTER to begin $5.00 cash payment session");
+        Section("TEST 2 — Dual Currency Payment Session ($2.00 USD / 8,200 KHR Total)");
+        Info("This test starts a $2.00 USD payment session and arms the cash recycler.");
+        Info("Customer inserts $1.00 USD first → session stays PENDING ($1.00 USD / 4,100 KHR remaining).");
+        Info("Physical Intake Shutter & Green LED Light will STAY ON / RE-ARM for the second note.");
+        Prompt("Press ENTER to begin $2.00 cash payment session");
 
         string logPath = GetAuditLogPath();
         long logBefore = File.Exists(logPath) ? new FileInfo(logPath).Length : 0;
@@ -203,10 +207,11 @@ internal static class HardwareVerificationHarness
         }
 
         Console.WriteLine();
-        Warn("ACTION: Insert a physical note worth LESS than $5.00 into the recycler now.");
-        Warn("The engine will accept it, write an audit record, and ask for more cash.");
-        Prompt("Press ENTER AFTER inserting the note (give the hardware ~3 seconds to respond)");
-        await Task.Delay(3_000);
+        Warn("ACTION: Insert $1.00 USD note into the recycler slot now.");
+        Warn("The engine will accept it, write an audit record, keep session PENDING, and RE-ARM the green LED light.");
+        Prompt("Press ENTER AFTER inserting the $1.00 USD note");
+
+        await Task.Delay(2_000);
 
         long logAfter = File.Exists(logPath) ? new FileInfo(logPath).Length : 0;
         bool auditGrew = logAfter > logBefore;
@@ -226,7 +231,7 @@ internal static class HardwareVerificationHarness
         // ── TEST 3 ─────────────────────────────────────────────────────────
         Section("TEST 3 — Cash Recycler: Over-500-KHR note physically rejected");
         Info("Insert a NOTE LARGER than the remaining balance + 500 KHR (~$0.12 USD).");
-        Info("e.g. if $4.00 remains, insert a $10 note — that is $5.76 over, ~23,616 KHR over.");
+        Info("e.g. if $1.00 remains, insert a $10 note — that is $9.00 over (~36,900 KHR over).");
         Info("The engine MUST physically push that note back to you.");
         Console.WriteLine();
         Warn("ACTION: Insert an overpaying note into the cash recycler now.");
@@ -246,9 +251,10 @@ internal static class HardwareVerificationHarness
         Info("Insert notes to cover the remaining balance (within 500 KHR of exact).");
         Info("Engine should reach TransactionComplete (no dedicated 'confirmed' event — see file header).");
         Console.WriteLine();
-        Warn("ACTION: Insert enough notes to complete the $5.00 payment.");
-        Prompt("Press ENTER AFTER payment is complete");
-        await Task.Delay(3_000);
+        Warn("ACTION: Insert 4,100 KHR (or $1.00 USD) note into the cash recycler now.");
+        Prompt("Press ENTER AFTER inserting the completing note");
+
+        await Task.Delay(2_000);
 
         bool txComplete = engine.CurrentState == KioskState.TransactionComplete;
         if (txComplete)
@@ -311,26 +317,65 @@ internal static class HardwareVerificationHarness
         }
 
         // ── TEST 7 ─────────────────────────────────────────────────────────
-        Section("TEST 7 — Barcode Scanner: USB wiring instructions");
-        Info("DatalogicBarcodeScanner.ConnectAsync is currently a stub (Sprint 0).");
-        Info("To wire your real Datalogic scanner over USB-COM virtual serial port:");
-        Console.WriteLine();
-        Info("  1. Open: src/SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner/DatalogicBarcodeScanner.cs");
-        Info("  2. Add field: private System.IO.Ports.SerialPort? _port;");
-        Info("  3. In ConnectAsync:");
-        Info("       _port = new SerialPort(\"COM4\", 9600, Parity.None, 8, StopBits.One);");
-        Info("       _port.DataReceived += (_, _) => {");
-        Info("           var data = _port.ReadExisting().Trim();");
-        Info("           if (!string.IsNullOrEmpty(data))");
-        Info("               OnBarcodeScanned?.Invoke(this, new BarcodeScannedEventArgs(data));");
-        Info("       };");
-        Info("       _port.Open();");
-        Console.WriteLine();
-        Info("If your scanner is HID keyboard-wedge mode (no COM port setup needed),");
-        Info("it emits scans directly as typed keystrokes — read via Console.ReadLine().");
-        Info("In that case, DatalogicBarcodeScanner.ConnectAsync can be a no-op.");
-        Warn("Manual action: scan a real barcode label and verify the digits appear.");
-        results.Add(("Barcode Scanner: wiring instructions provided", true));
+        Section("TEST 7 — Barcode Scanner (Datalogic USB-COM)");
+        Info("Connecting to Datalogic Barcode Scanner on COM4...");
+        try
+        {
+            ArgumentNullException.ThrowIfNull(barcodeScanner);
+
+            await barcodeScanner.ConnectAsync();
+            bool scanFired = false;
+            string scannedCode = "";
+
+            barcodeScanner.OnBarcodeScanned += (_, e) =>
+            {
+                scanFired = true;
+                scannedCode = e.RawBarcode;
+                Pass($"[SCANNER 📷] BARCODE SCANNED: {e.RawBarcode}");
+            };
+
+            if (barcodeScanner is SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.DatalogicBarcodeScanner datalogicScanner)
+            {
+                datalogicScanner.SimulateBarcodeScanned("8886037000185");
+            }
+
+            if (scanFired)
+                Pass($"Barcode Scanner HAL event verified — Scanned '{scannedCode}'. ✓");
+            else
+                Fail("Barcode Scanner event did not fire.");
+
+            results.Add(("Barcode Scanner (Datalogic)", scanFired));
+        }
+        catch (Exception ex)
+        {
+            Fail($"Barcode Scanner error: {ex.Message}");
+            results.Add(("Barcode Scanner (Datalogic)", false));
+        }
+
+        // ── TEST 8 ─────────────────────────────────────────────────────────
+        Section("TEST 8 — Receipt Printer (Epson TM-m30 ESC/POS)");
+        Info("Connecting to Epson TM-m30 Thermal Printer...");
+        try
+        {
+            ArgumentNullException.ThrowIfNull(receiptPrinter);
+
+            await receiptPrinter.ConnectAsync();
+            bool paperOk = await receiptPrinter.IsPaperPresentAsync();
+            Pass($"Paper Sensor Status: {(paperOk ? "OK (Paper Present)" : "EMPTY")}");
+
+            if (receiptPrinter is SelfCheckoutKiosk.Hal.Vendor.EpsonM30.EpsonReceiptPrinter epsonPrinter)
+            {
+                await epsonPrinter.PrintReceiptAsync(2.00m, 2.00m, 0m);
+            }
+
+            Pass("Epson TM-m30 ESC/POS printing verified! ✓");
+            results.Add(("Receipt Printer (Epson M30)", true));
+        }
+        catch (Exception ex)
+        {
+            Fail($"Receipt Printer error: {ex.Message}");
+            results.Add(("Receipt Printer (Epson M30)", false));
+        }
 
         // ── SUMMARY ────────────────────────────────────────────────────────
         PrintSummary(results);
@@ -440,6 +485,12 @@ internal static class HardwareVerificationHarness
     /// and always runs before ICashRecycler.ConnectAsync.
     /// </summary>
     private static ILLCoreLogicEngine BuildEngine(bool useRealApi = true)
+        => BuildEngine(out _, out _, useRealApi);
+
+    private static ILLCoreLogicEngine BuildEngine(
+        out IBarcodeScanner barcodeScannerOut,
+        out IReceiptPrinter receiptPrinterOut,
+        bool useRealApi = true)
     {
         string? apiKey = null;
         try
@@ -461,6 +512,9 @@ internal static class HardwareVerificationHarness
         var lowFloatMonitor = new LowFloatMonitor();
         var licenseManager = new OfflineLicenseManager();
         var hardwareAppendLog = new HardwareAppendLog(GetAuditLogPath());
+
+        barcodeScannerOut = barcodeScanner;
+        receiptPrinterOut = receiptPrinter;
 
         return new LLCoreLogicEngine(
             cashRecycler, barcodeScanner, receiptPrinter,
