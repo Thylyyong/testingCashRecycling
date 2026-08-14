@@ -79,10 +79,10 @@
 
             <!-- Store Branding & Tap Prompt Overlay -->
             <StackPanel x:Name="BrandingStackPanel" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="40,0,0,40" Spacing="8" IsHitTestVisible="False">
-                <TextBlock x:Name="WelcomeTextBlock" Text="WELCOME TO" FontSize="16" FontWeight="SemiBold" Foreground="#E2E8F0" CharacterSpacing="80"/>
-                <TextBlock x:Name="TitleTextBlock" Text="Self-Checkout" FontSize="42" FontWeight="Bold" Foreground="White"/>
+                <TextBlock x:Name="WelcomeTextBlock" Text="{x:Bind Localizer.GetString('WelcomeTo'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" Foreground="#E2E8F0" CharacterSpacing="80"/>
+                <TextBlock x:Name="TitleTextBlock" Text="{x:Bind Localizer.GetString('SelfCheckout'), Mode=OneWay}" FontSize="42" FontWeight="Bold" Foreground="White"/>
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-                    <TextBlock x:Name="TapPromptTextBlock" Text="Tap anywhere to start" FontSize="18" FontWeight="SemiBold" Foreground="#60A5FA"/>
+                    <TextBlock x:Name="TapPromptTextBlock" Text="{x:Bind Localizer.GetString('TapToStart'), Mode=OneWay}" FontSize="18" FontWeight="SemiBold" Foreground="#60A5FA"/>
                 </StackPanel>
             </StackPanel>
 

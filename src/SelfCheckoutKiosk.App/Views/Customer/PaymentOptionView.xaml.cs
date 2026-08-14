@@ -26,6 +26,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
     public sealed partial class PaymentOptionView : Page
     {
         public PaymentOptionViewModel ViewModel { get; }
+        public LocalizationService Localizer => LocalizationService.Instance;
 
         private readonly DispatcherTimer _inactivityTimer;
 

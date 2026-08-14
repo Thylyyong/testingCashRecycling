@@ -11,6 +11,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 {
     public sealed partial class SuccessView : Page
     {
+        public LocalizationService Localizer => LocalizationService.Instance;
         private const int AutoReturnSeconds = 60;
         private static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(50);
 
@@ -78,7 +79,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             if (ViewModel == null) return;
 
             TransactionIdText.Text = $"Transaction #{ViewModel.TransactionId}";
-            MethodLabelText.Text = $"Paid with {ViewModel.MethodLabel}";
+            MethodLabelText.Text = $"{Localizer.GetString("PaidWith")} {ViewModel.MethodLabel}";
 
             // Split out instead of FormattedTotalPaid, which bundles USD + KHR together
             TotalPaidText.Text = $"${ViewModel.Payment.TotalPaidUsd:0.00}";
@@ -125,7 +126,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             if (wholeSecond != _lastDisplayedSecond)
             {
                 _lastDisplayedSecond = wholeSecond;
-                TimerCountdownText.Text = $"This screen will return to the start in {wholeSecond} seconds";
+                CountdownNumberText.Text = wholeSecond.ToString();
             }
         }
 

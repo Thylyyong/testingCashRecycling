@@ -128,14 +128,14 @@
 
                 <!-- Status Header -->
                 <StackPanel HorizontalAlignment="Center" Spacing="4">
-                    <TextBlock x:Name="StatusTitleText" Text="Payment Complete" FontSize="30" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" FontFamily="{StaticResource AppPrimaryFont}"/>
+                    <TextBlock x:Name="StatusTitleText" Text="{x:Bind Localizer.GetString('PaymentComplete'), Mode=OneWay}" FontFamily="{StaticResource GlobalAppFont}" FontSize="30" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="TransactionIdText" FontFamily="Consolas" FontSize="13" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- RECEIPT CARD -->
                 <Border x:Name="ReceiptCardBorder" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" Padding="32,28" HorizontalAlignment="Stretch">
                     <StackPanel HorizontalAlignment="Stretch">
-                        <TextBlock x:Name="TotalPaidLabel" Text="TOTAL PAID" FontSize="{StaticResource FontSizeBody}" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" CharacterSpacing="80" FontFamily="{StaticResource AppPrimaryFont}"/>
+                        <TextBlock x:Name="TotalPaidLabel" Text="{x:Bind Localizer.GetString('TotalPaid'), Mode=OneWay}" FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource GlobalAppFont}" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" CharacterSpacing="80"/>
 
                         <!-- Primary Amount: USD -->
                         <TextBlock x:Name="TotalPaidText" Text="$0.00" FontFamily="Consolas" FontSize="44" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
@@ -149,7 +149,7 @@
                         <!-- Payment Method -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
                             <FontIcon x:Name="MethodIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" FontSize="16" Foreground="{StaticResource AccentBlueBrush}"/>
-                            <TextBlock x:Name="MethodLabelText" Text="Paid with Cash" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}" FontFamily="{StaticResource AppPrimaryFont}"/>
+                            <TextBlock x:Name="MethodLabelText" Text="Paid with Cash" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}" FontFamily="{StaticResource GlobalAppFont}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -158,15 +158,36 @@
                 <Border x:Name="PrinterWarningBanner" Background="{StaticResource DangerLightBrush}" BorderBrush="{StaticResource DangerBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="16,12" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
                         <FontIcon x:Name="PrinterWarningIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE7BA;" FontSize="16" Foreground="{StaticResource DangerBrush}"/>
-                        <TextBlock x:Name="PrinterWarningText" Text="We couldn't print your receipt — please ask a staff member." FontSize="{StaticResource FontSizeSubtitle}" Foreground="{StaticResource DangerHoverBrush}" TextWrapping="Wrap" HorizontalAlignment="Center" FontFamily="{StaticResource AppPrimaryFont}"/>
+                        <TextBlock x:Name="PrinterWarningText" Text="We couldn't print your receipt — please ask a staff member." FontSize="{StaticResource FontSizeSubtitle}" Foreground="{StaticResource DangerHoverBrush}" TextWrapping="Wrap" HorizontalAlignment="Center" FontFamily="{StaticResource GlobalAppFont}"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Redirect Countdown -->
-                <!-- Redirect Countdown -->
                 <StackPanel Spacing="8" HorizontalAlignment="Stretch" Margin="0,2,0,0">
-                    <TextBlock x:Name="TimerCountdownText" Text="This screen will return to the start in 60 seconds" FontSize="{StaticResource FontSizeBodyLarge}" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" FontFamily="{StaticResource AppPrimaryFont}"/>
+                    <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center" 
+                        Spacing="6">
 
+                        <!-- Part 1: Prefix -->
+                        <TextBlock Text="{x:Bind Localizer.GetString('ReturnToStartText'), Mode=OneWay}" 
+                           FontSize="{StaticResource FontSizeBodyLarge}" 
+                           Foreground="{StaticResource TextMutedBrush}" 
+                           FontFamily="{StaticResource GlobalAppFont}"/>
+
+                        <!-- Part 2: Number (Only this updates in C#) -->
+                        <TextBlock x:Name="CountdownNumberText" 
+                           Text="60" 
+                           FontSize="{StaticResource FontSizeBodyLarge}" 
+                           Foreground="{StaticResource TextMutedBrush}" 
+                           FontFamily="{StaticResource GlobalAppFont}"/>
+
+                        <!-- Part 3: Suffix -->
+                        <TextBlock Text="{x:Bind Localizer.GetString('Second'), Mode=OneWay}" 
+                           FontSize="{StaticResource FontSizeBodyLarge}" 
+                           Foreground="{StaticResource TextMutedBrush}" 
+                           FontFamily="{StaticResource GlobalAppFont}"/>
+
+                    </StackPanel>
                     <!-- Centered Progress Bar Container -->
                     <Grid x:Name="RedirectProgressBar" Height="4" Width="220" HorizontalAlignment="Center">
                         <!-- Gray Track Background (Visible Trough) -->
@@ -192,7 +213,7 @@
                     <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="TextOnAccentBrush"/>
                     <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="TextOnAccentBrush"/>
                 </Button.Resources>
-                <TextBlock x:Name="DoneButtonText" Text="DONE" FontWeight="Bold" FontSize="{StaticResource FontSizeHeroSmall}" Foreground="{StaticResource TextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" CharacterSpacing="60" FontFamily="{StaticResource AppPrimaryFont}"/>
+                <TextBlock x:Name="DoneButtonText" Text="{x:Bind Localizer.GetString('Done'), Mode=OneWay}" FontFamily="{StaticResource GlobalAppFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeHeroSmall}" Foreground="{StaticResource TextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" CharacterSpacing="60"/>
             </Button>
         </Grid>
     </Grid>

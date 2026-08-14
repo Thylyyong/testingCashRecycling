@@ -203,7 +203,7 @@
 
                 <!-- Centered Title -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
-                    <TextBlock x:Name="HeaderTitleText" Text="Cash Payment" Foreground="{StaticResource TextOnAccentBrush}" FontSize="{StaticResource FontSizeHeroMedium}" FontWeight="Bold"/>
+                    <TextBlock x:Name="HeaderTitleText" Text="{x:Bind Localizer.GetString('CashPayment'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="{StaticResource FontSizeHeroMedium}" FontWeight="Bold"/>
                 </StackPanel>
 
                 <!-- Left Floating Button -->
@@ -253,7 +253,7 @@
                 <!-- Hero: remaining balance -->
                 <Border x:Name="RemainingDueCard" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" Padding="16,12">
                     <StackPanel Spacing="6">
-                        <TextBlock x:Name="RemainingDueLabel" Text="AMOUNT REMAINING" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="RemainingDueLabel" Text="{x:Bind Localizer.GetString('AmountRemaining'), Mode=OneWay}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}" HorizontalAlignment="Center"/>
                         <TextBlock x:Name="RemainingDueText" FontSize="{StaticResource FontSizeHeroLarge}" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" HorizontalAlignment="Center"/>
                         <ProgressBar x:Name="PaidProgressBar" Minimum="0" Maximum="100" Value="0" Height="8" CornerRadius="4"
                                      Foreground="{StaticResource SuccessBrush}" Background="{StaticResource CardBorderBrush}"/>
@@ -269,14 +269,14 @@
 
                     <Border x:Name="TotalDueCard" Grid.Column="0" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="12,10">
                         <StackPanel Spacing="2">
-                            <TextBlock x:Name="TotalDueLabel" Text="TOTAL DUE" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
+                            <TextBlock x:Name="TotalDueLabel" Text="{x:Bind Localizer.GetString('TotalDue'), Mode=OneWay}" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
                             <TextBlock x:Name="TotalDueText" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource TextItemNameBrush}"/>
                         </StackPanel>
                     </Border>
 
                     <Border x:Name="TotalPaidCard" Grid.Column="1" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="12,10">
                         <StackPanel Spacing="2">
-                            <TextBlock x:Name="TotalPaidLabel" Text="AMOUNT PAID" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
+                            <TextBlock x:Name="TotalPaidLabel" Text="{x:Bind Localizer.GetString('AmountPaid'), Mode=OneWay}" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
                             <TextBlock x:Name="TotalPaidText" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}"/>
                         </StackPanel>
                     </Border>
@@ -327,7 +327,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock x:Name="ActivityLabel" Grid.Row="0" Text="Activity" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource TextItemNameBrush}" Margin="0,0,0,6"/>
+                <TextBlock x:Name="ActivityLabel" Grid.Row="0" Text="{x:Bind Localizer.GetString('Activity'), Mode=OneWay}" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource TextItemNameBrush}" Margin="0,0,0,6"/>
 
                 <Border x:Name="ActivityBorder" Grid.Row="1" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="4">
                     <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
@@ -345,8 +345,8 @@
                                                       FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                                             <StackPanel Grid.Column="1" Spacing="2">
-                                                <TextBlock x:Name="AmountText" Text="{x:Bind DisplayAmount}" FontWeight="Bold" FontSize="15"/>
-                                                <TextBlock x:Name="ReasonText" Text="{x:Bind Reason}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource TextQuantityBrush}" TextWrapping="Wrap"/>
+                                                <TextBlock x:Name="AmountText" Text="{x:Bind DisplayAmount}" FontWeight="Bold" FontFamily="{StaticResource GlobalAppFont}" FontSize="15"/>
+                                                <TextBlock x:Name="ReasonText" Text="{x:Bind Reason}" FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource GlobalAppFont}" Foreground="{StaticResource TextQuantityBrush}" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -371,7 +371,7 @@
                               Foreground="{StaticResource SuccessBrush}" 
                               VerticalAlignment="Center"/>
                     <TextBlock x:Name="CurrencyInfoText"
-                               Text="USD ($) and KHR (៛) cash are both accepted" 
+                               Text="{x:Bind Localizer.GetString('CurrencyInfoText'), Mode=OneWay}"
                                FontSize="{StaticResource FontSizeBodyLarge}" 
                                FontWeight="SemiBold" 
                                Foreground="{StaticResource SuccessBrush}"
@@ -380,7 +380,7 @@
 
                 <!-- Confirm Button -->
                 <Button x:Name="ConfirmPaymentButton"
-                        Content="Confirm Payment"
+                        Content="{x:Bind Localizer.GetString('ConfirmPayment'), Mode=OneWay}"
                         HorizontalAlignment="Stretch"
                         Height="80"
                         FontSize="24"

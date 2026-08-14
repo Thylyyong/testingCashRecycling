@@ -1,10 +1,13 @@
+using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
+using System.ComponentModel;
 
 namespace SelfCheckoutKiosk.App.Views.Customer
 {
@@ -12,7 +15,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
     {
         public HomeViewModel ViewModel { get; }
 
+        public LocalizationService Localizer => LocalizationService.Instance;
         private readonly DispatcherTimer _inactivityTimer;
+        private ContentDialog? _activeDialog;
 
         public HomeView()
         {
@@ -52,16 +57,28 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             Unloaded += HomeView_Unloaded;
         }
 
-        private void HomeView_Loaded(object sender, RoutedEventArgs e)
+        private async void HomeView_Loaded(object sender, RoutedEventArgs e)
         {
-            StoreHoursText.Text = ViewModel.StoreHoursText;
+            // Sync font, flag, and dropdown label with the current language loaded at startup
+            SyncLanguageUI(LocalizationService.Instance.CurrentLanguage);
+
+            //await LocalizationService.Instance.SetLanguageAsync(LocalizationService.Instance.CurrentLanguage);
+            LocalizationService.Instance.PropertyChanged += Localizer_PropertyChanged;
 
             StartInactivityTimer();
         }
 
         private void HomeView_Unloaded(object sender, RoutedEventArgs e)
         {
+            LocalizationService.Instance.PropertyChanged -= Localizer_PropertyChanged;
             StopInactivityTimer();
+        }
+
+        private void Localizer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // Keep the font/flag/label in the dropdown button synced whenever language changes,
+            // regardless of which page or control triggered the change.
+            SyncLanguageUI(LocalizationService.Instance.CurrentLanguage);
         }
 
         private void StartInactivityTimer()
@@ -90,6 +107,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         {
             _inactivityTimer.Stop();
 
+            // Dismiss any open dialog before returning to base view
+            _activeDialog?.Hide();
+            _activeDialog = null;
+
             ViewModel.ProceedToKioskBaseView();
         }
 
@@ -107,38 +128,109 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             ViewModel.ProceedToPaymentOptions();
         }
 
-        private void HelpButton_Click(object sender, RoutedEventArgs e)
+        private async void HelpButton_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
 
-            ViewModel.RequestHelp();
+            var globalFont = (FontFamily)Application.Current.Resources["GlobalAppFont"];
+
+            // Close Button: DialogButtonStyle + GlobalAppFont
+            var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
+            var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
+            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+
+            var dialog = new ContentDialog
+            {
+                Content = new StackPanel
+                {
+                    Spacing = 16,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Children =
+                    {
+                        new FontIcon
+                        {
+                            Glyph = "\uE946",
+                            FontFamily = new FontFamily("Segoe Fluent Icons"),
+                            FontSize = 42,
+                            Foreground = (Brush)Application.Current.Resources["AccentBlueBrush"],
+                            HorizontalAlignment = HorizontalAlignment.Center
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("HelpIsOnTheWay"),
+                            FontSize = 20,
+                            FontWeight = FontWeights.SemiBold,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = globalFont
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("HelpMessage"),
+                            FontSize = 16,
+                            TextWrapping = TextWrapping.Wrap,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = globalFont
+                        }
+                    }
+                },
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                CloseButtonText = Localizer.GetString("OK"),
+                CloseButtonStyle = closeButtonStyleWithFont,
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
+
+            _activeDialog = dialog;
+
+            try
+            {
+                await dialog.ShowAsync();
+            }
+            finally
+            {
+                _activeDialog = null;
+            }
         }
 
-        private void LanguageItem_Click(object sender, RoutedEventArgs e)
+        private async void LanguageItem_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
 
             if (sender is MenuFlyoutItem menuItem)
             {
-                CurrentLanguageText.Text = menuItem.Text;
+                string selectedLang = menuItem.Text == "ភាសាខ្មែរ" ? "km" : "en";
 
-                if (menuItem.Text == "ភាសាខ្មែរ")
-                {
-                    CurrentLanguageText.FontFamily =
-                        (Microsoft.UI.Xaml.Media.FontFamily)
-                        Application.Current.Resources["KhmerFont"];
+                // Updates the dictionary and raises PropertyChanged(string.Empty),
+                // which refreshes every bound TextBlock across every open page automatically.
+                await LocalizationService.Instance.SetLanguageAsync(selectedLang);
 
-                    CurrentLanguageFlag.Source = new BitmapImage(
-                        new Uri("ms-appx:///Assets/Images/Flag/km-flag.png"));
-                }
-                else
-                {
-                    CurrentLanguageText.FontFamily =
-                        new Microsoft.UI.Xaml.Media.FontFamily("Segoe UI");
+                // Font/flag on the dropdown itself isn't dictionary-driven, so sync it explicitly.
+                SyncLanguageUI(selectedLang);
+            }
+        }
 
-                    CurrentLanguageFlag.Source = new BitmapImage(
-                        new Uri("ms-appx:///Assets/Images/Flag/en-flag.png"));
-                }
+        // Centralized method to update font, flag, and dropdown label on load or switch.
+        private void SyncLanguageUI(string langCode)
+        {
+            if (langCode == "km")
+            {
+                CurrentLanguageText.Text = "ភាសាខ្មែរ";
+                CurrentLanguageText.FontFamily =
+                    (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["KhmerFont"];
+
+                CurrentLanguageFlag.Source = new BitmapImage(
+                    new Uri("ms-appx:///Assets/Images/Flag/km-flag.png"));
+            }
+            else
+            {
+                CurrentLanguageText.Text = "English";
+                CurrentLanguageText.FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily("Segoe UI");
+
+                CurrentLanguageFlag.Source = new BitmapImage(
+                    new Uri("ms-appx:///Assets/Images/Flag/en-flag.png"));
             }
         }
 

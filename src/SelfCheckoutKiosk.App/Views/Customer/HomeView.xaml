@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:services="using:SelfCheckoutKiosk.App.Services"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -16,6 +17,7 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="CornerRadius" Value="20"/>
             <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontFamily" Value="{StaticResource AppKhmerFont}"/>
         </Style>
         <Style x:Key="LanguageMenuItemStyle" TargetType="MenuFlyoutItem">
             <Setter Property="FontSize" Value="15"/>
@@ -206,8 +208,8 @@
         <!-- 1. WELCOME HEADING -->
         <!-- ========================================================= -->
         <StackPanel x:Name="WelcomeStackPanel" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
-            <TextBlock x:Name="WelcomeSubheadingText" Text="WELCOME TO" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="100" HorizontalAlignment="Center"/>
-            <TextBlock x:Name="WelcomeTitleText" Text="Self-Checkout" FontSize="38" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="WelcomeSubheadingText" Text="{x:Bind Localizer.GetString('WelcomeTo'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="100" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="WelcomeTitleText" Text="{x:Bind Localizer.GetString('SelfCheckout'), Mode=OneWay}" FontSize="38" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
         </StackPanel>
 
         <!-- ========================================================= -->
@@ -222,7 +224,7 @@
 
             <!-- SCAN ITEM CARD -->
             <Viewbox Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <Button x:Name="ScanButton" Width="400" Height="400" CornerRadius="28" BorderThickness="0" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Background="{StaticResource PrimaryCardGradientBrush}" Click="ScanItemCard_Click">
+                <Button x:Name="ScanButton" FontFamily="{StaticResource AppKhmerFont}" Width="400" Height="400" CornerRadius="28" BorderThickness="0" Padding="24" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Background="{StaticResource PrimaryCardGradientBrush}" Click="ScanItemCard_Click">
 
                     <Button.Resources>
                         <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="PrimaryBrandHoverBrush"/>
@@ -257,10 +259,10 @@
                         </Viewbox>
 
                         <!-- MAIN TITLE -->
-                        <TextBlock x:Name="ScanTitleText" Grid.Row="1" Text="Scan Item" FontWeight="Bold" FontSize="38" Foreground="White" HorizontalAlignment="Center" TextAlignment="Center"/>
+                        <TextBlock x:Name="ScanTitleText" Grid.Row="1" Text="{x:Bind Localizer.GetString('ScanItem'), Mode=OneWay}" FontWeight="Bold" FontSize="38" Foreground="White" HorizontalAlignment="Center" TextAlignment="Center"/>
 
                         <!-- SUBTITLE -->
-                        <TextBlock x:Name="ScanSubtitleText" Grid.Row="2" Text="Self Checkout Scanner" FontSize="22" Foreground="#E2E8F0" Opacity="0.95" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
+                        <TextBlock x:Name="ScanSubtitleText" Grid.Row="2" Text="{x:Bind Localizer.GetString('ScanSubtitle'), Mode=OneWay}" FontSize="22" Foreground="#E2E8F0" Opacity="0.95" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
                     </Grid>
                 </Button>
             </Viewbox>
@@ -303,10 +305,10 @@
                         </Viewbox>
 
                         <!-- MAIN TITLE -->
-                        <TextBlock x:Name="PaymentTitleText" Grid.Row="1" Text="Payment" FontWeight="Bold" FontSize="38" Foreground="#1E293B" HorizontalAlignment="Center" TextAlignment="Center"/>
+                        <TextBlock x:Name="PaymentTitleText" Grid.Row="1" Text="{x:Bind Localizer.GetString('PaymentOptions'), Mode=OneWay}" FontWeight="Bold" FontSize="38" Foreground="#1E293B" HorizontalAlignment="Center" TextAlignment="Center"/>
 
                         <!-- SUBTITLE -->
-                        <TextBlock x:Name="PaymentSubtitleText" Grid.Row="2" Text="Cards, Cash &amp; KHQR" FontSize="22" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
+                        <TextBlock x:Name="PaymentSubtitleText" Grid.Row="2" Text="{x:Bind Localizer.GetString('PaymentSubtitle'), Mode=OneWay}" FontSize="22" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,8,0,0"/>
                     </Grid>
                 </Button>
             </Viewbox>
@@ -324,14 +326,14 @@
             <!-- STORE HOURS -->
             <StackPanel x:Name="StoreHoursStack" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                 <FontIcon x:Name="StoreHoursIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE823;" FontSize="16" Foreground="{StaticResource TextMutedBrush}"/>
-                <TextBlock x:Name="StoreHoursText" Text="Open until 9:00 PM" FontSize="14" Foreground="{StaticResource TextMutedBrush}"/>
+                <TextBlock x:Name="StoreHoursText" Text="{x:Bind Localizer.GetString('OpenUntil'), Mode=OneWay}" FontSize="14" Foreground="{StaticResource TextMutedBrush}"/>
             </StackPanel>
 
             <!-- HELP BUTTON -->
             <Button Grid.Column="1" x:Name="HelpButton" HorizontalAlignment="Right" VerticalAlignment="Center" Background="Transparent" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1.5" CornerRadius="24" Padding="20,10" Click="HelpButton_Click">
                 <StackPanel x:Name="HelpButtonStack" Orientation="Horizontal" Spacing="8">
                     <FontIcon x:Name="HelpButtonIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE9CE;" FontSize="16" Foreground="{StaticResource TextDarkSlateBrush}"/>
-                    <TextBlock x:Name="HelpButtonText" Text="Need help?" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}"/>
+                    <TextBlock x:Name="HelpButtonText" Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}"/>
                 </StackPanel>
             </Button>
         </Grid>

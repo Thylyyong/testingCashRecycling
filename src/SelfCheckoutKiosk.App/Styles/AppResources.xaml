@@ -7,8 +7,40 @@
     <!-- GLOBAL FONTS -->
     <!-- ========================================================= -->
     <FontFamily x:Key="AppPrimaryFont">Segoe UI</FontFamily>
-    <FontFamily x:Key="AppKhmerFont">ms-appx:///Assets/Fonts/KhmerFont.ttf#Khmer</FontFamily>
+    <FontFamily x:Key="AppKhmerFont">ms-appx:///Assets/Fonts/NotoSansKhmer.ttf#Noto Sans Khmer</FontFamily>
 
+    <FontFamily x:Key="GlobalAppFont">Segoe UI, ms-appx:///Assets/Fonts/NotoSansKhmer-Regular.ttf#Noto Sans Khmer</FontFamily>
+    <FontFamily x:Key="ContentControlThemeFontFamily">{StaticResource GlobalAppFont}</FontFamily>
+
+    <!-- Implicit Style for Dialog -->
+    <Style TargetType="ContentDialog">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+    </Style>
+
+    <!-- Implicit Style for TextBlock -->
+    <Style TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}" />
+    </Style>
+
+    <!-- Implicit Style for TextBox / PasswordBox / AutoSuggestBox -->
+    <Style TargetType="TextBox">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}" />
+    </Style>
+
+    <!-- Implicit Style for Button -->
+    <Style TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}" />
+    </Style>
+
+    <Style x:Key="DialogButtonStyle" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+    </Style>
+
+    <Style x:Key="KioskContentDialogStyle" TargetType="ContentDialog">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+        <Setter Property="CornerRadius" Value="12"/>
+    </Style>
+    
     <!-- Font Sizes -->
     <x:Double x:Key="FontSizeCaption">10</x:Double>
     <x:Double x:Key="FontSizeSubLabel">11</x:Double>
@@ -66,8 +98,9 @@
     <SolidColorBrush x:Key="RowHighlightBrush" Color="#3310B981"/>
     <SolidColorBrush x:Key="RowFlashStartBrush" Color="#4010B981"/>
     <SolidColorBrush x:Key="RowDefaultBackgroundBrush" Color="Transparent"/>
-    <Color x:Key="RowFlashStartColor">#4010B981</Color>
-    <Color x:Key="TransparentColor">Transparent</Color>
+    <!--<Color x:Key="RowFlashStartColor">#4010B981</Color>-->
+    <!--<Color x:Key="TransparentColor">Transparent</Color>-->
+
 
     <!-- Danger / Destructive -->
     <SolidColorBrush x:Key="DangerBrush" Color="#DC2626"/>

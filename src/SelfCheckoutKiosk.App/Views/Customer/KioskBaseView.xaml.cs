@@ -1,19 +1,21 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
+using System.ComponentModel;
 
 namespace SelfCheckoutKiosk.App.Views.Customer
 {
     public sealed partial class KioskBaseView : Page
     {
         public KioskBaseViewModel ViewModel { get; }
+        public LocalizationService Localizer => LocalizationService.Instance;
 
         private readonly DispatcherTimer _slideTimer;
         private bool _showingA = true;
@@ -37,21 +39,21 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             ViewModel = new KioskBaseViewModel(navigationService);
 
-            // Load initial banner
             if (ViewModel.BannerMediaPaths.Count > 0)
             {
                 BannerImageA.Source = new BitmapImage(new Uri(ViewModel.BannerMediaPaths[0].Path));
             }
 
-            // Auto-advance banner carousel timer
             _slideTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromSeconds(10)
             };
+
             _slideTimer.Tick += (s, e) => AdvanceBanner();
             _slideTimer.Start();
 
-            this.Unloaded += (s, e) => _slideTimer.Stop();
+            LocalizationService.Instance.PropertyChanged += Localizer_PropertyChanged;
+            Unloaded += KioskBaseView_Unloaded;
         }
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
@@ -59,23 +61,31 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             UpdateIndicators();
         }
 
-        // Reset state on initial touch/click
+        private void Localizer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // {x:Bind Localizer.GetString(...)} will refresh when the
+            // localization service raises PropertyChanged.
+        }
+
+        private void KioskBaseView_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _slideTimer.Stop();
+            LocalizationService.Instance.PropertyChanged -= Localizer_PropertyChanged;
+        }
+
         private void BannerContainer_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             _wasManipulated = false;
         }
 
-        // Flag when user starts dragging/swiping
         private void BannerContainer_ManipulationStarted(object sender, ManipulationStartedRoutedEventArgs e)
         {
             _wasManipulated = true;
         }
 
-        // Process swipe gesture
         private void BannerContainer_ManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs e)
         {
-            const double SwipeThreshold = 40; // Pixels required to trigger banner advance
-
+            const double SwipeThreshold = 40;
             double totalX = e.Cumulative.Translation.X;
 
             if (Math.Abs(totalX) >= SwipeThreshold)
@@ -83,19 +93,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 _wasManipulated = true;
 
                 if (totalX < 0)
-                {
-                    AdvanceBanner(forward: true);   // Swiped left -> Next
-                }
+                    AdvanceBanner(forward: true);
                 else
-                {
-                    AdvanceBanner(forward: false);  // Swiped right -> Previous
-                }
+                    AdvanceBanner(forward: false);
 
                 ResetTimer();
             }
         }
 
-        // Process trackpad / mouse scroll wheel
         private void BannerContainer_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
         {
             var props = e.GetCurrentPoint(BannerContainer).Properties;
@@ -115,13 +120,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
         }
 
-        // Single tap or click triggers navigation ONLY if no drag/scroll occurred
         private void BannerContainer_Tapped(object sender, TappedRoutedEventArgs e)
         {
             if (!_wasManipulated)
-            {
                 ViewModel.ProceedToHome();
-            }
         }
 
         private void AdvanceBanner(bool forward = true)
@@ -137,17 +139,28 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 ViewModel.PreviousBanner();
 
             var nextPath = ViewModel.BannerMediaPaths[ViewModel.CurrentBannerIndex].Path;
-
             var incoming = _showingA ? BannerImageB : BannerImageA;
             var outgoing = _showingA ? BannerImageA : BannerImageB;
 
             incoming.Source = new BitmapImage(new Uri(nextPath));
 
-            var fadeOut = new DoubleAnimation { From = 1.0, To = 0.0, Duration = TimeSpan.FromMilliseconds(600) };
+            var fadeOut = new DoubleAnimation
+            {
+                From = 1.0,
+                To = 0.0,
+                Duration = TimeSpan.FromMilliseconds(600)
+            };
+
             Storyboard.SetTarget(fadeOut, outgoing);
             Storyboard.SetTargetProperty(fadeOut, "Opacity");
 
-            var fadeIn = new DoubleAnimation { From = 0.0, To = 1.0, Duration = TimeSpan.FromMilliseconds(600) };
+            var fadeIn = new DoubleAnimation
+            {
+                From = 0.0,
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(600)
+            };
+
             Storyboard.SetTarget(fadeIn, incoming);
             Storyboard.SetTargetProperty(fadeIn, "Opacity");
 
@@ -162,7 +175,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             };
 
             sb.Begin();
-
             UpdateIndicators();
         }
 
@@ -181,25 +193,25 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     if (VisualTreeHelper.GetChild(presenter, 0) is Rectangle rect)
                     {
                         bool current = i == ViewModel.CurrentBannerIndex;
-
                         double targetWidth = current ? 24 : 7;
                         double targetOpacity = current ? 1.0 : 0.35;
-                        TimeSpan duration = TimeSpan.FromMilliseconds(200);
 
                         var widthAnim = new DoubleAnimation
                         {
                             To = targetWidth,
-                            Duration = duration,
+                            Duration = TimeSpan.FromMilliseconds(200),
                             EnableDependentAnimation = true
                         };
+
                         Storyboard.SetTarget(widthAnim, rect);
                         Storyboard.SetTargetProperty(widthAnim, "Width");
 
                         var opacityAnim = new DoubleAnimation
                         {
                             To = targetOpacity,
-                            Duration = duration
+                            Duration = TimeSpan.FromMilliseconds(200)
                         };
+
                         Storyboard.SetTarget(opacityAnim, rect);
                         Storyboard.SetTargetProperty(opacityAnim, "Opacity");
 

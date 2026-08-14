@@ -43,12 +43,14 @@
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="TextAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,20,0,6"/>
+            <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
         </Style>
 
         <Style x:Key="PaymentSubtitleStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="24"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
         </Style>
     </Page.Resources>
 
@@ -111,8 +113,8 @@
             <Viewbox x:Name="HeaderViewbox" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" x:FieldModifier="public">
                 <Grid x:Name="HeaderContainer" Margin="32,20,32,16">
                     <StackPanel Spacing="4" HorizontalAlignment="Left">
-                        <TextBlock x:Name="HeaderSubTitle" Text="CHECKOUT" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="100"/>
-                        <TextBlock x:Name="HeaderTitle" Text="Choose a Payment Method" FontSize="36" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock x:Name="HeaderSubTitle" Text="{x:Bind Localizer.GetString('CHECKOUT'), Mode=OneWay}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="100"/>
+                        <TextBlock x:Name="HeaderTitle" Text="{x:Bind Localizer.GetString('PaymentOptionTitle'), Mode=OneWay}" FontSize="36" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
                     </StackPanel>
                 </Grid>
             </Viewbox>
@@ -147,8 +149,8 @@
                     </Button.Resources>
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <FontIcon Glyph="&#xE8C7;" Foreground="{StaticResource PrimaryBrandBrush}" Style="{StaticResource PaymentIconStyle}"/>
-                        <TextBlock Text="Cash" Foreground="{StaticResource TextDarkSlateBrush}" Style="{StaticResource PaymentTitleStyle}"/>
-                        <TextBlock Text="USD / KHR" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('CashTitle'), Mode=OneWay}" Foreground="{StaticResource TextDarkSlateBrush}" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('CashSubTitle'), Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
                     </StackPanel>
                 </Button>
             </Viewbox>
@@ -164,8 +166,8 @@
                     </Button.Resources>
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <FontIcon Glyph="&#xED14;" Foreground="{StaticResource PrimaryBrandBrush}" Style="{StaticResource PaymentIconStyle}"/>
-                        <TextBlock Text="KHQR" Foreground="{StaticResource TextDarkSlateBrush}" Style="{StaticResource PaymentTitleStyle}"/>
-                        <TextBlock Text="Digital" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('KhqrTitle'), Mode=OneWay}" Foreground="{StaticResource TextDarkSlateBrush}" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('KhqrSubTitle'), Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
                     </StackPanel>
                 </Button>
             </Viewbox>
@@ -176,8 +178,8 @@
                 <Button x:Name="CardCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}" IsEnabled="False" Click="CardCard_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <FontIcon Glyph="&#xE8C7;" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentIconStyle}"/>
-                        <TextBlock Text="Debit / Credit Card" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentTitleStyle}"/>
-                        <TextBlock Text="Unavailable" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('CardTitle'), Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('Unavailable'), Mode=OneWay}" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
                     </StackPanel>
                 </Button>
             </Viewbox>
@@ -187,8 +189,8 @@
                 <Button x:Name="IntlQrCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}" IsEnabled="False" Click="IntlQrCard_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <FontIcon Glyph="&#xED14;" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentIconStyle}"/>
-                        <TextBlock Text="International QR" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentTitleStyle}"/>
-                        <TextBlock Text="Unavailable" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('IntlQrTitle'), Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('Unavailable'), Mode=OneWay}" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
                     </StackPanel>
                 </Button>
             </Viewbox>
@@ -199,8 +201,8 @@
                 <Button x:Name="MembershipCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}" IsEnabled="False" Click="MembershipCard_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <FontIcon Glyph="&#xE8C3;" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentIconStyle}"/>
-                        <TextBlock Text="Membership Card" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentTitleStyle}"/>
-                        <TextBlock Text="Unavailable" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('MembershipTitle'), Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentTitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('Unavailable'), Mode=OneWay}" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
                     </StackPanel>
                 </Button>
             </Viewbox>
@@ -210,8 +212,8 @@
                 <Button x:Name="CouponCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}" IsEnabled="False" Click="CouponCard_Click">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                         <FontIcon Glyph="&#xE8EC;" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentIconStyle}"/>
-                        <TextBlock Text="Coupon" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
-                        <TextBlock Text="Unavailable" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('CouponTitle'), Mode=OneWay}" Foreground="{StaticResource TextSecondaryBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('Unavailable'), Mode=OneWay}" Foreground="{StaticResource TextMutedBrush}" Style="{StaticResource PaymentSubtitleStyle}"/>
                     </StackPanel>
                 </Button>
             </Viewbox>
@@ -230,7 +232,7 @@
                     <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="DangerBrush"/>
                 </Button.Resources>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
-                    <TextBlock x:Name="CancelButtonText" Text="RETURN TO CART" FontSize="22" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="CancelButtonText" Text="{x:Bind Localizer.GetString('ReturnToCart'), Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
         </Grid>
