@@ -5,6 +5,7 @@ using SelfCheckoutKiosk.App.Composition;
 using SelfCheckoutKiosk.Domain.Enums;
 using SelfCheckoutKiosk.Domain.ValueObjects;
 using SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX;
+using SelfCheckoutKiosk.Hal.Vendor.EpsonM30;
 
 if (args.Contains("--verify-hardware"))
 {
@@ -15,6 +16,112 @@ if (args.Contains("--verify-hardware"))
 if (args.Contains("--live") || args.Contains("--live-hardware"))
 {
     await HardwareVerificationHarness.RunLiveListenerAsync();
+    return;
+}
+
+// ── LIVE CASH PAYMENT TERMINAL ───────────────────────────────────────────────
+// Usage:  dotnet run --project src/SelfCheckoutKiosk.App -- --live-cash [amount]
+//   e.g.  dotnet run --project src/SelfCheckoutKiosk.App -- --live-cash 5.00
+//
+// Fully autonomous — no ENTER prompts during payment.
+// Shows every banknote inserted in real-time (amount + currency).
+// Supports mixed USD + KHR notes. Prints receipt on completion.
+// Press Q at any time to cancel and disarm.
+// ─────────────────────────────────────────────────────────────────────────────
+if (args.Contains("--live-cash"))
+{
+    await LiveCashTerminal.RunAsync(args);
+    return;
+}
+
+// ── RAW API DIAGNOSTIC MODE ───────────────────────────────────────────────────
+// Usage:  dotnet run --project src/SelfCheckoutKiosk.App -- --debug-recycler
+//
+// Arms the recycler shutter then DUMPS the raw JSON the vendor REST API returns
+// every 250ms. Use this to discover the exact field names when a banknote is
+// inserted. Press Q to stop.
+// ─────────────────────────────────────────────────────────────────────────────
+if (args.Contains("--debug-recycler"))
+{
+    await RecyclerApiDebugger.RunAsync();
+    return;
+}
+
+
+
+// Direct printer test — prints a receipt immediately, no other hardware needed
+if (args.Contains("--print-test"))
+{
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.WriteLine("╔═══════════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║           EPSON TM-m30 / EU-m30 DIRECT PRINT TEST             ║");
+    Console.WriteLine("╚═══════════════════════════════════════════════════════════════╝");
+    Console.ResetColor();
+
+    var installed = EpsonReceiptPrinter.GetInstalledPrinters();
+    Console.WriteLine("\n  Installed Windows Printers:");
+    if (installed.Count == 0)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("    (No printers returned by Windows spooler API)");
+        Console.ResetColor();
+    }
+    else
+    {
+        foreach (var p in installed)
+        {
+            Console.WriteLine($"    • {p}");
+        }
+    }
+
+    var comPorts = EpsonReceiptPrinter.GetAvailableComPorts();
+    Console.WriteLine("  Active System COM Ports:");
+    if (comPorts.Count == 0)
+    {
+        Console.WriteLine("    (No active COM ports detected)");
+    }
+    else
+    {
+        foreach (var c in comPorts)
+        {
+            Console.WriteLine($"    • {c}");
+        }
+    }
+
+    // Read printer name from optional second arg, default to Windows queue name
+    string printerPort = args.Length > 1 && !args[1].StartsWith("--") ? args[1] : "EPSON EU-m30";
+    Console.WriteLine($"\n  Target Printer / Port : {printerPort}");
+    Console.WriteLine("  Connecting to Epson receipt printer...");
+
+    var printer = new EpsonReceiptPrinter(printerPort);
+    try
+    {
+        await printer.ConnectAsync();
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("  [PASS] Printer spooler connected!");
+        Console.ResetColor();
+
+        Console.WriteLine("  Sending ESC/POS raw test receipt...");
+        await printer.PrintReceiptAsync(totalUsd: 5.00m, tenderedUsd: 5.00m, overpaymentKhr: 0m);
+
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("  [PASS] Spooler accepted receipt payload! Check printer 🧾");
+        Console.ResetColor();
+    }
+    catch (Exception ex)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"  [FAIL] Printer error: {ex.Message}");
+        Console.WriteLine();
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("  Troubleshooting:");
+        Console.WriteLine("    1. If job shows 'Printing, Offline' in Windows Print Queue:");
+        Console.WriteLine("       - Open Printers & Scanners -> Click 'EPSON EU-m30' -> Open Queue");
+        Console.WriteLine("       - Click 'Printer' menu -> UNCHECK 'Use Printer Offline'");
+        Console.WriteLine("    2. If connected via TM Virtual Port Driver (COM port):");
+        Console.WriteLine("       - Run:  dotnet run --project src/SelfCheckoutKiosk.App -- --print-test COM3");
+        Console.ResetColor();
+    }
     return;
 }
 
@@ -31,15 +138,54 @@ while (true)
     Console.WriteLine("  1. Pay with CASH (Opens intake shutter & Green Light ON 🟢)");
     Console.WriteLine("  2. Pay with QR CODE / KHQR (Machine STAYS CLOSED & Light OFF 🔴)");
     Console.WriteLine("  3. Run 7-Test Hardware Verification Suite");
-    Console.WriteLine("  4. Exit");
-    Console.Write("\nSelect option (1-4): ");
+    Console.WriteLine("  4. 🧾 Print Test Receipt (Printer only — no other hardware needed)");
+    Console.WriteLine("  5. Exit");
+    Console.Write("\nSelect option (1-5): ");
 
     var input = Console.ReadLine()?.Trim();
-    if (input == "4") break;
+    if (input == "5") break;
 
     if (input == "3")
     {
         await HardwareVerificationHarness.RunAsync();
+        Console.WriteLine("\nPress ENTER to return to menu...");
+        Console.ReadLine();
+        continue;
+    }
+
+    if (input == "4")
+    {
+        Console.Clear();
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("╔═══════════════════════════════════════════════════════════════╗");
+        Console.WriteLine("║           EPSON TM-m30 — DIRECT RECEIPT PRINT TEST            ║");
+        Console.WriteLine("╚═══════════════════════════════════════════════════════════════╝");
+        Console.ResetColor();
+        Console.Write("\n  Enter printer name (default EPSON EU-m30): ");
+        string printerPort = Console.ReadLine()?.Trim() is { Length: > 0 } p ? p : "EPSON EU-m30";
+        Console.WriteLine($"  Connecting to printer on {printerPort}...");
+
+        var printer = new SelfCheckoutKiosk.Hal.Vendor.EpsonM30.EpsonReceiptPrinter(printerPort);
+        try
+        {
+            await printer.ConnectAsync();
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("  [PASS] Printer connected! Sending receipt...");
+            Console.ResetColor();
+
+            await printer.PrintReceiptAsync(totalUsd: 5.00m, tenderedUsd: 5.00m, overpaymentKhr: 0m);
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("  [PASS] Receipt sent! Check your printer 🧾");
+            Console.ResetColor();
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"  [FAIL] {ex.Message}");
+            Console.WriteLine("  Tip: Make sure the printer is ON and paper is loaded.");
+            Console.ResetColor();
+        }
         Console.WriteLine("\nPress ENTER to return to menu...");
         Console.ReadLine();
         continue;
@@ -75,12 +221,31 @@ while (true)
             Console.ResetColor();
         };
 
-        services.Engine.OnCashPaymentConfirmed += (_, e) =>
+        services.Engine.OnCashPaymentConfirmed += async (_, e) =>
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"\n  🎉 [CONFIRMED] PAYMENT COMPLETE! Paid: ${e.TenderedUsd:F2} USD | Status: APPROVED ✓");
             Console.WriteLine($"  🔴 [DISARMED] Physical Shutter CLOSED & Green LED Light OFF!\n");
             Console.ResetColor();
+
+            try
+            {
+                if (services.ReceiptPrinter is EpsonReceiptPrinter epson)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("  🧾 Printing receipt on EPSON EU-m30...");
+                    Console.ResetColor();
+                    await epson.ConnectAsync();
+                    await epson.PrintReceiptAsync(totalUsd, e.TenderedUsd, e.OverpaymentKhr);
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("  [PASS] Receipt printed! Check the printer 🧾");
+                    Console.ResetColor();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  ⚠ Receipt print error: {ex.Message}");
+            }
         };
 
         services.Engine.OnCashPaymentRejected += (_, e) =>

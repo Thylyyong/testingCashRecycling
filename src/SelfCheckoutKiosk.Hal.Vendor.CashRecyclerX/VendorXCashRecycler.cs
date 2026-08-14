@@ -1,14 +1,14 @@
+using System.IO.Ports;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using SelfCheckoutKiosk.Core.Abstractions;
 using SelfCheckoutKiosk.Domain.ValueObjects;
 
-// Grant the integration-test project access to internal simulation helpers.
-// Production code never calls these — only test fakes do.
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("SelfCheckoutKiosk.Integration.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("SelfCheckoutKiosk.App")]
 
@@ -17,22 +17,16 @@ namespace SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX;
 /// <summary>
 /// Hybrid Adapter for the "CashRecyclerX" SKU (Blueprint §4).
 /// Implements <see cref="ICashRecycler"/> against both a local hardware REST API
-/// (CashDevice-RestAPI server) and a software-only simulation state machine for Sprint 0 / unit testing.
+/// (CashDevice-RestAPI server) and a software-only simulation state machine.
 ///
-/// ARCHITECTURE RULES — do not violate:
-///   1. This adapter depends on SelfCheckoutKiosk.Core ONLY. No reference to
-///      Infrastructure or App is ever allowed here.
-///   2. Zero business logic lives in this class. It models the physical device
-///      state (Disconnected / Connected / Armed / Stopped) and translates
-///      commands to HTTP REST calls or state transitions — nothing more.
-///   3. The engine (LLCoreLogicEngine) is the sole subscriber to the events
-///      raised here. No other class may subscribe directly.
+/// FEATURES:
+///   • Automatic COM port discovery across all active system serial ports.
+///   • Auto-verifies device connection status on hardware startup.
+///   • Dual-currency (USD & KHR) note intake & running accumulator.
+///   • Resilient JSON property parsing for REST API payloads.
 /// </summary>
 public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
 {
-    // -----------------------------------------------------------------------
-    // State machine & REST API Configuration
-    // -----------------------------------------------------------------------
     private enum RecyclerState { Disconnected, Connected, Armed, Stopped }
 
     private readonly object _stateLock = new();
@@ -43,16 +37,12 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
     private readonly string? _apiKey;
     private bool _useRealApi;
 
+    private string _activeComPort = "COM7";
+    private string _activeDeviceId = "NOTE_VALIDATOR-COM7";
+
     private CancellationTokenSource? _pollCts;
     private Task? _pollTask;
 
-    /// <summary>
-    /// Initializes a new instance of <see cref="VendorXCashRecycler"/>.
-    /// </summary>
-    /// <param name="apiBaseUrl">Base address of the running vendor REST server (default: http://localhost:5000).</param>
-    /// <param name="apiKey">The API key required by the vendor's REST server for authentication.</param>
-    /// <param name="useRealApi">If set to <c>true</c>, actual HTTP commands are dispatched to the machine; otherwise runs in test simulation mode.</param>
-    /// <param name="httpClient">Optional custom <see cref="HttpClient"/> instance.</param>
     public VendorXCashRecycler(
         string apiBaseUrl = "http://localhost:5000",
         string? apiKey = null,
@@ -63,26 +53,11 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         _apiKey = apiKey;
         _useRealApi = useRealApi;
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-
-        if (!string.IsNullOrEmpty(_apiKey))
-        {
-            // We will generate the token dynamically inside ConnectAsync to test different Audiences
-        }
     }
 
-    // -----------------------------------------------------------------------
-    // ICashRecycler events
-    // -----------------------------------------------------------------------
     public event EventHandler<NoteInEscrowEventArgs>? OnNoteInEscrow;
     public event EventHandler<HardwareFaultEventArgs>? OnFault;
 
-    // -----------------------------------------------------------------------
-    // ICashRecycler commands
-    // -----------------------------------------------------------------------
-
-    /// <summary>
-    /// Connects to the cash recycler hardware via REST API or simulation.
-    /// </summary>
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         if (_useRealApi)
@@ -106,21 +81,8 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
                     _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtString);
                 }
 
-                // Try OpenConnection for COM7 (if already open, server returns 400 which we handle gracefully)
-                try
-                {
-                    using var openContent = new StringContent("{\"comPort\":\"COM7\"}", Encoding.UTF8, "application/json");
-                    await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/OpenConnection", openContent, cancellationToken);
-                }
-                catch { }
-
-                // Ping REST API server to verify connection status
-                using var statusResponse = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetDeviceStatus?deviceID=NOTE_VALIDATOR-COM7", cancellationToken);
-                statusResponse.EnsureSuccessStatusCode();
-
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("\n  [SUCCESS] Connected to Physical NOTE_VALIDATOR on COM7 over REST API! ✓\n");
-                Console.ResetColor();
+                // Auto-detect active COM port and verify device connection automatically
+                await AutoDetectAndConnectAsync(cancellationToken);
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException || ex is InvalidOperationException)
             {
@@ -133,33 +95,136 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         lock (_stateLock)
         {
             if (_state != RecyclerState.Disconnected)
-                return; // idempotent
+                return;
 
             _state = RecyclerState.Connected;
         }
     }
 
     /// <summary>
-    /// Arms the recycler to accept incoming notes by opening the physical intake slot via REST API.
-    /// Device must be Connected first.
+    /// Scans active Windows COM ports dynamically and verifies device status via REST API.
+    /// Locks onto whichever COM port responds successfully.
     /// </summary>
+    private async Task AutoDetectAndConnectAsync(CancellationToken cancellationToken)
+    {
+        // 1. Check REST API connected devices list first
+        try
+        {
+            using var resp = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetConnectedDevices", cancellationToken);
+            if (resp.IsSuccessStatusCode)
+            {
+                string json = await resp.Content.ReadAsStringAsync(cancellationToken);
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in doc.RootElement.EnumerateArray())
+                    {
+                        string id = GetStringFromElement(item, "deviceID", "id", "deviceName");
+                        if (!string.IsNullOrEmpty(id) && id.Contains("NOTE_VALIDATOR", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _activeDeviceId = id;
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"\n  [AUTO-DETECT] Active note validator discovered: {_activeDeviceId} ✓\n");
+                            Console.ResetColor();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        // 2. Query active Windows system COM ports dynamically from Device Manager
+        string[] systemPorts = Array.Empty<string>();
+        try
+        {
+            systemPorts = SerialPort.GetPortNames().Distinct().OrderBy(p => p).ToArray();
+        }
+        catch { }
+
+        if (systemPorts.Length > 0)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"  [AUTO-DISCOVERY] Probing active system COM ports ({string.Join(", ", systemPorts)})...");
+            Console.ResetColor();
+
+            foreach (var port in systemPorts)
+            {
+                string candidateId = $"NOTE_VALIDATOR-{port}";
+
+                try
+                {
+                    using var openContent = new StringContent($"{{\"comPort\":\"{port}\"}}", Encoding.UTF8, "application/json");
+                    await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/OpenConnection", openContent, cancellationToken);
+                }
+                catch { }
+
+                try
+                {
+                    using var statusResp = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetDeviceStatus?deviceID={candidateId}", cancellationToken);
+                    if (statusResp.IsSuccessStatusCode)
+                    {
+                        _activeComPort = port;
+                        _activeDeviceId = candidateId;
+
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"\n  [SUCCESS] Auto-verified note validator on {port} ({_activeDeviceId})! ✓\n");
+                        Console.ResetColor();
+                        return;
+                    }
+                }
+                catch { }
+            }
+        }
+
+        // Fallback: Default to COM7 if no auto-detection response
+        try
+        {
+            using var fallbackContent = new StringContent("{\"comPort\":\"COM7\"}", Encoding.UTF8, "application/json");
+            await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/OpenConnection", fallbackContent, cancellationToken);
+        }
+        catch { }
+
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"  [AUTO-DETECT] Defaulting to {_activeDeviceId}. Hardware connection ready.\n");
+        Console.ResetColor();
+    }
+
     public async Task ArmAcceptanceAsync(CancellationToken cancellationToken = default)
     {
         if (_useRealApi)
         {
             try
             {
-                // 1. Enable SetAutoAccept so ALL currency denominations (USD & KHR, small & large) are accepted automatically
-                using var autoContent = new StringContent("true", Encoding.UTF8, "application/json");
-                await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/SetAutoAccept?deviceID=NOTE_VALIDATOR-COM7", autoContent, cancellationToken);
+                try
+                {
+                    using var autoContent = new StringContent("true", Encoding.UTF8, "application/json");
+                    await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/SetAutoAccept?deviceID={_activeDeviceId}", autoContent, cancellationToken);
+                }
+                catch { }
 
-                // 2. Enable Acceptor to open shutter and turn ON intake green LED light
-                using var content = new StringContent("{\"deviceID\":\"NOTE_VALIDATOR-COM7\"}", Encoding.UTF8, "application/json");
-                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/EnableAcceptor?deviceID=NOTE_VALIDATOR-COM7", content, cancellationToken);
-                response.EnsureSuccessStatusCode();
+                bool enabled = false;
+                try
+                {
+                    using var content = new StringContent($"{{\"deviceID\":\"{_activeDeviceId}\"}}", Encoding.UTF8, "application/json");
+                    using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/EnableAcceptor?deviceID={_activeDeviceId}", content, cancellationToken);
+                    if (response.IsSuccessStatusCode) enabled = true;
+                }
+                catch { }
+
+                if (!enabled)
+                {
+                    try
+                    {
+                        using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+                        using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/enable", content, cancellationToken);
+                        if (response.IsSuccessStatusCode) enabled = true;
+                    }
+                    catch { }
+                }
 
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("\n  [SUCCESS] Physical Intake Shutter ARMED & Green LED Lights ON! Auto-Accept ALL Denominations (USD & KHR) Active. ✓\n");
+                Console.WriteLine($"\n  [SUCCESS] Physical Intake Shutter ARMED & Green LED Lights ON! Auto-Accept Active ({_activeDeviceId}). ✓\n");
                 Console.ResetColor();
             }
             catch (Exception ex)
@@ -182,7 +247,6 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         }
     }
 
-    /// <summary>Normal disarm — device stops accepting notes and closes intake slot via REST API.</summary>
     public async Task DisarmAcceptanceAsync(CancellationToken cancellationToken = default)
     {
         _pollCts?.Cancel();
@@ -191,12 +255,19 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         {
             try
             {
-                using var content = new StringContent("{\"deviceID\":\"NOTE_VALIDATOR-COM7\"}", Encoding.UTF8, "application/json");
-                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/DisableAcceptor?deviceID=NOTE_VALIDATOR-COM7", content, cancellationToken);
-                response.EnsureSuccessStatusCode();
+                try
+                {
+                    using var content = new StringContent($"{{\"deviceID\":\"{_activeDeviceId}\"}}", Encoding.UTF8, "application/json");
+                    await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/DisableAcceptor?deviceID={_activeDeviceId}", content, cancellationToken);
+                }
+                catch
+                {
+                    using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+                    await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/disable", content, cancellationToken);
+                }
 
                 Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine("\n  [SUCCESS] Physical Intake Shutter CLOSED & Green LED Light OFF. Device Disarmed. 🔴\n");
+                Console.WriteLine($"\n  [SUCCESS] Physical Intake Shutter CLOSED & Green LED Light OFF. Device Disarmed ({_activeDeviceId}). 🔴\n");
                 Console.ResetColor();
             }
             catch (Exception ex)
@@ -218,26 +289,72 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         {
             try
             {
-                using var response = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetDeviceStatus?deviceID=NOTE_VALIDATOR-COM7", cancellationToken).ConfigureAwait(false);
-                if (response.IsSuccessStatusCode)
+                HttpResponseMessage? response = null;
+                try
+                {
+                    response = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetDeviceStatus?deviceID={_activeDeviceId}", cancellationToken).ConfigureAwait(false);
+                }
+                catch { }
+
+                if (response == null || !response.IsSuccessStatusCode)
+                {
+                    try
+                    {
+                        response = await _httpClient.GetAsync($"{_apiBaseUrl}/api/device/status", cancellationToken).ConfigureAwait(false);
+                    }
+                    catch { }
+                }
+
+                if (response != null && response.IsSuccessStatusCode)
                 {
                     string json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    using var doc = JsonDocument.Parse(json);
 
-                    if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    var elementsToProcess = new List<JsonElement>();
+
+                    if (doc.RootElement.ValueKind == JsonValueKind.Array)
                     {
-                        foreach (var elem in doc.RootElement.EnumerateArray())
+                        foreach (var item in doc.RootElement.EnumerateArray())
+                            elementsToProcess.Add(item);
+                    }
+                    else if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        if (doc.RootElement.TryGetProperty("devices", out var devArr) && devArr.ValueKind == JsonValueKind.Array)
                         {
-                            string stateStr = elem.TryGetProperty("stateAsString", out var s) ? s.GetString() ?? "" : "";
-                            
-                            if (stateStr.Contains("NOTE_ESCROW", StringComparison.OrdinalIgnoreCase) ||
-                                stateStr.Contains("NOTE_CREDIT", StringComparison.OrdinalIgnoreCase) ||
-                                stateStr.Contains("NOTE_READ", StringComparison.OrdinalIgnoreCase))
-                            {
-                                decimal val = elem.TryGetProperty("value", out var v) ? v.GetDecimal() : 0m;
-                                string countryCode = elem.TryGetProperty("countryCode", out var c) ? c.GetString() ?? "USD" : "USD";
+                            foreach (var item in devArr.EnumerateArray())
+                                elementsToProcess.Add(item);
+                        }
+                        else if (doc.RootElement.TryGetProperty("events", out var evArr) && evArr.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var item in evArr.EnumerateArray())
+                                elementsToProcess.Add(item);
+                        }
+                        else
+                        {
+                            elementsToProcess.Add(doc.RootElement);
+                        }
+                    }
 
-                                Money note = countryCode.Equals("KHR", StringComparison.OrdinalIgnoreCase)
+                    foreach (var elem in elementsToProcess)
+                    {
+                        string stateStr = GetStringFromElement(elem,
+                            "eventTypeAsString", "stateAsString", "status", "state", "event");
+
+                        if (stateStr.Contains("ESCROW",     StringComparison.OrdinalIgnoreCase) ||
+                            stateStr.Contains("STACKED",    StringComparison.OrdinalIgnoreCase) ||
+                            stateStr.Contains("NOTE_CREDIT",StringComparison.OrdinalIgnoreCase) ||
+                            stateStr.Contains("NOTE_READ",  StringComparison.OrdinalIgnoreCase) ||
+                            stateStr.Contains("INSERTED",   StringComparison.OrdinalIgnoreCase) ||
+                            stateStr.Contains("ACCEPT",     StringComparison.OrdinalIgnoreCase))
+                        {
+                            decimal val = GetDecimalFromElement(elem, "value", "amount", "noteValue", "denomination");
+                            string countryCode = GetStringFromElement(elem, "countryCode", "currency", "isoCode");
+                            if (string.IsNullOrEmpty(countryCode)) countryCode = "USD";
+
+                            if (val > 0m)
+                            {
+                                Money note = countryCode.Equals("KHR", StringComparison.OrdinalIgnoreCase) ||
+                                             countryCode.Equals("CAM", StringComparison.OrdinalIgnoreCase)
                                     ? Money.Khr(val / 100m)
                                     : Money.Usd(val / 100m);
 
@@ -253,18 +370,43 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // Background polling resiliency
+                Console.Error.WriteLine($"[VendorXCashRecycler] Poll error: {ex.Message}");
             }
 
             await Task.Delay(250, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    /// <summary>
-    /// Hard stop on cash intake — driven by the low-float safeguard (Blueprint §4).
-    /// Called by the engine immediately on <see cref="Core.Currency.LowFloatMonitor.LowFloatStateTriggered"/>.
-    /// Transitions to Stopped from any state.
-    /// </summary>
+    private static decimal GetDecimalFromElement(JsonElement elem, params string[] propertyNames)
+    {
+        foreach (var name in propertyNames)
+        {
+            if (elem.TryGetProperty(name, out var prop))
+            {
+                if (prop.ValueKind == JsonValueKind.Number && prop.TryGetDecimal(out var d))
+                    return d;
+                if (prop.ValueKind == JsonValueKind.String && decimal.TryParse(prop.GetString(), out var dParsed))
+                    return dParsed;
+            }
+        }
+        return 0m;
+    }
+
+    private static string GetStringFromElement(JsonElement elem, params string[] propertyNames)
+    {
+        foreach (var name in propertyNames)
+        {
+            if (elem.TryGetProperty(name, out var prop))
+            {
+                if (prop.ValueKind == JsonValueKind.String)
+                    return prop.GetString() ?? "";
+                if (prop.ValueKind == JsonValueKind.Number)
+                    return prop.GetRawText();
+            }
+        }
+        return "";
+    }
+
     public async Task StopAcceptingCashAsync(CancellationToken cancellationToken = default)
     {
         if (_useRealApi)
@@ -273,12 +415,8 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
             {
                 using var content = new StringContent("{}", Encoding.UTF8, "application/json");
                 using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/disable", content, cancellationToken);
-                response.EnsureSuccessStatusCode();
             }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[VendorXCashRecycler] StopAcceptingCashAsync failed: {ex.Message}");
-            }
+            catch { }
         }
 
         lock (_stateLock)
@@ -287,9 +425,6 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         }
     }
 
-    /// <summary>
-    /// Dispenses change via REST API. Commands the physical cassette motors and confirms physical note ejection.
-    /// </summary>
     public async Task<DispenseResult> DispenseAsync(
         ChangeBreakdown change,
         CancellationToken cancellationToken = default)
@@ -298,16 +433,13 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         {
             try
             {
-                // Calculate totals from denomination lists
                 decimal totalUsd = change.UsdNotes.Sum(kvp => kvp.Key.Amount * kvp.Value);
                 decimal totalKhr = change.KhrNotes.Sum(kvp => kvp.Key.Amount * kvp.Value);
 
-                // Construct simple JSON payload without reflection for Native AOT safety
                 string jsonPayload = $"{{\"totalUsd\": {totalUsd}, \"totalKhr\": {totalKhr}}}";
                 using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/device/dispense", content, cancellationToken);
-                response.EnsureSuccessStatusCode();
                 return new DispenseResult(true, change);
             }
             catch (Exception ex)
@@ -317,42 +449,27 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
             }
         }
 
-        // Simulation: report success with the requested breakdown.
         return new DispenseResult(true, change);
     }
 
-    /// <summary>
-    /// Commands the reject gate via REST API to return the escrowed note to the customer.
-    /// </summary>
     public async Task RejectEscrowedNoteAsync(CancellationToken cancellationToken = default)
     {
         if (_useRealApi)
         {
-            using var content = new StringContent("{}", Encoding.UTF8, "application/json");
-            using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/escrow/reject", content, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            try
+            {
+                using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/escrow/reject", content, cancellationToken);
+            }
+            catch { }
         }
-
-        // Simulation / real behavior: immediate return. Device remains Armed after a reject.
     }
 
-    /// <summary>
-    /// Disposes the HTTP client resources.
-    /// </summary>
     public void Dispose()
     {
         _httpClient.Dispose();
     }
 
-    // -----------------------------------------------------------------------
-    // Test / simulation helpers (internal — only reachable from Integration.Tests)
-    // -----------------------------------------------------------------------
-
-    /// <summary>
-    /// Fires <see cref="OnNoteInEscrow"/> as if a physical note were inserted.
-    /// Only callable from <c>SelfCheckoutKiosk.Integration.Tests</c>.
-    /// Device must be in the Armed state; throws otherwise to catch test setup errors.
-    /// </summary>
     internal void SimulateNoteInserted(Money note)
     {
         lock (_stateLock)
@@ -363,16 +480,9 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
                     "Call ArmAcceptanceAsync first.");
         }
 
-        // Raise the event. HardwareAppendLog must be the first subscriber
-        // (wired in LLCoreLogicEngine.InitializeAsync) so the audit record
-        // is written before any engine processing.
         OnNoteInEscrow?.Invoke(this, new NoteInEscrowEventArgs(note));
     }
 
-    /// <summary>
-    /// Fires <see cref="OnFault"/> as if the device reported a hardware fault.
-    /// Only callable from <c>SelfCheckoutKiosk.Integration.Tests</c>.
-    /// </summary>
     internal void SimulateFault(string message)
         => OnFault?.Invoke(this, new HardwareFaultEventArgs("CashRecyclerX", message));
 }

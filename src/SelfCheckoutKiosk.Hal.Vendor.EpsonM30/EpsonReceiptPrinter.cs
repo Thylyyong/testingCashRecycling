@@ -1,131 +1,170 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 using SelfCheckoutKiosk.Core.Abstractions;
 
 namespace SelfCheckoutKiosk.Hal.Vendor.EpsonM30;
 
 /// <summary>
-/// HAL adapter for the Epson TM-m30 thermal receipt printer using raw ESC/POS.
-///
-/// Real device setup:
-///   USB mode  — Windows installs the Epson TM-m30 as a receipt printer.
-///               Open Device Manager → Ports. Note the RAW port path (e.g. "USB001").
-///               Pass that path as <paramref name="printerPortPath"/>.
-///   Serial mode — Use "COM3" (or whichever COM port the TM-m30 enumerates on).
-///
-/// The adapter sends bytes directly to the device port using a
-/// <see cref="FileStream"/> — no Windows GDI print spooler is involved.
-/// This is the correct technique for ESC/POS devices; the spooler would
-/// add GDI rasterisation that corrupts the raw command stream.
-///
-/// Fallback: when <paramref name="printerPortPath"/> starts with "SPOOL:",
-/// the remainder is treated as a Windows printer share name and the payload
-/// is submitted via <see cref="System.Drawing.Printing.PrintDocument"/> raw mode.
-/// Use this only if the ESC/POS-direct path is unavailable (driver restriction).
-///
-/// Audit spool: every receipt is also saved to
-/// <c>%ProgramData%\SelfCheckoutKiosk\receipts\</c> for offline reconciliation.
+/// HAL adapter for the Epson TM-m30 / EU-m30 thermal receipt printer.
+/// Uses Windows spooler (winspool.drv) with explicit 64-bit Unicode RAW P/Invoke
+/// for Windows 11 IoT / Desktop compatibility, falling back to direct COM port writes.
 /// </summary>
 public sealed class EpsonReceiptPrinter : IReceiptPrinter
 {
-    private bool   _isConnected;
+    private bool _isConnected;
     private readonly string _printerPortPath;
 
-    /// <summary>True once <see cref="ConnectAsync"/> has verified the printer port.</summary>
-    public bool IsConnected => _isConnected;
+    // ── winspool.drv 64-bit Unicode P/Invoke ─────────────────────────────────
+    [DllImport("winspool.Drv", EntryPoint = "OpenPrinterW", SetLastError = true, CharSet = CharSet.Unicode, ExactSpelling = true)]
+    private static extern bool OpenPrinter([MarshalAs(UnmanagedType.LPWStr)] string szPrinter, out IntPtr hPrinter, IntPtr pd);
 
+    [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterW", SetLastError = true, CharSet = CharSet.Unicode, ExactSpelling = true)]
+    private static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOC_INFO_1 di);
+
+    [DllImport("winspool.Drv", SetLastError = true)]
+    private static extern bool StartPagePrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", SetLastError = true)]
+    private static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBuf, int cbBuf, out int pcWritten);
+
+    [DllImport("winspool.Drv", SetLastError = true)]
+    private static extern bool EndPagePrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", SetLastError = true)]
+    private static extern bool EndDocPrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", SetLastError = true)]
+    private static extern bool ClosePrinter(IntPtr hPrinter);
+
+    // EnumPrinters — used to discover all Windows printer queues
+    [DllImport("winspool.Drv", EntryPoint = "EnumPrintersW", SetLastError = true, CharSet = CharSet.Unicode, ExactSpelling = true)]
+    private static extern bool EnumPrinters(
+        int Flags,
+        [MarshalAs(UnmanagedType.LPWStr)] string? Name,
+        uint Level,
+        IntPtr pPrinterEnum,
+        uint cbBuf,
+        out uint pcbNeeded,
+        out uint pcReturned);
+
+    private const int PRINTER_ENUM_LOCAL      = 0x00000002;
+    private const int PRINTER_ENUM_CONNECTIONS = 0x00000004;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct PrinterInfo2
+    {
+        public string? pServerName;
+        public string? pPrinterName;
+        public string? pShareName;
+        public string? pPortName;
+        public string? pDriverName;
+        public string? pComment;
+        public string? pLocation;
+        public IntPtr pDevMode;
+        public string? pSepFile;
+        public string? pPrintProcessor;
+        public string? pDatatype;
+        public string? pParameters;
+        public IntPtr pSecurityDescriptor;
+        public uint   Attributes;
+        public uint   Priority;
+        public uint   DefaultPriority;
+        public uint   StartTime;
+        public uint   UntilTime;
+        public uint   Status;
+        public uint   cJobs;
+        public uint   AveragePPM;
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct DOC_INFO_1
+    {
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string pDocName;
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string? pOutputFile;
+        [MarshalAs(UnmanagedType.LPWStr)]
+        public string pDatatype;
+    }
+
+    // ── Public surface ───────────────────────────────────────────────────────
+    public bool IsConnected => _isConnected;
     public event EventHandler<PrintJobStatusEventArgs>? OnJobStatusChanged;
 
-    // ── ESC/POS constants ──────────────────────────────────────────────────
-    private static readonly byte[] EscPosInit      = { 0x1B, 0x40 };           // Initialize
-    private static readonly byte[] EscPosAlignLeft = { 0x1B, 0x61, 0x00 };      // Align left
-    private static readonly byte[] EscPosFeedCut   = { 0x0A, 0x0A, 0x0A,       // Feed 3 lines
-                                                        0x1D, 0x56, 0x42, 0x00 }; // Full cut
+    private static readonly byte[] EscPosInit      = { 0x1B, 0x40 };
+    private static readonly byte[] EscPosAlignLeft = { 0x1B, 0x61, 0x00 };
+    private static readonly byte[] EscPosFeedCut   = { 0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x42, 0x00 };
 
-    /// <param name="printerPortPath">
-    ///   Windows RAW port path of the Epson TM-m30 USB printer.
-    ///   Examples:
-    ///     "USB001"    — USB direct (most common on TM-m30)
-    ///     "COM3"      — Serial connection
-    ///     "\\\\.\\USB001" — Win32 device path form (equivalent)
-    ///   To find the right value: open Device Manager → Universal Serial Bus
-    ///   controllers and look for "Epson TM-m30" → Properties → Port.
-    /// </param>
-    public EpsonReceiptPrinter(string printerPortPath = "USB001")
+    public EpsonReceiptPrinter(string printerPortPath = "EPSON EU-m30")
     {
         _printerPortPath = printerPortPath;
     }
 
-    // -----------------------------------------------------------------------
-    // IReceiptPrinter
-    // -----------------------------------------------------------------------
-
-    /// <summary>
-    /// Verifies the printer port is accessible and sends an ESC/POS Init command
-    /// to reset the print buffer.
-    /// </summary>
+    // ── ConnectAsync — REAL handshake ────────────────────────────────────────
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
-        // Open in probe mode — write ESC/POS Init so the TM-m30 resets its buffer.
-        // A failure here (FileNotFoundException, UnauthorizedAccessException) means
-        // the port path is wrong or the driver is not installed.
-        await WriteRawBytesAsync(EscPosInit, cancellationToken).ConfigureAwait(false);
+        if (_printerPortPath.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!IsComPortPresent(_printerPortPath))
+                throw new PrinterNotFoundException(
+                    _printerPortPath,
+                    $"COM port '{_printerPortPath}' was not found. Available ports: " +
+                    string.Join(", ", GetAvailableComPorts()));
+        }
+        else
+        {
+            bool opened = OpenPrinter(_printerPortPath, out IntPtr hPrinter, IntPtr.Zero);
+            if (!opened || hPrinter == IntPtr.Zero)
+            {
+                int err = Marshal.GetLastWin32Error();
+                var available = GetInstalledPrinters();
+                string hint = available.Count == 0
+                    ? "No printers found in Windows. Install the Epson TM-m30 driver first."
+                    : $"Available Windows printers:\n" +
+                      string.Join("\n", available.ConvertAll(p => $"    • {p}"));
+
+                throw new PrinterNotFoundException(
+                    _printerPortPath,
+                    $"Printer '{_printerPortPath}' not found in Windows spooler (Win32 error {err}).\n{hint}");
+            }
+            ClosePrinter(hPrinter);
+        }
+
         _isConnected = true;
-
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine($"[EpsonReceiptPrinter] TM-m30 ready on {_printerPortPath}. ESC/POS Init sent. ✓");
-        Console.ResetColor();
+        await Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Queries paper-present status.  
-    /// Full DLE/EOT paper-sensor queries require the Epson ePOS SDK or a bidirectional
-    /// COM port. Over a unidirectional USB raw port we probe readiness via a test write.
-    /// Returns <c>true</c> when the port is open and writable.
-    /// </summary>
-    public Task<bool> IsPaperPresentAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> IsPaperPresentAsync(CancellationToken cancellationToken = default)
     {
-        // Over USB001 the port is always unidirectional (write-only).
-        // The safest check without the ePOS SDK is: can we still open the port?
-        try
-        {
-            using var probe = new FileStream(NormalisedPortPath(_printerPortPath),
-                                             FileMode.Open, FileAccess.Write, FileShare.ReadWrite);
-            return Task.FromResult(probe.CanWrite && _isConnected);
-        }
-        catch
-        {
-            return Task.FromResult(false);
-        }
+        return await Task.FromResult(_isConnected);
     }
 
-    /// <summary>
-    /// Sends a raw ESC/POS byte stream to the TM-m30 and raises job-status events.
-    /// Also writes an audit copy to <c>%ProgramData%\SelfCheckoutKiosk\receipts\</c>.
-    /// </summary>
-    public async Task PrintRawAsync(ReadOnlyMemory<byte> escPosPayload,
-                                    CancellationToken cancellationToken = default)
+    public async Task PrintRawAsync(ReadOnlyMemory<byte> escPosPayload, CancellationToken cancellationToken = default)
     {
+        if (!_isConnected)
+            throw new InvalidOperationException("Call ConnectAsync() before printing.");
+
         OnJobStatusChanged?.Invoke(this, new PrintJobStatusEventArgs(PrintJobState.Printing));
 
         try
         {
-            // 1. Send raw bytes directly to the printer port
-            await WriteRawBytesAsync(escPosPayload, cancellationToken).ConfigureAwait(false);
+            if (_printerPortPath.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
+            {
+                await WriteToComPortAsync(escPosPayload, cancellationToken);
+                await WriteToComPortAsync(EscPosFeedCut, cancellationToken);
+            }
+            else
+            {
+                await WriteToSpoolerAsync(escPosPayload, cancellationToken);
+                await WriteToSpoolerAsync(EscPosFeedCut, cancellationToken);
+            }
 
-            // 2. Write ESC/POS full-cut so paper is automatically separated
-            await WriteRawBytesAsync(EscPosFeedCut, cancellationToken).ConfigureAwait(false);
-
-            // 3. Audit spool — keep a text copy on disk for reconciliation
-            await SpoolAuditCopyAsync(escPosPayload, cancellationToken).ConfigureAwait(false);
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"\n[EpsonReceiptPrinter 🧾] RECEIPT SENT TO PRINTER ({escPosPayload.Length} bytes).");
-            Console.ResetColor();
-
+            await SpoolAuditCopyAsync(escPosPayload, cancellationToken);
             OnJobStatusChanged?.Invoke(this, new PrintJobStatusEventArgs(PrintJobState.Completed));
         }
         catch (Exception ex)
@@ -136,25 +175,11 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Convenience helper — builds and prints a formatted transaction receipt
-    // -----------------------------------------------------------------------
-
-    /// <summary>
-    /// Builds a complete ESC/POS receipt for a completed kiosk sale and prints it.
-    /// </summary>
-    public async Task PrintReceiptAsync(decimal totalUsd, decimal tenderedUsd,
-                                        decimal overpaymentKhr,
-                                        CancellationToken cancellationToken = default)
+    public async Task PrintReceiptAsync(decimal totalUsd, decimal tenderedUsd, decimal overpaymentKhr, CancellationToken cancellationToken = default)
     {
         var sb = new StringBuilder();
-
-        // ESC/POS: double-width header
-        sb.Append("\x1B\x21\x30");   // emphasised + double size
-        sb.AppendLine("SELF-CHECKOUT KIOSK");
-        sb.Append("\x1B\x21\x00");   // back to normal
-        sb.AppendLine("Phnom Penh, Cambodia");
-        sb.AppendLine("========================================");
+        sb.Append("\x1B\x21\x30").AppendLine("SELF-CHECKOUT KIOSK").Append("\x1B\x21\x00");
+        sb.AppendLine("Phnom Penh, Cambodia").AppendLine("========================================");
         sb.AppendLine($"Date   : {DateTime.Now:yyyy-MM-dd  HH:mm:ss}");
         sb.AppendLine($"Receipt: {Guid.NewGuid().ToString()[..8].ToUpper()}");
         sb.AppendLine("----------------------------------------");
@@ -164,34 +189,146 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
         sb.AppendLine("----------------------------------------");
         sb.AppendLine("      THANK YOU FOR SHOPPING!");
         sb.AppendLine("========================================");
-        // Paper feed handled by PrintRawAsync via EscPosFeedCut
 
         byte[] payload = Encoding.UTF8.GetBytes(sb.ToString());
-        await PrintRawAsync(EscPosInit.Concat(EscPosAlignLeft).Concat(payload).ToArray(),
-                            cancellationToken).ConfigureAwait(false);
+        byte[] full = EscPosInit.Concat(EscPosAlignLeft).Concat(payload);
+        await PrintRawAsync(full, cancellationToken);
     }
 
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
-
-    private async Task WriteRawBytesAsync(ReadOnlyMemory<byte> bytes,
-                                          CancellationToken ct = default)
+    public static List<string> GetInstalledPrinters()
     {
-        await using var stream = new FileStream(
-            NormalisedPortPath(_printerPortPath),
-            FileMode.Open,
-            FileAccess.Write,
-            FileShare.ReadWrite,
-            bufferSize: 1,
-            useAsync: true);
+        var result = new List<string>();
+        try
+        {
+            uint needed  = 0;
+            uint returned = 0;
+            int  flags   = PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS;
 
-        await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
-        await stream.FlushAsync(ct).ConfigureAwait(false);
+            EnumPrinters(flags, null, 2, IntPtr.Zero, 0, out needed, out returned);
+            if (needed == 0) return result;
+
+            IntPtr buf = Marshal.AllocHGlobal((int)needed);
+            try
+            {
+                bool ok = EnumPrinters(flags, null, 2, buf, needed, out needed, out returned);
+                if (!ok) return result;
+
+                int structSize = Marshal.SizeOf<PrinterInfo2>();
+                for (int i = 0; i < (int)returned; i++)
+                {
+                    IntPtr ptr = IntPtr.Add(buf, i * structSize);
+                    var info = Marshal.PtrToStructure<PrinterInfo2>(ptr);
+                    if (!string.IsNullOrEmpty(info.pPrinterName))
+                        result.Add($"{info.pPrinterName} [Port: {info.pPortName ?? "N/A"}, Driver: {info.pDriverName ?? "N/A"}]");
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(buf);
+            }
+        }
+        catch
+        {
+        }
+        return result;
     }
 
-    private static async Task SpoolAuditCopyAsync(ReadOnlyMemory<byte> payload,
-                                                   CancellationToken ct)
+    private static bool IsComPortPresent(string portName)
+    {
+        try
+        {
+            var ports = System.IO.Ports.SerialPort.GetPortNames();
+            return Array.Exists(ports, p => p.Equals(portName, StringComparison.OrdinalIgnoreCase));
+        }
+        catch { return false; }
+    }
+
+    private async Task WriteToSpoolerAsync(ReadOnlyMemory<byte> data, CancellationToken ct)
+    {
+        await Task.Run(() =>
+        {
+            if (!OpenPrinter(_printerPortPath, out var hPrinter, IntPtr.Zero))
+            {
+                int err = Marshal.GetLastWin32Error();
+                throw new Exception($"OpenPrinter failed for '{_printerPortPath}' (Win32 error {err}).");
+            }
+
+            try
+            {
+                var di = new DOC_INFO_1
+                {
+                    pDocName  = "Kiosk Receipt",
+                    pOutputFile = null,
+                    pDatatype = "RAW"
+                };
+
+                if (!StartDocPrinter(hPrinter, 1, ref di))
+                {
+                    int err = Marshal.GetLastWin32Error();
+                    throw new Exception($"StartDocPrinter failed (Win32 error {err}).");
+                }
+
+                if (!StartPagePrinter(hPrinter))
+                {
+                    int err = Marshal.GetLastWin32Error();
+                    throw new Exception($"StartPagePrinter failed (Win32 error {err}).");
+                }
+
+                IntPtr pBytes = Marshal.AllocHGlobal(data.Length);
+                try
+                {
+                    Marshal.Copy(data.ToArray(), 0, pBytes, data.Length);
+                    if (!WritePrinter(hPrinter, pBytes, data.Length, out int written))
+                    {
+                        int err = Marshal.GetLastWin32Error();
+                        throw new Exception($"WritePrinter failed (Win32 error {err}, wrote {written}/{data.Length} bytes).");
+                    }
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(pBytes);
+                }
+
+                EndPagePrinter(hPrinter);
+                EndDocPrinter(hPrinter);
+            }
+            finally
+            {
+                ClosePrinter(hPrinter);
+            }
+        }, ct);
+    }
+
+    private async Task WriteToComPortAsync(ReadOnlyMemory<byte> data, CancellationToken ct)
+    {
+        await Task.Run(() =>
+        {
+            using var port = new System.IO.Ports.SerialPort(_printerPortPath, 9600, System.IO.Ports.Parity.None, 8, System.IO.Ports.StopBits.One)
+            {
+                DtrEnable = true,
+                RtsEnable = true,
+                WriteTimeout = 3000
+            };
+            port.Open();
+            byte[] bytes = data.ToArray();
+            port.Write(bytes, 0, bytes.Length);
+            port.Close();
+        }, ct);
+    }
+
+    public static List<string> GetAvailableComPorts()
+    {
+        try
+        {
+            return new List<string>(System.IO.Ports.SerialPort.GetPortNames());
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+
+    private static async Task<string?> SpoolAuditCopyAsync(ReadOnlyMemory<byte> payload, CancellationToken ct)
     {
         try
         {
@@ -200,39 +337,26 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
                 "SelfCheckoutKiosk", "receipts");
             Directory.CreateDirectory(dir);
             string file = Path.Combine(dir, $"receipt_{DateTime.Now:yyyyMMdd_HHmmss_fff}.txt");
-            // Strip non-printable ESC/POS control bytes for the text audit copy
             string text = Encoding.UTF8.GetString(payload.Span)
-                                        .Replace("\x1B", "").Replace("\x1D", "");
-            await File.WriteAllTextAsync(file, text, ct).ConfigureAwait(false);
-            Console.WriteLine($"   ► Audit copy: {file}");
+                .Replace("\x1B", "").Replace("\x1D", "").Replace("!", "");
+            await File.WriteAllTextAsync(file, text, ct);
+            return file;
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[EpsonReceiptPrinter] Audit spool warning: {ex.Message}");
-            // Non-fatal — print succeeded even if spool write fails
+            return null;
         }
-    }
-
-    /// <summary>
-    /// Converts short port names like "USB001" to the Win32 device path
-    /// "\\.\USB001" that <see cref="FileStream"/> requires on Windows.
-    /// COM ports are returned unchanged; absolute paths are returned unchanged.
-    /// </summary>
-    private static string NormalisedPortPath(string raw)
-    {
-        if (raw.StartsWith(@"\\", StringComparison.Ordinal) ||
-            raw.StartsWith("/", StringComparison.Ordinal))
-            return raw; // already a device path or Unix path
-
-        if (raw.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
-            return $@"\\.\{raw}"; // COM10+ requires the long form
-
-        // USB001, LPT1, etc.
-        return $@"\\.\{raw}";
     }
 }
 
-// Extension helper — avoids LINQ dependency in this file
+public sealed class PrinterNotFoundException : Exception
+{
+    public string PrinterName { get; }
+    public PrinterNotFoundException(string printerName, string message)
+        : base(message) => PrinterName = printerName;
+}
+
 file static class ByteArrayExtensions
 {
     public static byte[] Concat(this byte[] a, byte[] b)

@@ -238,6 +238,10 @@ cd src/SelfCheckoutKiosk.App
 dotnet run --project SelfCheckoutKiosk.App -- --verify-hardware
 
 dotnet run --project src/SelfCheckoutKiosk.App -- --verify-hardware
+# test with printer 
+dotnet run --project src/SelfCheckoutKiosk.App -- --print-test "EPSON EU-m30"
+
+# test with scanner 
 
 > **`TreatWarningsAsErrors=true` is solution-wide.**
 > Every compiler warning is a build failure. Never suppress a warning without Lead approval.

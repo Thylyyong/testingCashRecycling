@@ -4,8 +4,12 @@
        Owner: Back-End / Systems. Retargets to net10.0-windows with the real SDK. -->
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk.Hal.Vendor.EpsonM30</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.IO.Ports" Version="10.0.10" />
   </ItemGroup>
 </Project>

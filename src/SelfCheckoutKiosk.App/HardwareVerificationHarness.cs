@@ -218,13 +218,6 @@ internal static class HardwareVerificationHarness
         Warn("ACTION: Insert $1.00 USD note into the recycler slot now.");
         Warn("The engine will accept it, write an audit record, keep session PENDING, and RE-ARM the green LED light.");
         Prompt("Press ENTER AFTER inserting the $1.00 USD note");
-        
-        // Interactive simulation fallback if no physical note inserted
-        if (!pendingFired && services.CashRecycler is VendorXCashRecycler vendorRecycler)
-        {
-            try { vendorRecycler.SimulateNoteInserted(Money.Usd(1.00m)); } catch { }
-        }
-
         await Task.Delay(2_000);
 
         long logAfter = File.Exists(logPath) ? new FileInfo(logPath).Length : 0;

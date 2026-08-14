@@ -199,7 +199,7 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
     ///     → Raise OnCashPaymentRejected (UI: "too much — insert less")
     ///     → Session stays open at the prior accumulated total.
     /// </summary>
-    private void HandleNoteInEscrowInternal(object? sender, NoteInEscrowEventArgs e)
+    private async void HandleNoteInEscrowInternal(object? sender, NoteInEscrowEventArgs e)
     {
         // Audit record already written by HardwareAppendLog (first subscriber).
         var escrowId = _hardwareAppendLog.LastEscrowId;
@@ -247,8 +247,8 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
         {
             _hardwareAppendLog.CommitToVault(escrowId);
 
-            // Disarm the recycler — shutter CLOSES & Green LED Light TURNS OFF
-            _ = _cashRecycler.DisarmAcceptanceAsync();
+            // Disarm the recycler — shutter CLOSES & Green LED Light TURNS OFF synchronously
+            await _cashRecycler.DisarmAcceptanceAsync();
 
             _paymentSession = null;
             TransitionState(KioskState.TransactionComplete);

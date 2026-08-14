@@ -65,7 +65,7 @@ public static class CompositionRoot
             apiKey: apiKey,
             useRealApi: true);
         IBarcodeScanner barcodeScanner = new DatalogicBarcodeScanner();
-        IReceiptPrinter receiptPrinter = new EpsonReceiptPrinter();
+        IReceiptPrinter receiptPrinter = new EpsonReceiptPrinter("EPSON EU-m30");
 
         // 5. TODO(Back-End): construct KioskDbContext via a FACTORY delegate
         //    (EF contexts are cheap; do not hold one open for process lifetime).

@@ -7,6 +7,7 @@
        is ratified; ViewModels stay framework-agnostic and testable headless. -->
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk.Presentation</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />

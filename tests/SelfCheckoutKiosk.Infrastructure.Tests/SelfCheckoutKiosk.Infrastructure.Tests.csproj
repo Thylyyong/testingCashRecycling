@@ -2,6 +2,7 @@
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk_Infrastructure_Tests</RootNamespace>
     <OutputType>Library</OutputType>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
