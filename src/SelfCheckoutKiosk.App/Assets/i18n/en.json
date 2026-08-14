@@ -81,6 +81,11 @@
   "InvalidAmount": "Invalid amount.",
   "NoteTooLarge": "Note too large — try a smaller note.",
 
+  "QRPaymentTitle": "QR Payment",
+  "ScanInstructions": "Scan with ABA Mobile or any KHQR App",
+  "SupportedApps": "Supports Bakong, ABA, ABA PAY, and local bank apps",
+  "WaitingForPayment": "Waiting for payment...",
+
   "CancelPaymentTitle": "Cancel Payment?",
   "CancelPaymentMessage": "Going back will cancel this payment.",
   "ContinuePayment": "Continue Payment",
@@ -89,7 +94,8 @@
   "PaymentComplete": "Payment Complete",
   "TotalPaid": "Total Paid",
   "PaidWith": "Paid With",
-  "CashPaymentMethod": "Cash Payment",
+  "CashPaymentMethod": "Cash",
+  "KHQRPaymentMethod": "KHQR",
   "ReturnToStartText": "This screen will return to the start in",
   "Second": "seconds",
   "Done": "Done"

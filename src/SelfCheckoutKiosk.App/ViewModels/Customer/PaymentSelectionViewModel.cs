@@ -28,6 +28,9 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
             if (methodKey == "Cash") {
                 ProceedToIngestionProgress();
+            } else if (methodKey == "KHQR")
+            {
+                ProceedToQRPayment();
             }
         }
 
@@ -49,6 +52,15 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         {
             NavigationService.NavigateTo(
                 typeof(IngestionProgressView),
+                null,
+                SlideNavigationTransitionEffect.FromRight
+            );
+        }
+
+        public void ProceedToQRPayment()
+        {
+            NavigationService.NavigateTo(
+                typeof(QRPaymentView),
                 null,
                 SlideNavigationTransitionEffect.FromRight
             );

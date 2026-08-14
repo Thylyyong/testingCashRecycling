@@ -33,6 +33,7 @@
 
 	<ItemGroup>
 		<None Remove="Styles\AppResources.xaml" />
+		<None Remove="Views\Customer\QRPaymentView.xaml" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -46,6 +47,12 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2526" />
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Page Update="Views\Customer\QRPaymentView.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </Page>
 	</ItemGroup>
 
 	<ItemGroup>

@@ -81,6 +81,11 @@
   "InvalidAmount": "ចំនួនទឹកប្រាក់មិនត្រឹមត្រូវ។",
   "NoteTooLarge": "ក្រដាសប្រាក់ធំពេក — សូមសាកល្បងក្រដាសប្រាក់តូចជាងនេះ។",
 
+  "QRPaymentTitle": "ការទូទាត់តាម QR",
+  "ScanInstructions": "ស្កែនជាមួយ ABA Mobile ឬកម្មវិធី KHQR ណាមួយ",
+  "SupportedApps": "គាំទ្រ Bakong, ABA, ABA PAY និងកម្មវិធីធនាគារក្នុងស្រុកផ្សេងទៀត",
+  "WaitingForPayment": "កំពុងរង់ចាំការស្កែនទូទាត់ប្រាក់...",
+
   "CancelPaymentTitle": "បោះបង់ការទូទាត់?",
   "CancelPaymentMessage": "ការត្រឡប់ទៅវិញនឹងបោះបង់ការទូទាត់នេះ។",
   "ContinuePayment": "បន្តការទូទាត់",
@@ -90,6 +95,7 @@
   "TotalPaid": "ទូទាត់សរុប",
   "PaidWith": "បានបង់ជាមួយ",
   "CashPaymentMethod": "សាច់ប្រាក់",
+  "KHQRPaymentMethod": "KHQR",
   "ReturnToStartText": "អេក្រង់នេះនឹងត្រឡប់ទៅទំព័រចាប់ផ្តើមក្នុងរយៈពេល",
   "Second": "វិនាទី",
   "Done": "រួចរាល់"

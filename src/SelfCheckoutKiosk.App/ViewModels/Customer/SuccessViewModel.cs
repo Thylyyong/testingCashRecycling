@@ -25,6 +25,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public string MethodLabel => Method switch
         {
             PaymentMethod.Cash => Localizer.GetString("CashPaymentMethod"),
+            PaymentMethod.KHQR => Localizer.GetString("KHQRPaymentMethod"),
             _ => Method.ToString()
         };
 
