@@ -27,11 +27,10 @@ namespace SelfCheckoutKiosk.App
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
         }
 
-        protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             try
             {
-                // 1. Create and activate window immediately (Keeps WinUI UI Thread happy)
                 var mainWindow = new MainWindow();
                 _window = mainWindow;
 
@@ -44,8 +43,7 @@ namespace SelfCheckoutKiosk.App
 
                 _window.Activate();
 
-                // 2. Fire-and-forget background language loading AFTER window activation
-                _ = InitializeLocalizationAsync();
+                await InitializeLocalizationAsync();
             }
             catch (Exception ex)
             {
@@ -55,14 +53,14 @@ namespace SelfCheckoutKiosk.App
 
         private async Task InitializeLocalizationAsync()
         {
-            string savedLang = "km";
+            string savedLang = "en";
 
             try
             {
                 // Access ApplicationData safely
                 if (AppInstanceIsPackaged())
                 {
-                    savedLang = Windows.Storage.ApplicationData.Current.LocalSettings.Values["AppLanguage"] as string ?? "km";
+                    savedLang = Windows.Storage.ApplicationData.Current.LocalSettings.Values["AppLanguage"] as string ?? "en";
                 }
             }
             catch (Exception ex)

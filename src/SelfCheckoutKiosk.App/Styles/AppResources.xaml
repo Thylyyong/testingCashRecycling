@@ -9,7 +9,7 @@
     <FontFamily x:Key="AppPrimaryFont">Segoe UI</FontFamily>
     <FontFamily x:Key="AppKhmerFont">ms-appx:///Assets/Fonts/NotoSansKhmer.ttf#Noto Sans Khmer</FontFamily>
 
-    <FontFamily x:Key="GlobalAppFont">Segoe UI, ms-appx:///Assets/Fonts/NotoSansKhmer-Regular.ttf#Noto Sans Khmer</FontFamily>
+    <FontFamily x:Key="GlobalAppFont">Segoe UI, ms-appx:///Assets/Fonts/NotoSansKhmer.ttf#Noto Sans Khmer</FontFamily>
     <FontFamily x:Key="ContentControlThemeFontFamily">{StaticResource GlobalAppFont}</FontFamily>
 
     <!-- Implicit Style for Dialog -->

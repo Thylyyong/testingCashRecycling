@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Windows.Storage;
 
 namespace SelfCheckoutKiosk.App.Services
 {
@@ -13,44 +13,62 @@ namespace SelfCheckoutKiosk.App.Services
 
         private Dictionary<string, string> _dictionary = new();
 
-        public string CurrentLanguage { get; private set; } = "km";
+        public string CurrentLanguage { get; private set; } = "en";
 
-        // Indexer retained for code-behind or classical {Binding} usage
+        // Indexer for classical {Binding} usage
         public string this[string key] => GetString(key);
 
-        // Required for WinUI 3 compiled bindings: {x:Bind Localizer.GetString('Key'), Mode=OneWay}
+        // For WinUI 3 compiled bindings: {x:Bind Localizer.GetString('Key'), Mode=OneWay}
         public string GetString(string key)
         {
             return _dictionary.TryGetValue(key, out var val) ? val : key;
         }
 
-        // Short alias if you prefer: {x:Bind Localizer.Get('Key'), Mode=OneWay}
         public string Get(string key) => GetString(key);
 
         public async Task SetLanguageAsync(string langCode)
         {
             CurrentLanguage = langCode;
 
-            // Persist user selection globally
-            ApplicationData.Current.LocalSettings.Values["AppLanguage"] = langCode;
-
+            // 1. Safely save setting (prevents crash in unpackaged builds)
             try
             {
-                var uri = new Uri($"ms-appx:///Assets/i18n/{langCode}.json");
-                var file = await StorageFile.GetFileFromApplicationUriAsync(uri);
-                var json = await FileIO.ReadTextAsync(file);
-
-                // Uses generated JsonTypeInfo for AOT/Trimming safety
-                _dictionary = JsonSerializer.Deserialize(
-                    json,
-                    LocalizationJsonContext.Default.DictionaryStringString) ?? new();
+                if (Windows.ApplicationModel.Package.Current != null)
+                {
+                    Windows.Storage.ApplicationData.Current.LocalSettings.Values["AppLanguage"] = langCode;
+                }
             }
             catch
             {
+                // App is running unpackaged, ignore or write to a local config file if needed
+            }
+
+            // 2. Read JSON file using standard System.IO (Works everywhere in Release/Publish)
+            try
+            {
+                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "i18n", $"{langCode}.json");
+
+                if (File.Exists(filePath))
+                {
+                    string json = await File.ReadAllTextAsync(filePath);
+
+                    _dictionary = JsonSerializer.Deserialize(
+                        json,
+                        LocalizationJsonContext.Default.DictionaryStringString) ?? new();
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Localization] File not found at: {filePath}");
+                    _dictionary = new();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Localization Error] {ex.Message}");
                 _dictionary = new();
             }
 
-            // Raising PropertyChanged with string.Empty triggers XAML to re-evaluate all method bindings
+            // 3. Notify XAML bindings to refresh text
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Item[]"));
         }
