@@ -59,23 +59,7 @@
     <None Remove="Views\Customer\QRPaymentView.xaml" />
   </ItemGroup>
 
-  <!-- ============================================================
-       TEMPORARY PLACEHOLDER ASSETS — NOT FINAL
-       These files stand in for real branding/media assets pending
-       handoff from the frontend dev. Tracked as an open item on the
-       integration tracker. Replace before any real demo/release build.
-       ============================================================ -->
-  <ItemGroup>
-    <Content Include="Assets\Logo\PLACEHOLDER-ca.ico" Link="Assets\Logo\ca.ico" />
-    <Content Include="Assets\Images\Flag\PLACEHOLDER-en-flag.png" Link="Assets\Images\Flag\en-flag.png" />
-    <Content Include="Assets\Images\Flag\PLACEHOLDER-km-flag.png" Link="Assets\Images\Flag\km-flag.png" />
-    <Content Include="Assets\Images\Banner\PLACEHOLDER-banner4.jpg" Link="Assets\Images\Banner\banner4.jpg" />
-    <Content Include="Assets\Images\Banner\PLACEHOLDER-banner6.jpg" Link="Assets\Images\Banner\banner6.jpg" />
-    <Content Include="Assets\Images\Banner\PLACEHOLDER-banner7.jpg" Link="Assets\Images\Banner\banner7.jpg" />
-    <Content Include="Assets\Images\Banner\PLACEHOLDER-banner8.jpg" Link="Assets\Images\Banner\banner8.jpg" />
-    <Content Include="Assets\Images\Banner\PLACEHOLDER-banner9.jpg" Link="Assets\Images\Banner\banner9.jpg" />
-    <Content Include="Assets\Fonts\PLACEHOLDER-NotoSansKhmer.ttf" Link="Assets\Fonts\NotoSansKhmer.ttf" />
-  </ItemGroup>
+
 
   <ItemGroup>
     <!-- Guarantees i18n JSON files are copied to BOTH debug bin and publish output -->
