@@ -26,7 +26,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
     public sealed partial class PaymentSelectionView : Page
     {
         public PaymentSelectionViewModel ViewModel { get; }
-
+        public LocalizationService Localizer => LocalizationService.Instance;
         public PaymentSelectionView()
         {
             InitializeComponent();

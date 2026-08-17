@@ -60,7 +60,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         public void ConfirmPaymentAndProceed()
         {
-            var payment = _paymentService.ConfirmPayment();
+            var payment = _paymentService.ConfirmPayment(PaymentMethod.Cash);
             if (payment == null) return;
 
             _cartService.ClearCart();

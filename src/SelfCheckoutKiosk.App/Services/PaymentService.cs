@@ -9,6 +9,7 @@ namespace SelfCheckoutKiosk.App.Services
 {
     public class PaymentService : IPaymentService
     {
+        public LocalizationService Localizer => LocalizationService.Instance;
         private const decimal MaxOverpayKhr = 100m;
 
         private decimal _totalDueUsd;
@@ -74,17 +75,16 @@ namespace SelfCheckoutKiosk.App.Services
 
         public bool TrySubmitCash(decimal amount, bool isUsd, out string reason)
         {
-            // Already fully paid — different message than "note too big"
             if (IsFullyPaid)
             {
-                reason = "Payment already complete.";
+                reason = Localizer.GetString("PaymentAlreadyComplete");
                 RecordAttempt(PaymentAttemptResult.Rejected, reason, amount, isUsd);
                 return false;
             }
 
             if (amount <= 0)
             {
-                reason = "Invalid amount.";
+                reason = Localizer.GetString("InvalidAmount");
                 RecordAttempt(PaymentAttemptResult.Rejected, reason, amount, isUsd);
                 return false;
             }
@@ -95,7 +95,7 @@ namespace SelfCheckoutKiosk.App.Services
 
             if (projectedTotal > TotalDueUsd + maxOverpayUsd)
             {
-                reason = "Note too large — try a smaller note.";
+                reason = Localizer.GetString("NoteTooLarge");
                 RecordAttempt(PaymentAttemptResult.Rejected, reason, amount, isUsd);
                 return false;
             }
@@ -104,18 +104,19 @@ namespace SelfCheckoutKiosk.App.Services
             HasAcceptedAnyPayment = true;
             OnPropertyChanged(nameof(HasAcceptedAnyPayment));
 
-            reason = "Accepted";
+            reason = Localizer.GetString("Accepted");
             RecordAttempt(PaymentAttemptResult.Accepted, reason, amount, isUsd);
             return true;
         }
 
-        public Payment? ConfirmPayment()
+        // Updated signature with default parameter value
+        public Payment? ConfirmPayment(PaymentMethod method = PaymentMethod.Cash)
         {
             if (!IsFullyPaid) return null;
 
             return new Payment
             {
-                Method = PaymentMethod.Cash,
+                Method = method,
                 TotalDueUsd = TotalDueUsd,
                 TotalPaidUsd = TotalPaidUsd,
                 ChangeDueUsd = Math.Max(0, TotalPaidUsd - TotalDueUsd),

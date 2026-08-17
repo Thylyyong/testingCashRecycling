@@ -11,6 +11,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 {
     public class SuccessViewModel : INotifyPropertyChanged
     {
+        public LocalizationService Localizer => LocalizationService.Instance;
         private readonly IReceiptPrinterService _printerService;
 
         public INavigationService NavigationService { get; }
@@ -23,7 +24,8 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public string CompletedAtText => Payment.CompletedAt.ToString("dd MMM yyyy, hh:mm tt");
         public string MethodLabel => Method switch
         {
-            PaymentMethod.Cash => "Cash Payment",
+            PaymentMethod.Cash => Localizer.GetString("CashPaymentMethod"),
+            PaymentMethod.KHQR => Localizer.GetString("KHQRPaymentMethod"),
             _ => Method.ToString()
         };
 
@@ -90,7 +92,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         public void ReturnHome()
         {
-            NavigationService.NavigateTo(typeof(KioskBaseView2), null, SlideNavigationTransitionEffect.FromLeft);
+            NavigationService.NavigateTo(typeof(KioskBaseView), null, SlideNavigationTransitionEffect.FromRight);
         }
 
         protected void OnPropertyChanged(string name) =>

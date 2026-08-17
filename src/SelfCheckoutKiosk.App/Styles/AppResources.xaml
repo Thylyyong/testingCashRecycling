@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ========================================================= -->
+    <!-- GLOBAL FONTS -->
+    <!-- ========================================================= -->
+    <FontFamily x:Key="AppPrimaryFont">Segoe UI</FontFamily>
+    <FontFamily x:Key="AppKhmerFont">ms-appx:///Assets/Fonts/NotoSansKhmer.ttf#Noto Sans Khmer</FontFamily>
+
+    <FontFamily x:Key="GlobalAppFont">Segoe UI, ms-appx:///Assets/Fonts/NotoSansKhmer.ttf#Noto Sans Khmer</FontFamily>
+    <FontFamily x:Key="ContentControlThemeFontFamily">{StaticResource GlobalAppFont}</FontFamily>
+
+    <!-- Implicit Style for Dialog -->
+    <Style TargetType="ContentDialog">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+    </Style>
+
+    <!-- Implicit Style for TextBlock -->
+    <Style TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}" />
+    </Style>
+
+    <!-- Implicit Style for TextBox / PasswordBox / AutoSuggestBox -->
+    <Style TargetType="TextBox">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}" />
+    </Style>
+
+    <!-- Implicit Style for Button -->
+    <Style TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}" />
+    </Style>
+
+    <Style x:Key="DialogButtonStyle" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+    </Style>
+
+    <Style x:Key="KioskContentDialogStyle" TargetType="ContentDialog">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+        <Setter Property="CornerRadius" Value="12"/>
+    </Style>
+    
+    <!-- Font Sizes -->
+    <x:Double x:Key="FontSizeCaption">10</x:Double>
+    <x:Double x:Key="FontSizeSubLabel">11</x:Double>
+    <x:Double x:Key="FontSizeBody">12</x:Double>
+    <x:Double x:Key="FontSizeBodyLarge">13</x:Double>
+    <x:Double x:Key="FontSizeSubtitle">14</x:Double>
+    <x:Double x:Key="FontSizeTitleSmall">16</x:Double>
+    <x:Double x:Key="FontSizeTitle">18</x:Double>
+    <x:Double x:Key="FontSizeHeroSmall">22</x:Double>
+    <x:Double x:Key="FontSizeHeroMedium">26</x:Double>
+    <x:Double x:Key="FontSizeHeroLarge">32</x:Double>
+
+    <!-- ========================================================= -->
+    <!-- BRAND COLOR PALETTE -->
+    <!-- ========================================================= -->
+    <!-- Primaries -->
+    <SolidColorBrush x:Key="PrimaryBrandBrush" Color="#2563EB"/>
+    <SolidColorBrush x:Key="PrimaryBrandHoverBrush" Color="#1D4ED8"/>
+    <SolidColorBrush x:Key="PrimaryBrandPressedBrush" Color="#1E40AF"/>
+
+    <!-- Accent / Secondary -->
+    <SolidColorBrush x:Key="AccentBlueBrush" Color="#0067C0"/>
+    <SolidColorBrush x:Key="AccentBlueLightBrush" Color="#38A5F0"/>
+    <SolidColorBrush x:Key="AccentBlueChipHoverBrush" Color="#2D8EDD"/>
+    <SolidColorBrush x:Key="AccentBlueChipPressedBrush" Color="#166BAE"/>
+    <SolidColorBrush x:Key="AccentBlueChipDisabledBrush" Color="#005096"/>
+    <SolidColorBrush x:Key="AccentBlueSoftBrush" Color="#D6E9FA"/>
+
+    <!-- Text Colors -->
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1A202C"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#64748B"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#94A3B8"/>
+    <SolidColorBrush x:Key="TextDarkSlateBrush" Color="#334155"/>
+    <SolidColorBrush x:Key="TextItemNameBrush" Color="#2D3748"/>
+    <SolidColorBrush x:Key="TextQuantityBrush" Color="#718096"/>
+    <SolidColorBrush x:Key="TextSubLabelBrush" Color="#A0AEC0"/>
+    <SolidColorBrush x:Key="TextOnAccentBrush" Color="White"/>
+
+    <!-- Backgrounds & Borders -->
+    <SolidColorBrush x:Key="SurfaceLightBrush" Color="#F1F5F9"/>
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F8FAFC"/>
+    <SolidColorBrush x:Key="BorderLightBrush" Color="#CBD5E1"/>
+    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#FFF4F6F8"/>
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="White"/>
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#E2E8F0"/>
+    <SolidColorBrush x:Key="SubtleBackgroundBrush" Color="#EDF2F7"/>
+    <SolidColorBrush x:Key="ButtonBackgroundPointerOverBrush" Color="#E5E7EB"/>
+    <SolidColorBrush x:Key="ButtonBackgroundPressedBrush" Color="#D1D5DB"/>
+    <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="#E2E8F0"/>
+    <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#94A3B8"/>
+
+    <!-- Success / Highlight -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="#059669"/>
+    <SolidColorBrush x:Key="SuccessLightBrush" Color="#10B981"/>
+    <SolidColorBrush x:Key="RowHighlightBrush" Color="#3310B981"/>
+    <SolidColorBrush x:Key="RowFlashStartBrush" Color="#4010B981"/>
+    <SolidColorBrush x:Key="RowDefaultBackgroundBrush" Color="Transparent"/>
+    <!--<Color x:Key="RowFlashStartColor">#4010B981</Color>-->
+    <!--<Color x:Key="TransparentColor">Transparent</Color>-->
+
+
+    <!-- Danger / Destructive -->
+    <SolidColorBrush x:Key="DangerBrush" Color="#DC2626"/>
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="#B91C1C"/>
+    <SolidColorBrush x:Key="DangerPressedBrush" Color="#991B1B"/>
+    <SolidColorBrush x:Key="DangerLightBrush" Color="#FEE2E2"/>
+    <SolidColorBrush x:Key="DangerLightPressedBrush" Color="#FECACA"/>
+
+    <!-- Gradients -->
+    <LinearGradientBrush x:Key="PrimaryCardGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#2563EB" Offset="0"/>
+        <GradientStop Color="#1D4ED8" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="HeaderBannerGradientBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#0067C0" Offset="0"/>
+        <GradientStop Color="#38A5F0" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="CheckoutButtonGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#2563EB" Offset="0"/>
+        <GradientStop Color="#1D4ED8" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- ========================================================= -->
+    <!-- KIOSK UI LAYOUT METRICS -->
+    <!-- ========================================================= -->
+    <CornerRadius x:Key="KioskCardCornerRadius">12</CornerRadius>
+    <CornerRadius x:Key="KioskHeroCardCornerRadius">16</CornerRadius>
+    <CornerRadius x:Key="KioskButtonCornerRadius">14</CornerRadius>
+    <CornerRadius x:Key="KioskChipCornerRadius">8</CornerRadius>
+
+</ResourceDictionary>

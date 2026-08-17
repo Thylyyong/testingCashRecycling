@@ -5,7 +5,12 @@ namespace SelfCheckoutKiosk.App.Models
 {
     public enum PaymentMethod
     {
-        Cash
+        Cash,
+        KHQR,
+        Card,
+        InternationalQR,
+        MembershipCard,
+        Coupon,
         // Card, QR, etc. can be added later — SuccessView reads this to render dynamically
     }
 

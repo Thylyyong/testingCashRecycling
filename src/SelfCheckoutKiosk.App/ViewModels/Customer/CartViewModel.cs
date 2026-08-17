@@ -26,8 +26,8 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public decimal ExchangeRate => _cartService.ExchangeRate;
         public bool HasItems => !IsEmpty;
         public string CurrencyLabel => IsUsd ? "USD" : "KHR";
-        public string ItemCountText => $"{ItemCount} items";
-        public string ItemCountSubText => $"{ItemCount} items in cart";
+        public string ItemCountText => $"{ItemCount}";
+        public string ItemCountSubText => $"{ItemCount}";
 
         public string FormattedTotalUsd => IsUsd ? $"${Total:0.00}" : $"៛{TotalKhr:N0}";
         public string FormattedTotalKhr => IsUsd ? $"≈ ៛{TotalKhr:N0}" : $"≈ ${Total:0.00}";

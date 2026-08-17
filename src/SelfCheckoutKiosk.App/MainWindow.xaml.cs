@@ -25,9 +25,6 @@ using SelfCheckoutKiosk.App.Views.Customer;
 using Microsoft.UI.Windowing;
 using Windows.Graphics;
 
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
-
 namespace SelfCheckoutKiosk.App
 {
     /// <summary>
@@ -35,6 +32,9 @@ namespace SelfCheckoutKiosk.App
     /// </summary>
     public sealed partial class MainWindow : Window
     {
+        // Set this to true to boot directly into full screen mode
+        private readonly bool _startInFullScreen = false;
+
         public INavigationService NavigationService { get; }
 
         public Frame MainRootFrame => RootFrame;
@@ -86,14 +86,23 @@ namespace SelfCheckoutKiosk.App
             IntPtr ptrWndProc = Marshal.GetFunctionPointerForDelegate(_wndProcDelegate);
             _oldWndProc = SetWindowLongPtr(_hwnd, GWL_WNDPROC, ptrWndProc);
 
-            // Force initial window size to a clean 9:16 portrait layout on startup (e.g., Width: 540, Height: 960)
-            EnforceInitialAspectRatio(540, 960);
+            // Configure window mode based on option flag
+            if (_startInFullScreen)
+            {
+                // Native WinUI 3 Fullscreen mode (overrides window frame sizing)
+                appWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
+            }
+            else
+            {
+                // Force initial window size to a clean 9:16 portrait layout on startup (e.g., Width: 540, Height: 960)
+                EnforceInitialAspectRatio(540, 960);
+            }
 
             // Initialize your navigation service with the root frame defined in XAML
             NavigationService = new NavigationService(RootFrame);
 
             // Navigate to the initial page using the service
-            NavigationService.NavigateTo(typeof(KioskBaseView2));
+            NavigationService.NavigateTo(typeof(KioskBaseView));
         }
 
         private void EnforceInitialAspectRatio(int initialWidth, int initialHeight)
@@ -158,7 +167,7 @@ namespace SelfCheckoutKiosk.App
             if (ctrl && shift && e.Key == VirtualKey.Back)
             {
                 NavigationService.NavigateTo(
-                    typeof(KioskBaseView2),
+                    typeof(KioskBaseView),
                     null,
                     new SuppressNavigationTransitionInfo()
                 );

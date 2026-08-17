@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="SelfCheckoutKiosk.App.Views.Customer.QRPaymentView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SelfCheckoutKiosk.App.Views.Customer"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    RequestedTheme="Light">
+
+    <Page.Resources>
+        <Style x:Key="HeaderChipButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentBlueBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextOnAccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="{StaticResource KioskChipCornerRadius}"/>
+            <Setter Property="Padding" Value="16,6"/>
+            <Setter Property="Height" Value="40"/>
+        </Style>
+
+        <!-- Simulated Testing Action Button Style -->
+        <Style x:Key="SimulateButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextItemNameBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="CornerRadius" Value="{StaticResource KioskButtonCornerRadius}"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Background="{StaticResource PageBackgroundBrush}">
+        <!-- ========================================================= -->
+        <!-- VISUAL STATE MANAGER (ADAPTIVE KIOSK SCALING)             -->
+        <!-- ========================================================= -->
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="LayoutStates">
+
+                <!-- 1. SMALL VERTICAL TEST STATE (Compact portrait test window, base/default) -->
+                <VisualState x:Name="SmallVerticalTestState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Header -->
+                        <Setter Target="HeaderBorder.Padding" Value="16,10"/>
+                        <Setter Target="HeaderBorder.Height" Value="64"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="{StaticResource FontSizeTitle}"/>
+                        <Setter Target="BackButton.Height" Value="40"/>
+                        <Setter Target="BackButtonIcon.FontSize" Value="16"/>
+
+                        <!-- Main Layout -->
+                        <Setter Target="MainBodyGrid.Margin" Value="14,10,14,10"/>
+
+                        <!-- Integrated Total Display -->
+                        <Setter Target="TotalDueLabel.FontSize" Value="{StaticResource FontSizeSubLabel}"/>
+                        <Setter Target="TotalDueText.FontSize" Value="28"/>
+
+                        <!-- QR Container -->
+                        <Setter Target="QrCard.Padding" Value="20"/>
+                        <Setter Target="QrImageContainer.Width" Value="200"/>
+                        <Setter Target="QrImageContainer.Height" Value="200"/>
+                        <Setter Target="ScanInstructionsText.FontSize" Value="{StaticResource FontSizeBody}"/>
+
+                        <!-- Footer -->
+                        <Setter Target="FooterBorder.Padding" Value="16,12,16,14"/>
+                        <Setter Target="SimulateSuccessButton.Height" Value="52"/>
+                        <Setter Target="SimulateSuccessButton.FontSize" Value="17"/>
+                        <Setter Target="SimulateCancelButton.Height" Value="52"/>
+                        <Setter Target="SimulateCancelButton.FontSize" Value="17"/>
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!-- 2. HORIZONTAL KIOSK STATE: 16:9, 17.3 Inches (1920x1080) -->
+                <VisualState x:Name="Horizontal17InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1400" MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Header -->
+                        <Setter Target="HeaderBorder.Padding" Value="32,14"/>
+                        <Setter Target="HeaderBorder.Height" Value="84"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="{StaticResource FontSizeHeroMedium}"/>
+                        <Setter Target="BackButton.Height" Value="54"/>
+                        <Setter Target="BackButtonIcon.FontSize" Value="21"/>
+
+                        <!-- Main Layout -->
+                        <Setter Target="MainBodyGrid.Margin" Value="32,18,32,18"/>
+
+                        <!-- Integrated Total Display -->
+                        <Setter Target="TotalDueLabel.FontSize" Value="{StaticResource FontSizeBodyLarge}"/>
+                        <Setter Target="TotalDueText.FontSize" Value="40"/>
+
+                        <!-- QR Container -->
+                        <Setter Target="QrCard.Padding" Value="32"/>
+                        <Setter Target="QrImageContainer.Width" Value="280"/>
+                        <Setter Target="QrImageContainer.Height" Value="280"/>
+                        <Setter Target="ScanInstructionsText.FontSize" Value="{StaticResource FontSizeTitleSmall}"/>
+
+                        <!-- Footer -->
+                        <Setter Target="FooterBorder.Padding" Value="32,18,32,20"/>
+                        <Setter Target="SimulateSuccessButton.Height" Value="70"/>
+                        <Setter Target="SimulateSuccessButton.FontSize" Value="20"/>
+                        <Setter Target="SimulateCancelButton.Height" Value="70"/>
+                        <Setter Target="SimulateCancelButton.FontSize" Value="20"/>
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!-- 3. VERTICAL KIOSK STATE: 9:16, 27.5 Inches (1080x1920) -->
+                <VisualState x:Name="Vertical27InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="1200"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Header -->
+                        <Setter Target="HeaderBorder.Padding" Value="48,16"/>
+                        <Setter Target="HeaderBorder.Height" Value="100"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="34"/>
+                        <Setter Target="BackButton.Height" Value="64"/>
+                        <Setter Target="BackButtonIcon.FontSize" Value="26"/>
+
+                        <!-- Main Layout -->
+                        <Setter Target="MainBodyGrid.Margin" Value="48,28,48,28"/>
+
+                        <!-- Integrated Total Display -->
+                        <Setter Target="TotalDueLabel.FontSize" Value="18"/>
+                        <Setter Target="TotalDueText.FontSize" Value="52"/>
+
+                        <!-- QR Container -->
+                        <Setter Target="QrCard.Padding" Value="40"/>
+                        <Setter Target="QrImageContainer.Width" Value="340"/>
+                        <Setter Target="QrImageContainer.Height" Value="340"/>
+                        <Setter Target="ScanInstructionsText.FontSize" Value="{StaticResource FontSizeTitle}"/>
+
+                        <!-- Footer -->
+                        <Setter Target="FooterBorder.Padding" Value="48,28,48,32"/>
+                        <Setter Target="SimulateSuccessButton.Height" Value="86"/>
+                        <Setter Target="SimulateSuccessButton.FontSize" Value="24"/>
+                        <Setter Target="SimulateCancelButton.Height" Value="86"/>
+                        <Setter Target="SimulateCancelButton.FontSize" Value="24"/>
+                    </VisualState.Setters>
+                </VisualState>
+
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. HEADER -->
+        <Border x:Name="HeaderBorder" Grid.Row="0" Background="{StaticResource AccentBlueBrush}" Padding="24,16" Height="80">
+            <Grid VerticalAlignment="Center">
+
+                <!-- Centered Title -->
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal" Spacing="10">
+                    <TextBlock x:Name="HeaderTitleText" Text="{x:Bind Localizer.GetString('QRPaymentTitle'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="{StaticResource FontSizeHeroMedium}" FontWeight="Bold"/>
+                </StackPanel>
+
+                <!-- Left Floating Back Button -->
+                <Button x:Name="BackButton" 
+                        Height="50" 
+                        HorizontalAlignment="Left" 
+                        VerticalAlignment="Center" 
+                        CornerRadius="10"
+                        Style="{StaticResource HeaderChipButtonStyle}">
+
+                    <Button.Resources>
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                        <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#005096"/>
+                        <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#66FFFFFF"/>
+                        <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="Transparent"/>
+                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White"/>
+                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
+                    </Button.Resources>
+
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon x:Name="BackButtonIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE830;" FontSize="20"/>
+                    </StackPanel>
+                </Button>
+
+            </Grid>
+        </Border>
+
+        <!-- 2. BODY -->
+        <Grid x:Name="MainBodyGrid" Grid.Row="1" Margin="24,16" VerticalAlignment="Center">
+
+            <!-- QR PAYMENT CARD WITH INTEGRATED TOTAL (ABA / KHQR STYLE) -->
+            <Border x:Name="QrCard" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Spacing="16" HorizontalAlignment="Center">
+
+                    <!-- ABA / KHQR Header Badge -->
+                    <Border Background="#E61C24" CornerRadius="8" Padding="14,6" HorizontalAlignment="Center">
+                        <TextBlock Text="KHQR / ABA PAY" Foreground="White" FontWeight="Black" FontSize="14" CharacterSpacing="80"/>
+                    </Border>
+
+                    <!-- INTEGRATED TOTAL DISPLAY (USD) -->
+                    <StackPanel Spacing="2" HorizontalAlignment="Center" Margin="0,4,0,4">
+                        <TextBlock x:Name="TotalDueLabel" Text="Total Amount" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="TotalDueText" Text="{x:Bind ViewModel.FormattedTotalDue, Mode=OneWay}" FontSize="{StaticResource FontSizeHeroLarge}" FontWeight="Bold" Foreground="{StaticResource AccentBlueBrush}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- QR Display Frame -->
+                    <Border x:Name="QrImageContainer" Background="White" BorderBrush="#E2E8F0" BorderThickness="2" CornerRadius="16" Padding="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Grid x:Name="QrContentGrid">
+                            <!-- Display Actual QR Image when available -->
+                            <Image x:Name="QrCodeImage" Source="{x:Bind ViewModel.QrCodeImageSource, Mode=OneWay}" Stretch="Uniform"/>
+
+                            <!-- Fallback Placeholder icon if QR image isn't loaded -->
+                            <FontIcon x:Name="QrFallbackIcon" 
+                                      FontFamily="Segoe Fluent Icons" 
+                                      Glyph="&#xED14;" 
+                                      FontSize="120" 
+                                      Foreground="#94A3B8"
+                                      HorizontalAlignment="Center" 
+                                      VerticalAlignment="Center"
+                                      Visibility="{x:Bind ViewModel.IsQrLoading, Mode=OneWay}"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Instruction Text -->
+                    <StackPanel Spacing="4" HorizontalAlignment="Center">
+                        <TextBlock x:Name="ScanInstructionsText" 
+                           Text="{x:Bind Localizer.GetString('ScanInstructions'), Mode=OneWay}" 
+                           FontSize="{StaticResource FontSizeBodyLarge}" 
+                           FontWeight="Bold" 
+                           Foreground="{StaticResource TextItemNameBrush}" 
+                           TextAlignment="Center"/>
+
+                        <TextBlock x:Name="SupportedAppsText" 
+                           Text="{x:Bind Localizer.GetString('SupportedApps'), Mode=OneWay}" 
+                           FontSize="{StaticResource FontSizeCaption}" 
+                           Foreground="{StaticResource TextSubLabelBrush}" 
+                           TextAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Animated Sync / Expiration Status Indicator -->
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                        <ProgressRing IsActive="True" Width="16" Height="16"/>
+                        <TextBlock x:Name="WaitingForPaymentText" 
+                           Text="{x:Bind Localizer.GetString('WaitingForPayment'), Mode=OneWay}" 
+                           FontSize="{StaticResource FontSizeSubLabel}" 
+                           Foreground="{StaticResource TextSubLabelBrush}"/>
+                    </StackPanel>
+
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 3. FOOTER (MOCK / TESTING SIMULATION CONTROLS) -->
+        <Border x:Name="FooterBorder" Grid.Row="2" Background="{StaticResource CardBackgroundBrush}" Padding="24,20" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Simulate Cancel / Fail Button -->
+                <Button x:Name="SimulateCancelButton"
+                        Grid.Column="0"
+                        Content="Simulate Back / Cancel"
+                        HorizontalAlignment="Stretch"
+                        Height="70"
+                        FontSize="18"
+                        FontWeight="Bold"
+                        Foreground="{StaticResource DangerBrush}"
+                        CornerRadius="{StaticResource KioskHeroCardCornerRadius}"
+                        Style="{StaticResource SimulateButtonStyle}"/>
+
+                <!-- Simulate Payment Success Button -->
+                <Button x:Name="SimulateSuccessButton"
+                        Grid.Column="1"
+                        Content="Simulate Payment Success"
+                        HorizontalAlignment="Stretch"
+                        Height="70"
+                        FontSize="18"
+                        FontWeight="Bold"
+                        Foreground="{StaticResource TextOnAccentBrush}"
+                        CornerRadius="{StaticResource KioskHeroCardCornerRadius}"
+                        Background="{StaticResource SuccessBrush}">
+                    <Button.Resources>
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#059669"/>
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#047857"/>
+
+                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White"/>
+                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
+                    </Button.Resources>
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

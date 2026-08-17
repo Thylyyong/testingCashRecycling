@@ -18,7 +18,10 @@ namespace SelfCheckoutKiosk.App.Services
 
         void BeginTransaction(decimal totalDueUsd, decimal exchangeRate);
         bool TrySubmitCash(decimal amount, bool isUsd, out string reason);
-        Payment? ConfirmPayment();
+
+        // Updated to accept an optional PaymentMethod parameter (defaults to Cash)
+        Payment? ConfirmPayment(PaymentMethod method = PaymentMethod.Cash);
+
         void ResetTransaction();
     }
 }

@@ -8,54 +8,106 @@
       mc:Ignorable="d"
       RequestedTheme="Light">
 
-    <Grid Background="#F8FAFC">
-        <!-- ========================================================= -->
-        <!-- VISUAL STATE MANAGER (ADAPTIVE KIOSK SCALING AT 1000px+) -->
-        <!-- ========================================================= -->
+    <Grid Background="{StaticResource PageBackgroundBrush}">
+        <!-- VISUAL STATE MANAGER (ADAPTIVE KIOSK SCALING) -->
         <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup x:Name="DisplayStates">
-                <VisualState x:Name="DefaultState" />
-                <VisualState x:Name="LargeKioskState">
+            <VisualStateGroup x:Name="LayoutStates">
+                <!-- 1. SMALL VERTICAL TEST STATE -->
+                <VisualState x:Name="SmallVerticalTestState">
                     <VisualState.StateTriggers>
-                        <!-- Triggers when vertical height is 1000px or greater (e.g., 1080x1920 27.5" Kiosk) -->
-                        <AdaptiveTrigger MinWindowHeight="1000" />
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="0"/>
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <!-- Header Scaling -->
-                        <Setter Target="HeaderBorder.Height" Value="110" />
-                        <Setter Target="HeaderBorder.Padding" Value="36,20" />
-                        <Setter Target="HeaderIcon.FontSize" Value="36" />
-                        <Setter Target="HeaderTitleText.FontSize" Value="34" />
+                        <Setter Target="HeaderBorder.Height" Value="76"/>
+                        <Setter Target="HeaderBorder.Padding" Value="22,14"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="24"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="21"/>
+                        <Setter Target="MainContainerStackPanel.Width" Value="360"/>
+                        <Setter Target="MainContainerStackPanel.Spacing" Value="18"/>
+                        <Setter Target="StatusIcon.FontSize" Value="68"/>
+                        <Setter Target="StatusTitleText.FontSize" Value="25"/>
+                        <Setter Target="TransactionIdText.FontSize" Value="{StaticResource FontSizeBody}"/>
+                        <Setter Target="ReceiptCardBorder.Padding" Value="26,22"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="{StaticResource FontSizeBody}"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="36"/>
+                        <Setter Target="TotalPaidKhrText.FontSize" Value="15"/>
+                        <Setter Target="MethodIcon.FontSize" Value="15"/>
+                        <Setter Target="MethodLabelText.FontSize" Value="{StaticResource FontSizeSubtitle}"/>
+                        <Setter Target="PrinterWarningBanner.Padding" Value="14,10"/>
+                        <Setter Target="PrinterWarningIcon.FontSize" Value="15"/>
+                        <Setter Target="PrinterWarningText.FontSize" Value="{StaticResource FontSizeBodyLarge}"/>
+                        <Setter Target="TimerCountdownText.FontSize" Value="{StaticResource FontSizeBody}"/>
+                        <Setter Target="RedirectProgressBar.Height" Value="4"/>
+                        <Setter Target="RedirectProgressBar.Width" Value="180"/>
+                        <Setter Target="FooterGrid.Padding" Value="22,16"/>
+                        <Setter Target="DoneButton.Height" Value="60"/>
+                        <Setter Target="DoneButtonText.FontSize" Value="19"/>
+                    </VisualState.Setters>
+                </VisualState>
 
-                        <!-- Main Container Scaling -->
-                        <Setter Target="MainContainerStackPanel.Width" Value="680" />
-                        <Setter Target="MainContainerStackPanel.Spacing" Value="32" />
+                <!-- 2. HORIZONTAL KIOSK STATE: 16:9, 17.3 Inches (1920x1080) -->
+                <VisualState x:Name="Horizontal17InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1400" MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="HeaderBorder.Height" Value="88"/>
+                        <Setter Target="HeaderBorder.Padding" Value="32,16"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="30"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="{StaticResource FontSizeHeroLarge}"/>
+                        <Setter Target="MainContainerStackPanel.Width" Value="480"/>
+                        <Setter Target="MainContainerStackPanel.Spacing" Value="24"/>
+                        <Setter Target="StatusIcon.FontSize" Value="88"/>
+                        <Setter Target="StatusTitleText.FontSize" Value="32"/>
+                        <Setter Target="TransactionIdText.FontSize" Value="{StaticResource FontSizeSubtitle}"/>
+                        <Setter Target="ReceiptCardBorder.Padding" Value="36,30"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="{StaticResource FontSizeBodyLarge}"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="48"/>
+                        <Setter Target="TotalPaidKhrText.FontSize" Value="19"/>
+                        <Setter Target="MethodIcon.FontSize" Value="18"/>
+                        <Setter Target="MethodLabelText.FontSize" Value="{StaticResource FontSizeTitleSmall}"/>
+                        <Setter Target="PrinterWarningBanner.Padding" Value="18,14"/>
+                        <Setter Target="PrinterWarningIcon.FontSize" Value="18"/>
+                        <Setter Target="PrinterWarningText.FontSize" Value="15"/>
+                        <Setter Target="TimerCountdownText.FontSize" Value="{StaticResource FontSizeSubtitle}"/>
+                        <Setter Target="RedirectProgressBar.Height" Value="6"/>
+                        <Setter Target="RedirectProgressBar.Width" Value="260"/>
+                        <Setter Target="FooterGrid.Padding" Value="36,24"/>
+                        <Setter Target="DoneButton.Height" Value="80"/>
+                        <Setter Target="DoneButtonText.FontSize" Value="24"/>
+                    </VisualState.Setters>
+                </VisualState>
 
-                        <!-- Status Badge & Header -->
-                        <Setter Target="StatusIcon.FontSize" Value="120" />
-                        <Setter Target="StatusTitleText.FontSize" Value="42" />
-                        <Setter Target="TransactionIdText.FontSize" Value="18" />
-
-                        <!-- Receipt Card Scaling -->
-                        <Setter Target="ReceiptCardBorder.Padding" Value="48,40" />
-                        <Setter Target="TotalPaidLabel.FontSize" Value="16" />
-                        <Setter Target="TotalPaidText.FontSize" Value="64" />
-                        <Setter Target="TotalPaidKhrText.FontSize" Value="26" />
-                        <Setter Target="MethodIcon.FontSize" Value="22" />
-                        <Setter Target="MethodLabelText.FontSize" Value="20" />
-
-                        <!-- Warning Banner & Timer Scaling -->
-                        <Setter Target="PrinterWarningBanner.Padding" Value="24,18" />
-                        <Setter Target="PrinterWarningIcon.FontSize" Value="22" />
-                        <Setter Target="PrinterWarningText.FontSize" Value="18" />
-                        <Setter Target="TimerCountdownText.FontSize" Value="18" />
-                        <Setter Target="RedirectProgressBar.Height" Value="8" />
-                        <Setter Target="RedirectProgressBar.Width" Value="340" />
-
-                        <!-- Footer Scaling -->
-                        <Setter Target="FooterGrid.Padding" Value="48,32" />
-                        <Setter Target="DoneButton.Height" Value="96" />
-                        <Setter Target="DoneButtonText.FontSize" Value="30" />
+                <!-- 3. VERTICAL KIOSK STATE: 9:16, 27.5 Inches (1080x1920) -->
+                <VisualState x:Name="Vertical27InchState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="1200"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="HeaderBorder.Height" Value="110"/>
+                        <Setter Target="HeaderBorder.Padding" Value="36,20"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="36"/>
+                        <Setter Target="HeaderTitleText.FontSize" Value="34"/>
+                        <Setter Target="MainContainerStackPanel.Width" Value="680"/>
+                        <Setter Target="MainContainerStackPanel.Spacing" Value="32"/>
+                        <Setter Target="StatusIcon.FontSize" Value="120"/>
+                        <Setter Target="StatusTitleText.FontSize" Value="42"/>
+                        <Setter Target="TransactionIdText.FontSize" Value="{StaticResource FontSizeTitle}"/>
+                        <Setter Target="ReceiptCardBorder.Padding" Value="48,40"/>
+                        <Setter Target="TotalPaidLabel.FontSize" Value="{StaticResource FontSizeTitleSmall}"/>
+                        <Setter Target="TotalPaidText.FontSize" Value="64"/>
+                        <Setter Target="TotalPaidKhrText.FontSize" Value="26"/>
+                        <Setter Target="MethodIcon.FontSize" Value="22"/>
+                        <Setter Target="MethodLabelText.FontSize" Value="20"/>
+                        <Setter Target="PrinterWarningBanner.Padding" Value="24,18"/>
+                        <Setter Target="PrinterWarningIcon.FontSize" Value="22"/>
+                        <Setter Target="PrinterWarningText.FontSize" Value="{StaticResource FontSizeTitle}"/>
+                        <Setter Target="TimerCountdownText.FontSize" Value="{StaticResource FontSizeTitle}"/>
+                        <Setter Target="RedirectProgressBar.Height" Value="8"/>
+                        <Setter Target="RedirectProgressBar.Width" Value="340"/>
+                        <Setter Target="FooterGrid.Padding" Value="48,32"/>
+                        <Setter Target="DoneButton.Height" Value="96"/>
+                        <Setter Target="DoneButtonText.FontSize" Value="30"/>
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -67,103 +119,101 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- KIOSK HEADER -->
-        <Border x:Name="HeaderBorder" Grid.Row="0" Background="#0067C0" Padding="28,12" Height="80">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
-                <FontIcon x:Name="HeaderIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xEC61;" FontSize="28" Foreground="White"/>
-                <TextBlock x:Name="HeaderTitleText" Text="Payment Completed" Foreground="White" FontSize="26" FontWeight="Bold"/>
-            </StackPanel>
-        </Border>
-
         <!-- MAIN BODY -->
         <Grid x:Name="MainBodyGrid" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
             <StackPanel x:Name="MainContainerStackPanel" Width="460" Spacing="22" HorizontalAlignment="Center">
 
-                <!-- Status badge -->
-                <FontIcon x:Name="StatusIcon"
-                          FontFamily="Segoe Fluent Icons" Glyph="&#xEC61;" FontSize="80"
-                          Foreground="#059669" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <!-- Status Badge -->
+                <FontIcon x:Name="StatusIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xEC61;" FontSize="80" Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
                 <!-- Status Header -->
                 <StackPanel HorizontalAlignment="Center" Spacing="4">
-                    <TextBlock x:Name="StatusTitleText" Text="Payment Complete" FontSize="30" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="TransactionIdText" FontFamily="Consolas" FontSize="13"
-                               Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="StatusTitleText" Text="{x:Bind Localizer.GetString('PaymentComplete'), Mode=OneWay}" FontFamily="{StaticResource GlobalAppFont}" FontSize="30" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="TransactionIdText" FontFamily="Consolas" FontSize="13" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- RECEIPT CARD -->
-                <Border x:Name="ReceiptCardBorder" Background="#FFFDF9" BorderBrush="#E7E2D6" BorderThickness="1"
-                        CornerRadius="16" Padding="32,28" HorizontalAlignment="Stretch">
+                <Border x:Name="ReceiptCardBorder" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" Padding="32,28" HorizontalAlignment="Stretch">
                     <StackPanel HorizontalAlignment="Stretch">
+                        <TextBlock x:Name="TotalPaidLabel" Text="{x:Bind Localizer.GetString('TotalPaid'), Mode=OneWay}" FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource GlobalAppFont}" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" CharacterSpacing="80"/>
 
-                        <TextBlock x:Name="TotalPaidLabel" Text="TOTAL PAID" FontSize="12" FontWeight="Bold" Foreground="#64748B"
-                                   HorizontalAlignment="Center" CharacterSpacing="80"/>
+                        <!-- Primary Amount: USD -->
+                        <TextBlock x:Name="TotalPaidText" Text="$0.00" FontFamily="Consolas" FontSize="44" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
 
-                        <!-- Primary amount: USD -->
-                        <TextBlock x:Name="TotalPaidText" Text="$0.00" FontFamily="Consolas"
-                                   FontSize="44" FontWeight="Bold" Foreground="#0F172A"
-                                   HorizontalAlignment="Center" Margin="0,6,0,0"/>
-
-                        <!-- Secondary amount: KHR -->
-                        <TextBlock x:Name="TotalPaidKhrText" Text="≈ ៛0" FontFamily="Consolas"
-                                   FontSize="17" FontWeight="SemiBold" Foreground="#B45309"
-                                   HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                        <!-- Secondary Amount: KHR -->
+                        <TextBlock x:Name="TotalPaidKhrText" Text="≈ ៛0" FontFamily="{StaticResource AppKhmerFont}" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
 
                         <!-- Divider -->
-                        <Rectangle Height="1" Fill="#E2DDD0" HorizontalAlignment="Stretch" Margin="0,20,0,16"/>
+                        <Rectangle Height="1" Fill="{StaticResource CardBorderBrush}" HorizontalAlignment="Stretch" Margin="0,20,0,16"/>
 
-                        <!-- Payment method -->
+                        <!-- Payment Method -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                            <FontIcon x:Name="MethodIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" FontSize="16" Foreground="#0067C0"/>
-                            <TextBlock x:Name="MethodLabelText" Text="Paid with Cash" FontSize="15"
-                                       FontWeight="SemiBold" Foreground="#475569"/>
+                            <FontIcon x:Name="MethodIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" FontSize="16" Foreground="{StaticResource AccentBlueBrush}"/>
+                            <TextBlock x:Name="MethodLabelText" Text="Paid with Cash" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}" FontFamily="{StaticResource GlobalAppFont}"/>
                         </StackPanel>
-
                     </StackPanel>
                 </Border>
 
-                <!-- Printer warning: hidden unless printing failed -->
-                <Border x:Name="PrinterWarningBanner" Background="#FFFBEB" BorderBrush="#FDE68A" BorderThickness="1"
-                        CornerRadius="12" Padding="16,12" Visibility="Collapsed">
+                <!-- Printer Warning Banner -->
+                <Border x:Name="PrinterWarningBanner" Background="{StaticResource DangerLightBrush}" BorderBrush="{StaticResource DangerBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="16,12" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                        <FontIcon x:Name="PrinterWarningIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE7BA;" FontSize="16" Foreground="#B45309"/>
-                        <TextBlock x:Name="PrinterWarningText"
-                                   Text="We couldn't print your receipt — please ask a staff member."
-                                   FontSize="14" Foreground="#92400E" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                        <FontIcon x:Name="PrinterWarningIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE7BA;" FontSize="16" Foreground="{StaticResource DangerBrush}"/>
+                        <TextBlock x:Name="PrinterWarningText" Text="We couldn't print your receipt — please ask a staff member." FontSize="{StaticResource FontSizeSubtitle}" Foreground="{StaticResource DangerHoverBrush}" TextWrapping="Wrap" HorizontalAlignment="Center" FontFamily="{StaticResource GlobalAppFont}"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Redirect countdown -->
+                <!-- Redirect Countdown -->
                 <StackPanel Spacing="8" HorizontalAlignment="Stretch" Margin="0,2,0,0">
-                    <TextBlock x:Name="TimerCountdownText"
-                               Text="This screen will return to the start in 60 seconds"
-                               FontSize="13" Foreground="#94A3B8" HorizontalAlignment="Center"/>
-                    <ProgressBar x:Name="RedirectProgressBar" Minimum="0" Maximum="60" Value="60"
-                                 Height="4" Width="220" HorizontalAlignment="Center"
-                                 Foreground="#0067C0" Background="#E2E8F0" CornerRadius="2"/>
-                </StackPanel>
+                    <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Center" 
+                        Spacing="6">
 
+                        <!-- Part 1: Prefix -->
+                        <TextBlock Text="{x:Bind Localizer.GetString('ReturnToStartText'), Mode=OneWay}" 
+                           FontSize="{StaticResource FontSizeBodyLarge}" 
+                           Foreground="{StaticResource TextMutedBrush}" 
+                           FontFamily="{StaticResource GlobalAppFont}"/>
+
+                        <!-- Part 2: Number (Only this updates in C#) -->
+                        <TextBlock x:Name="CountdownNumberText" 
+                           Text="60" 
+                           FontSize="{StaticResource FontSizeBodyLarge}" 
+                           Foreground="{StaticResource TextMutedBrush}" 
+                           FontFamily="{StaticResource GlobalAppFont}"/>
+
+                        <!-- Part 3: Suffix -->
+                        <TextBlock Text="{x:Bind Localizer.GetString('Second'), Mode=OneWay}" 
+                           FontSize="{StaticResource FontSizeBodyLarge}" 
+                           Foreground="{StaticResource TextMutedBrush}" 
+                           FontFamily="{StaticResource GlobalAppFont}"/>
+
+                    </StackPanel>
+                    <!-- Centered Progress Bar Container -->
+                    <Grid x:Name="RedirectProgressBar" Height="4" Width="220" HorizontalAlignment="Center">
+                        <!-- Gray Track Background (Visible Trough) -->
+                        <Border Background="{StaticResource CardBorderBrush}" CornerRadius="2"/>
+
+                        <!-- Animated Fill Bar Receding to Center -->
+                        <Border Background="{StaticResource AccentBlueBrush}" CornerRadius="2" RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="RedirectProgressScale" ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
+                        </Border>
+                    </Grid>
+                </StackPanel>
             </StackPanel>
         </Grid>
 
         <!-- KIOSK FOOTER -->
-        <Grid x:Name="FooterGrid" Grid.Row="2" Background="White" Padding="32,20">
-            <Button x:Name="DoneButton" HorizontalAlignment="Stretch" Height="72" CornerRadius="16" Click="DoneButton_Click">
-                <Button.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#2563EB" Offset="0"/>
-                        <GradientStop Color="#1D4ED8" Offset="1"/>
-                    </LinearGradientBrush>
-                </Button.Background>
-
+        <Grid x:Name="FooterGrid" Grid.Row="2" Background="{StaticResource CardBackgroundBrush}" Padding="32,20">
+            <Button x:Name="DoneButton" HorizontalAlignment="Stretch" Height="72" Background="{StaticResource CheckoutButtonGradientBrush}" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" Click="DoneButton_Click">
                 <Button.Resources>
-                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#1D4ED8"/>
-                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#1E40AF"/>
-                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White"/>
-                    <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
+                    <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="PrimaryBrandHoverBrush"/>
+                    <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="PrimaryBrandPressedBrush"/>
+                    <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="TextOnAccentBrush"/>
+                    <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="TextOnAccentBrush"/>
                 </Button.Resources>
-
-                <TextBlock x:Name="DoneButtonText" Text="DONE" FontWeight="Bold" FontSize="22" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" CharacterSpacing="60"/>
+                <TextBlock x:Name="DoneButtonText" Text="{x:Bind Localizer.GetString('Done'), Mode=OneWay}" FontFamily="{StaticResource GlobalAppFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeHeroSmall}" Foreground="{StaticResource TextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" CharacterSpacing="60"/>
             </Button>
         </Grid>
     </Grid>

@@ -1,3 +1,4 @@
+using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -12,7 +13,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
     public sealed partial class IngestionProgressView : Page
     {
         public IngestionProgressViewModel ViewModel { get; }
-
+        public LocalizationService Localizer => LocalizationService.Instance;
         public IngestionProgressView()
         {
             InitializeComponent();
@@ -115,23 +116,66 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         {
             if (!ViewModel.CanNavigateBack) return;
 
+            var globalFont = (FontFamily)Application.Current.Resources["GlobalAppFont"];
+
+            // Primary Button: AccentButtonStyle + GlobalAppFont
+            var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+            var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
+            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+
+            // Secondary Button: DialogButtonStyle + GlobalAppFont
+            var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
+            var secondaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
+            secondaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+
             var dialog = new ContentDialog
             {
-                Title = "Cancel Payment?",
-                Content = new TextBlock
+                Content = new StackPanel
                 {
-                    Text = "Going back will cancel this payment and return you to payment method selection. Continue?",
-                    TextWrapping = TextWrapping.Wrap,
-                    MaxWidth = 420
+                    Spacing = 16,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Children =
+                    {
+                        new FontIcon
+                        {
+                            Glyph = "\uE814", // Warning / Alert icon
+                            FontFamily = new FontFamily("Segoe Fluent Icons"),
+                            FontSize = 42,
+                            Foreground = (Brush)Application.Current.Resources["DangerBrush"],
+                            HorizontalAlignment = HorizontalAlignment.Center
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("CancelPaymentTitle"),
+                            FontSize = 20,
+                            FontWeight = FontWeights.SemiBold,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = globalFont
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("CancelPaymentMessage"),
+                            FontSize = 16,
+                            TextWrapping = TextWrapping.Wrap,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            MaxWidth = 450,
+                            FontFamily = globalFont
+                        }
+                    }
                 },
-                PrimaryButtonText = "Continue Payment",
-                SecondaryButtonText = "Cancel Payment",
-                PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"],
-                XamlRoot = this.Content?.XamlRoot ?? this.XamlRoot,
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                PrimaryButtonText = Localizer.GetString("ContinuePayment"),
+                SecondaryButtonText = Localizer.GetString("CancelPayment"),
+                PrimaryButtonStyle = primaryButtonStyleWithFont,
+                SecondaryButtonStyle = secondaryButtonStyleWithFont,
+                XamlRoot = this.XamlRoot,
                 RequestedTheme = ElementTheme.Light
             };
 
             var result = await dialog.ShowAsync();
+
             if (result == ContentDialogResult.Secondary)
             {
                 ViewModel.NavigateBackToPaymentSelection();

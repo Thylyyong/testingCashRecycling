@@ -26,7 +26,12 @@
       profile launches, not from a hardcoded property.
     -->
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+
+    <!-- Disable trimming & ReadyToRun to ensure JSON localization files load reliably -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="Resources\**" />
     <EmbeddedResource Remove="Resources\**" />
@@ -50,6 +55,8 @@
     <None Remove="Views\Customer\PaymentSelectionView.xaml" />
     <None Remove="Views\Customer\SuccessView.xaml" />
     <None Remove="Views\KioskBaseView.xaml" />
+    <None Remove="Styles\AppResources.xaml" />
+    <None Remove="Views\Customer\QRPaymentView.xaml" />
   </ItemGroup>
 
   <!-- ============================================================
@@ -68,6 +75,19 @@
     <Content Include="Assets\Images\Banner\PLACEHOLDER-banner8.jpg" Link="Assets\Images\Banner\banner8.jpg" />
     <Content Include="Assets\Images\Banner\PLACEHOLDER-banner9.jpg" Link="Assets\Images\Banner\banner9.jpg" />
     <Content Include="Assets\Fonts\PLACEHOLDER-NotoSansKhmer.ttf" Link="Assets\Fonts\NotoSansKhmer.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Guarantees i18n JSON files are copied to BOTH debug bin and publish output -->
+    <Content Include="Assets\i18n\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+
+    <Content Include="Assets\Fonts\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -105,44 +125,31 @@
     <Page Update="Views\Customer\HomeView.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-  </ItemGroup>
-  <ItemGroup>
     <Page Update="Views\KioskBaseView.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-  </ItemGroup>
-  <ItemGroup>
     <Page Update="Views\Customer\CartView.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-  </ItemGroup>
-  <ItemGroup>
     <Page Update="Views\Admin\AdminLoginView.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Assets\Fonts\" />
-    <Folder Include="Assets\Images\Flag\" />
-    <Folder Include="Assets\Logo\" />
-  </ItemGroup>
-  <ItemGroup>
     <Page Update="Views\Customer\IngestionProgressView.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-  </ItemGroup>
-  <ItemGroup>
     <Page Update="Views\Customer\SuccessView.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-  </ItemGroup>
-  <ItemGroup>
     <Page Update="Views\Customer\PaymentOptionView.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
-  </ItemGroup>
-  <ItemGroup>
     <Page Update="Views\Customer\PaymentSelectionView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\Customer\QRPaymentView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Styles\AppResources.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
@@ -156,14 +163,9 @@
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
 
-  <!-- Publish Properties -->
-  <PropertyGroup>
-    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
-    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
-  </PropertyGroup>
-  <ItemGroup>
-    <PRIResource Remove="Resources\**" />
-  </ItemGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties />
+    </VisualStudio>
+  </ProjectExtensions>
 </Project>
