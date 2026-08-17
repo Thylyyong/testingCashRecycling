@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml;
 using SelfCheckoutKiosk.App.Services;
 using System;
 using System.Diagnostics;
@@ -20,11 +20,6 @@ namespace SelfCheckoutKiosk.App
         public App()
         {
             InitializeComponent();
-
-            // Catch global unhandled exceptions to prevent hard Win32 process crashes
-            this.UnhandledException += App_UnhandledException;
-            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
         }
 
         protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
@@ -90,25 +85,5 @@ namespace SelfCheckoutKiosk.App
             }
         }
 
-        #region Global Exception Handlers (Logs instead of hard crashing)
-
-        private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
-        {
-            Debug.WriteLine($"[Global WinUI Exception] {e.Message}");
-            e.Handled = true; // Prevents process exit
-        }
-
-        private void CurrentDomain_UnhandledException(object sender, System.UnhandledExceptionEventArgs e)
-        {
-            Debug.WriteLine($"[Global AppDomain Exception] {e.ExceptionObject}");
-        }
-
-        private void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
-        {
-            Debug.WriteLine($"[Unobserved Task Exception] {e.Exception}");
-            e.SetObserved();
-        }
-
-        #endregion
     }
 }
