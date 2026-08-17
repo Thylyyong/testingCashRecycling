@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="SelfCheckoutKiosk.App.Views.Customer.KioskBaseView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SelfCheckoutKiosk.App.Views.Customer"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:models="using:SelfCheckoutKiosk.App.Models"
+    mc:Ignorable="d"
+    Loaded="Page_Loaded">
+
+    <Page.Resources>
+        <!-- Attract-loop pulse animation for the Start button -->
+        <Storyboard x:Name="PulseAnimation" RepeatBehavior="Forever" AutoReverse="True">
+            <DoubleAnimation
+                Storyboard.TargetName="StartButtonScale"
+                Storyboard.TargetProperty="ScaleX"
+                From="1.0" To="1.04"
+                Duration="0:0:1"/>
+            <DoubleAnimation
+                Storyboard.TargetName="StartButtonScale"
+                Storyboard.TargetProperty="ScaleY"
+                From="1.0" To="1.04"
+                Duration="0:0:1"/>
+        </Storyboard>
+    </Page.Resources>
+
+    <Grid Background="White">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="85*" />
+            <RowDefinition Height="15*" />
+        </Grid.RowDefinitions>
+
+        <!-- 1. BANNER AREA WITH OVERLAY BRANDING -->
+        <Grid Grid.Row="0">
+
+            <Border 
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Background="#EFEFEF">
+
+                <Grid>
+                    <FlipView 
+                        x:Name="BannerFlipView"
+                        ItemsSource="{x:Bind ViewModel.BannerMediaPaths, Mode=OneWay}"
+                        SelectedIndex="{x:Bind ViewModel.CurrentBannerIndex, Mode=TwoWay}"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        CornerRadius="0">
+
+                        <FlipView.ItemTemplate>
+                            <DataTemplate x:DataType="models:BannerMedia">
+                                <Grid>
+                                    <Image Source="{x:Bind Path}" Stretch="UniformToFill"/>
+                                </Grid>
+                            </DataTemplate>
+                        </FlipView.ItemTemplate>
+                    </FlipView>
+
+                    <Image x:Name="CrossfadeOverlay" 
+                           Stretch="UniformToFill" 
+                           Opacity="0" 
+                           IsHitTestVisible="False"/>
+                    
+                    <!-- Gradient scrim so overlay text stays legible over any image -->
+                    <Rectangle VerticalAlignment="Bottom" Height="260" IsHitTestVisible="False">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="Transparent" Offset="0"/>
+                                <GradientStop Color="#B3000000" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+
+                    <!-- Store branding overlay, bottom-left -->
+                    <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="28,0,0,36" Spacing="4" IsHitTestVisible="False">
+                        <TextBlock Text="WELCOME TO" FontSize="14" FontWeight="SemiBold"
+                            Foreground="#E2E8F0" CharacterSpacing="80"/>
+                        <TextBlock Text="Self-Checkout" FontSize="34" FontWeight="Bold" Foreground="White"/>
+                    </StackPanel>
+
+                    <!-- Carousel page indicator dots, bottom-right -->
+                    <ItemsControl x:Name="IndicatorDots" ItemsSource="{x:Bind ViewModel.BannerMediaPaths, Mode=OneWay}"
+                        VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,28,40" IsHitTestVisible="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="6"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Rectangle Width="7" Height="7" Fill="#B3FFFFFF" Opacity="0.35"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 2. BOTTOM ACTION AREA -->
+        <Grid 
+            Grid.Row="1"
+            Background="White"
+            Padding="32,20"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0"
+                Text="Scan, pay, and go — no lines."
+                FontSize="15"
+                Foreground="#718096"
+                HorizontalAlignment="Center"
+                Margin="0,0,0,14"/>
+
+            <Button
+                Grid.Row="1"
+                x:Name="StartButton"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                MaxHeight="82"
+                CornerRadius="16"
+                Background="#0067C0"
+                Click="StartButton_Click">
+
+                <Button.RenderTransform>
+                    <ScaleTransform
+                        x:Name="StartButtonScale"
+                        CenterX="0"
+                        CenterY="0"/>
+                </Button.RenderTransform>
+
+                <Button.Resources>
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#005A9E"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#004578"/>
+                </Button.Resources>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
+                    <TextBlock
+                        Text="TAP TO START"
+                        FontWeight="Bold"
+                        FontSize="20"
+                        Foreground="White"/>
+                    <!--<FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEC5A;" FontSize="24" Foreground="White"/>-->
+                </StackPanel>
+            </Button>
+
+        </Grid>
+
+    </Grid>
+</Page>

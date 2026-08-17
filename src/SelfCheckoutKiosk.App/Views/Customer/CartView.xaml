@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="SelfCheckoutKiosk.App.Views.Customer.CartView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SelfCheckoutKiosk.App.Views.Customer"
+    xmlns:vm="using:SelfCheckoutKiosk.App.ViewModels.Customer"
+    xmlns:models="using:SelfCheckoutKiosk.App.Models"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+
+        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#E5E7EB"/>
+        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#D1D5DB"/>
+
+        <Style x:Key="SubtleButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#EDF2F7"/>
+            <Setter Property="Foreground" Value="#2D3748"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+
+        <Style x:Key="HeaderChipButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#1F7FCB"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Height" Value="40"/>
+        </Style>
+
+        <Storyboard x:Name="ScanAnimation" RepeatBehavior="Forever" AutoReverse="True">
+            <DoubleAnimation Storyboard.TargetName="ScanLineTransform" Storyboard.TargetProperty="Y" From="0" To="75" Duration="0:0:1.4">
+                <DoubleAnimation.EasingFunction>
+                    <SineEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+
+        <SolidColorBrush x:Key="RowHighlightBrush" Color="#3310B981" />
+        <SolidColorBrush x:Key="RowDefaultBackground" Color="Transparent" />
+
+        <!-- CART ITEM TEMPLATE (Slightly larger fonts and touch targets) -->
+        <DataTemplate x:Key="CartItemTemplate" x:DataType="models:CartItem">
+            <Border x:Name="RowBorder" 
+                    Loaded="CartItemRow_Loaded" 
+                    BorderBrush="#E2E8F0" 
+                    BorderThickness="0,0,0,1" 
+                    Padding="12,22">
+
+                <Border.Background>
+                    <SolidColorBrush x:Name="RowBackground" Color="Transparent" />
+                </Border.Background>
+
+                <Border.Resources>
+                    <Storyboard x:Key="FlashAnimation">
+                        <ColorAnimation
+                            Storyboard.TargetName="RowBackground"
+                            Storyboard.TargetProperty="Color"
+                            From="#4010B981" 
+                            To="Transparent"
+                            Duration="0:0:0.8" />
+                    </Storyboard>
+                </Border.Resources>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Spacing="8" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="21" Foreground="#2D3748" TextTrimming="CharacterEllipsis"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <TextBlock Foreground="#64748B" FontSize="15">
+                                <Run Text="SKU:"/>
+                                <Run Text="{x:Bind Sku}"/>
+                            </TextBlock>
+                            <TextBlock FontSize="15" Foreground="#718096">
+                                <Run Text="Qty:"/>
+                                <Run Text="{x:Bind Quantity, Mode=OneWay}"/>
+                                <Run Text="  •  $"/>
+                                <Run Text="{x:Bind UnitPrice}"/>
+                                <Run Text="each"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Grid Grid.Column="1" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" FontWeight="Bold" FontSize="23" Foreground="#0067C0" VerticalAlignment="Center" Margin="0,0,20,0">
+                            <Run Text="$"/><Run Text="{x:Bind LineTotal, Mode=OneWay}"/>
+                        </TextBlock>
+
+                        <Button Grid.Column="1" Width="52" Height="52" CornerRadius="10" Foreground="#DC2626" Padding="0" Tag="{x:Bind}">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FEE2E2"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FECACA"/>
+                            </Button.Resources>
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74D;" FontSize="22" Foreground="#DC2626"/>
+                            <Button.Flyout>
+                                <Flyout Placement="Right">
+                                    <Flyout.FlyoutPresenterStyle>
+                                        <Style TargetType="FlyoutPresenter">
+                                            <Setter Property="Background" Value="White"/>
+                                            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                            <Setter Property="CornerRadius" Value="12"/>
+                                            <Setter Property="Padding" Value="16"/>
+                                        </Style>
+                                    </Flyout.FlyoutPresenterStyle>
+                                    <StackPanel Spacing="12" Width="190">
+                                        <TextBlock Text="Remove this item?" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="#1E293B"/>
+                                        <Button Content="Remove" HorizontalAlignment="Stretch" Height="42" Background="#DC2626" Foreground="White" CornerRadius="8" Tag="{x:Bind}" Click="ConfirmRemove_Click">
+                                            <Button.Resources>
+                                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#B91C1C"/>
+                                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#991B1B"/>
+                                            </Button.Resources>
+                                        </Button>
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid Background="#FFF4F6F8">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="LayoutStates">
+                <!-- DEFAULT STATE -->
+                <VisualState x:Name="DefaultState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowHeight="0" />
+                    </VisualState.StateTriggers>
+                </VisualState>
+
+                <!-- LARGE KIOSK DISPLAY STATE (27.5" Vertical 1080x1920) -->
+                <VisualState x:Name="LargeKioskState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowHeight="1000" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <!-- Header Scaling -->
+                        <Setter Target="HeaderBorder.Padding" Value="24,20"/>
+                        <Setter Target="HeaderTitle.FontSize" Value="26"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="34"/>
+                        <Setter Target="ItemCountLabel.FontSize" Value="16"/>
+                        <Setter Target="NetworkIcon.FontSize" Value="20"/>
+                        <Setter Target="NetworkStatusLabel.FontSize" Value="15"/>
+                        <Setter Target="BannerText.FontSize" Value="16"/>
+
+                        <!-- Empty State Scaling -->
+                        <Setter Target="EmptyCardBorder.Padding" Value="56,40"/>
+                        <Setter Target="EmptyTitleText.FontSize" Value="28"/>
+                        <Setter Target="EmptySubText.FontSize" Value="18"/>
+
+                        <!-- Footer Scaling -->
+                        <Setter Target="FooterArea.Padding" Value="24,20"/>
+                        <Setter Target="TotalToPayLabel.FontSize" Value="20"/>
+                        <Setter Target="ItemCountSubLabel.FontSize" Value="16"/>
+                        <Setter Target="TotalUSDLabel.FontSize" Value="38"/>
+                        <Setter Target="TotalKHRLabel.FontSize" Value="20"/>
+
+                        <!-- Action Controls Scaling -->
+                        <Setter Target="BackToScanButton.Width" Value="100"/>
+                        <Setter Target="BackToScanButton.Height" Value="100"/>
+                        <Setter Target="BackIcon.FontSize" Value="32"/>
+                        <Setter Target="CheckoutButton.Height" Value="100"/>
+                        <Setter Target="PayNowText.FontSize" Value="30"/>
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. HEADER AREA -->
+        <Border x:Name="HeaderBorder" Grid.Row="0" Background="#0067C0" Padding="20,12" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <StackPanel Spacing="10" VerticalAlignment="Center">
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <FontIcon x:Name="HeaderIcon" Grid.Column="0" FontFamily="Segoe Fluent Icons" Glyph="&#xE7BF;" FontSize="28" Foreground="White" VerticalAlignment="Center" Margin="0,0,12,0"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                        <TextBlock x:Name="HeaderTitle" Text="Your Cart" Foreground="White" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock x:Name="ItemCountLabel" Text="{x:Bind ViewModel.ItemCountText, Mode=OneWay}" Foreground="#D6E9FA" FontSize="13"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <FontIcon x:Name="NetworkIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE701;" FontSize="16" Foreground="#7CFC9A"/>
+                        <TextBlock x:Name="NetworkStatusLabel" Text="Online" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+
+                        <Button x:Name="AddItemManuallyButton" Style="{StaticResource HeaderChipButtonStyle}" Click="AddItemManuallyLink_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE710;" FontSize="15" Foreground="White"/>
+                                <TextBlock Text="Add item" Foreground="White" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="CheckPriceButton" Style="{StaticResource HeaderChipButtonStyle}" Click="CheckPriceButton_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8EF;" FontSize="15" Foreground="White"/>
+                                <TextBlock Text="Check Price" Foreground="White" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="RecallButton" Style="{StaticResource HeaderChipButtonStyle}" Click="RecallButton_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7A7;" FontSize="15" Foreground="White"/>
+                                <TextBlock Text="Recall" Foreground="White" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="CurrencySwitchButton" Style="{StaticResource HeaderChipButtonStyle}" Click="CurrencySwitch_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE825;" FontSize="15" Foreground="White"/>
+                                <TextBlock x:Name="CurrencySwitchLabel" Text="{x:Bind ViewModel.CurrencyLabel, Mode=OneWay}" Foreground="White" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button x:Name="HelpButton" Style="{StaticResource HeaderChipButtonStyle}" Click="HelpButton_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE9CE;" FontSize="16" Foreground="White"/>
+                                <TextBlock Text="Help"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+            </StackPanel>
+        </Border>
+
+        <!-- 2. PAYMENT METHODS BANNER -->
+        <Border Grid.Row="1" Height="44" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#0067C0" Offset="0"/>
+                    <GradientStop Color="#38A5F0" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <TextBlock x:Name="BannerText" Text="Cash (USD/KHR) &amp; KHQR are accepted" Foreground="White" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- EXPANDED & SCALED EMPTY CART STATE -->
+        <Border x:Name="EmptyCartState" Grid.Row="2" Background="#FFF4F6F8" Visibility="Visible">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+
+                <Border x:Name="EmptyCardBorder" Background="White" CornerRadius="16" BorderBrush="#E2E8F0" BorderThickness="2" Padding="40,32">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                            <!-- LARGER BARCODE GRAPHIC -->
+                            <StackPanel Orientation="Horizontal" Spacing="4" Height="75" VerticalAlignment="Stretch">
+                                <Rectangle Width="4" Fill="#2D3748"/>
+                                <Rectangle Width="8" Fill="#2D3748"/>
+                                <Rectangle Width="3" Fill="#2D3748"/>
+                                <Rectangle Width="6" Fill="#2D3748"/>
+                                <Rectangle Width="3" Fill="#2D3748"/>
+                                <Rectangle Width="10" Fill="#2D3748"/>
+                                <Rectangle Width="5" Fill="#2D3748"/>
+                                <Rectangle Width="3" Fill="#2D3748"/>
+                                <Rectangle Width="8" Fill="#2D3748"/>
+                                <Rectangle Width="4" Fill="#2D3748"/>
+                            </StackPanel>
+
+                            <!-- Divider -->
+                            <Rectangle Width="2" Height="75" Fill="#E2E8F0"/>
+
+                            <!-- LARGER QR CODE GRAPHIC -->
+                            <Grid Width="75" Height="75">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+
+                                <Rectangle Grid.Row="0" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="1" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="4" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="6" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="7" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="0" Grid.Column="8" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="1" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="1" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="1" Grid.Column="6" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="1" Grid.Column="8" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="2" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="1" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="4" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="6" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="7" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="2" Grid.Column="8" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="3" Grid.Column="4" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="4" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="4" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="4" Grid.Column="3" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="4" Grid.Column="5" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="4" Grid.Column="7" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="4" Grid.Column="8" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="5" Grid.Column="4" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="5" Grid.Column="6" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="6" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="6" Grid.Column="1" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="6" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="6" Grid.Column="5" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="6" Grid.Column="7" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="7" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="7" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="7" Grid.Column="4" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="7" Grid.Column="5" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="7" Grid.Column="7" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="7" Grid.Column="8" Fill="#2D3748"/>
+
+                                <Rectangle Grid.Row="8" Grid.Column="0" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="8" Grid.Column="1" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="8" Grid.Column="2" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="8" Grid.Column="4" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="8" Grid.Column="6" Fill="#2D3748"/>
+                                <Rectangle Grid.Row="8" Grid.Column="8" Fill="#2D3748"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- UPDATED ANIMATED SCAN LINE -->
+                        <Rectangle x:Name="ScanLine" Height="4" Fill="#0067C0" VerticalAlignment="Top" HorizontalAlignment="Stretch" Opacity="0.85">
+                            <Rectangle.RenderTransform>
+                                <TranslateTransform x:Name="ScanLineTransform" Y="0"/>
+                            </Rectangle.RenderTransform>
+                        </Rectangle>
+
+                    </Grid>
+                </Border>
+
+                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock x:Name="EmptyTitleText" Text="Your Cart is Empty" FontWeight="Bold" FontSize="24" Foreground="#2D3748" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="EmptySubText" Text="Scan an item to add it to your cart." FontSize="16" Foreground="#718096" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- POPULATED CART STATE -->
+        <Border x:Name="ItemsListArea" Grid.Row="2" Background="#FFF4F6F8" Padding="16,6" Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="CartItemsControl" ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}" ItemTemplate="{StaticResource CartItemTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <!-- 3. TOTALS SUMMARY BREAKDOWN -->
+        <Border Grid.Row="3" Background="White" Padding="24,12" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+            <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock x:Name="TotalToPayLabel" Text="Total to Pay" FontSize="16" FontWeight="SemiBold" Foreground="#718096"/>
+                    <TextBlock x:Name="ItemCountSubLabel" Text="{x:Bind ViewModel.ItemCountSubText, Mode=OneWay}" FontSize="14" Foreground="#A0AEC0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="0">
+                    <TextBlock x:Name="TotalUSDLabel" Text="{x:Bind ViewModel.FormattedTotalUsd, Mode=OneWay}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="30" Foreground="#0067C0"/>
+                    <TextBlock x:Name="TotalKHRLabel" Text="{x:Bind ViewModel.FormattedTotalKhr, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" FontWeight="SemiBold" Foreground="#718096"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 4. BOTTOM ACTION BUTTON AREA -->
+        <Grid x:Name="FooterArea" Grid.Row="4" Background="White" Padding="16" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" x:Name="BackToScanButton" Width="80" Height="80" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0,0,10,0" CornerRadius="16" Background="#F1F5F9" Foreground="#374151">
+                <Button.Resources>
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#E5E7EB"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#D1D5DB"/>
+                </Button.Resources>
+                <FontIcon x:Name="BackIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE830;" FontSize="24" Foreground="black"/>
+            </Button>
+
+            <Button Grid.Column="1" x:Name="CheckoutButton" IsEnabled="{x:Bind ViewModel.HasItems, Mode=OneWay}" HorizontalAlignment="Stretch" Height="80" VerticalAlignment="Center" CornerRadius="16">
+                <Button.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#2563EB" Offset="0"/>
+                        <GradientStop Color="#1D4ED8" Offset="1"/>
+                    </LinearGradientBrush>
+                </Button.Background>
+                <Button.Resources>
+                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#005A9E"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#004578"/>
+                    <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#E2E8F0"/>
+                    <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#94A3B8"/>
+                </Button.Resources>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                    <TextBlock x:Name="PayNowText" Text="PAY NOW" FontWeight="Bold" FontSize="24" Foreground="White"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+    </Grid>
+</Page>

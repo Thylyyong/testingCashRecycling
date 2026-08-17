@@ -10,6 +10,7 @@ using SelfCheckoutKiosk.Domain.Enums;
 using SelfCheckoutKiosk.Domain.ValueObjects;
 using SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner;
 using SelfCheckoutKiosk.Hal.Vendor.EpsonM30;
+using SelfCheckoutKiosk.Core.Currency;
 
 namespace SelfCheckoutKiosk.App;
 
@@ -251,25 +252,14 @@ internal static class LiveCashTerminal
         bool    cancelled  = false;
         var     sessionDone = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        services.CashRecycler.OnNoteInEscrow += (_, e) =>
-        {
-            string currency = e.Note.Currency == CurrencyCode.Usd
-                ? $"${e.Note.Amount:F2} USD"
-                : $"{e.Note.Amount:N0} KHR (៛)";
-
-            Console.WriteLine();
-            LiveRow("💵 NOTE IN  ", ConsoleColor.Cyan,
-                $"DETECTED: {currency}  ← physical note accepted by validator");
-        };
-
-        services.Engine.OnCashPaymentPending += (_, e) =>
+        services.Engine.OnBalanceChanged += (_, e) =>
         {
             paidUsd = e.TenderedUsd;
             decimal remaining = e.RemainingUsd;
-            long    remKhr    = (long)e.RemainingKhr;
+            long    remKhr    = (long)(remaining * DualCurrencyCalculator.DefaultUsdToKhrRate);
 
             LiveRow("✅ ACCEPTED  ", ConsoleColor.Green,
-                $"Banknote vaulted. Shutter RE-ARMED for next note.");
+                "Banknote vaulted. Shutter RE-ARMED for next note.");
             StatusBar(paidUsd, totalUsd);
 
             if (remaining > 0m)
@@ -277,63 +267,17 @@ internal static class LiveCashTerminal
                     $"Still need ${remaining:F2} USD ({remKhr:N0} KHR) — insert next note.");
         };
 
-        services.Engine.OnCashPaymentConfirmed += async (_, e) =>
+        services.Engine.OnCashNoteRejected += (_, e) =>
         {
-            confirmed = true;
-            paidUsd   = e.TenderedUsd;
-            long overKhr = (long)e.OverpaymentKhr;
+            decimal noteKhr = e.Note.Currency == CurrencyCode.Khr ? e.Note.Amount : e.Note.Amount * DualCurrencyCalculator.DefaultUsdToKhrRate;
+            decimal overpayKhr = noteKhr - e.RemainingKhr.Amount;
 
-            Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("  ╔══════════════════════════════════════════════════════════╗");
-            Console.WriteLine("  ║  🎉  PAYMENT COMPLETE & CONFIRMED!                       ║");
-            Console.WriteLine($"  ║     Item Paid    : {selectedProduct.Description}".PadRight(62) + "║");
-            Console.WriteLine($"  ║     Total Paid   : ${e.TenderedUsd:F2} USD".PadRight(62) + "║");
-            Console.WriteLine($"  ║     Change Due   : {overKhr:N0} KHR (returned as Riel)".PadRight(62) + "║");
-            Console.WriteLine("  ║     Shutter CLOSED — Green LED OFF 🔴                   ║");
-            Console.WriteLine("  ╚══════════════════════════════════════════════════════════╝");
-            Console.ResetColor();
-
-            try
-            {
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"\n  Printing receipt on EPSON EU-m30...");
-                Console.ResetColor();
-
-                if (services.ReceiptPrinter is EpsonReceiptPrinter epson)
-                {
-                    await epson.ConnectAsync();
-                    await epson.PrintItemReceiptAsync(
-                        selectedProduct.Description,
-                        selectedProduct.Ean13,
-                        totalUsd,
-                        e.TenderedUsd,
-                        overKhr);
-                    LiveRow("🧾 RECEIPT   ", ConsoleColor.Green, "Itemized receipt printed! Check the printer.");
-                }
-
-                string auditDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                    "SelfCheckoutKiosk", "receipts");
-                LiveRow("💾 AUDIT     ", ConsoleColor.DarkGray,
-                    $"Digital copy saved to: {auditDir}");
-            }
-            catch (Exception ex)
-            {
-                LiveRow("⚠️  PRINT ERR ", ConsoleColor.Yellow, $"Receipt print failed: {ex.Message}");
-            }
-
-            sessionDone.TrySetResult(true);
-        };
-
-        services.Engine.OnCashPaymentRejected += (_, e) =>
-        {
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine("  ╔════════════════════════════════════════════════════════════════════╗");
             Console.WriteLine("  ║  ⛔  OVERPAYMENT REJECTED: NOTE RETURNED TO CUSTOMER                ║");
             Console.WriteLine("  ║      Machine accepts exact payment or max 500 KHR (~$0.12) over.   ║");
-            Console.WriteLine($"  ║      Overpay Amount : {e.OverpaymentKhr:N0} KHR (Exceeds 500 KHR tolerance)      ".PadRight(71) + "║");
+            Console.WriteLine($"  ║      Overpay Amount : {overpayKhr:N0} KHR (Exceeds 500 KHR tolerance)      ".PadRight(71) + "║");
             Console.WriteLine("  ║                                                                    ║");
             Console.WriteLine("  ║  👉 Please pull your banknote back out of the validator slot!      ║");
             Console.WriteLine("  ║  👉 Insert smaller or exact banknotes (e.g. 100៛, 500៛, 1,000៛, $1)║");
@@ -345,11 +289,61 @@ internal static class LiveCashTerminal
                 "Intake shutter still OPEN — waiting for correct banknote insertion.");
         };
 
-        services.Engine.OnStateChanged += (_, e) =>
+        services.Engine.OnStateChanged += async (_, e) =>
         {
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine($"  [{DateTime.Now:HH:mm:ss}] [STATE] {e.Previous} → {e.Current}");
             Console.ResetColor();
+
+            if (e.Current == KioskState.TransactionComplete && !confirmed)
+            {
+                confirmed = true;
+                decimal finalTenderedUsd = paidUsd;
+                decimal changeUsd = finalTenderedUsd - totalUsd;
+                long overKhr = (long)(changeUsd * DualCurrencyCalculator.DefaultUsdToKhrRate);
+
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("  ╔══════════════════════════════════════════════════════════╗");
+                Console.WriteLine("  ║  🎉  PAYMENT COMPLETE & CONFIRMED!                       ║");
+                Console.WriteLine($"  ║     Item Paid    : {selectedProduct.Description}".PadRight(62) + "║");
+                Console.WriteLine($"  ║     Total Paid   : ${finalTenderedUsd:F2} USD".PadRight(62) + "║");
+                Console.WriteLine($"  ║     Change Due   : {overKhr:N0} KHR (returned as Riel)".PadRight(62) + "║");
+                Console.WriteLine("  ║     Shutter CLOSED — Green LED OFF 🔴                   ║");
+                Console.WriteLine("  ╚══════════════════════════════════════════════════════════╝");
+                Console.ResetColor();
+
+                try
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine($"\n  Printing receipt on EPSON EU-m30...");
+                    Console.ResetColor();
+
+                    if (services.ReceiptPrinter is EpsonReceiptPrinter epson)
+                    {
+                        await epson.ConnectAsync();
+                        await epson.PrintItemReceiptAsync(
+                            selectedProduct.Description,
+                            selectedProduct.Ean13,
+                            totalUsd,
+                            finalTenderedUsd,
+                            overKhr);
+                        LiveRow("🧾 RECEIPT   ", ConsoleColor.Green, "Itemized receipt printed! Check the printer.");
+                    }
+
+                    string auditDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                        "SelfCheckoutKiosk", "receipts");
+                    LiveRow("💾 AUDIT     ", ConsoleColor.DarkGray,
+                        $"Digital copy saved to: {auditDir}");
+                }
+                catch (Exception ex)
+                {
+                    LiveRow("⚠️  PRINT ERR ", ConsoleColor.Yellow, $"Receipt print failed: {ex.Message}");
+                }
+
+                sessionDone.TrySetResult(true);
+            }
         };
 
         services.Engine.OnHardwareFault += (_, e) =>
@@ -368,7 +362,7 @@ internal static class LiveCashTerminal
 
             C(ConsoleColor.Cyan, $"\n  Starting Cash Session for {selectedProduct.Description} (${totalUsd:F2} USD)...");
             await services.Engine.SelectPaymentMethodAsync(PaymentMethod.Cash);
-            await services.Engine.BeginCashPaymentAsync(totalUsd);
+            await services.Engine.BeginCashPaymentAsync(Money.Usd(totalUsd), DualCurrencyCalculator.DefaultUsdToKhrRate);
         }
         catch (Exception ex)
         {

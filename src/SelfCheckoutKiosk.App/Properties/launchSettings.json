@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SelfCheckoutKiosk.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "SelfCheckoutKiosk.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

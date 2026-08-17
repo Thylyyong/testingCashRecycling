@@ -1,138 +1,418 @@
+using System;
 using SelfCheckoutKiosk.Core.Currency;
 using Xunit;
 
 namespace SelfCheckoutKiosk.Core.Tests;
 
-/// <summary>
-/// Unit tests for <see cref="LowFloatMonitor"/> (Blueprint §4).
-///
-/// AI NOTE — before editing this file:
-///   1. Re-read Blueprint §4 (low-float safeguard) and the pending tracker.
-///   2. Do NOT add business logic to LowFloatMonitor itself; it only tracks
-///      counts and fires events. Engine reaction is tested in CompositionSeamTests.
-/// </summary>
 public sealed class LowFloatMonitorTests
 {
-    // -----------------------------------------------------------------------
-    // Trigger tests
-    // -----------------------------------------------------------------------
-
     [Fact]
-    public void UpdateCount_ExactlyAtThreshold_DoesNotTrigger()
+    public void LowFloatThreshold_IsFifteen()
     {
-        var monitor = new LowFloatMonitor();
-        var triggered = false;
-        monitor.LowFloatStateTriggered += (_, _) => triggered = true;
-
-        monitor.UpdateCount(1000, LowFloatMonitor.LowFloatThreshold); // == 15
-
-        Assert.False(triggered, "Trigger must NOT fire when count equals the threshold.");
+        Assert.Equal(
+            15,
+            LowFloatMonitor.LowFloatThreshold
+        );
     }
 
     [Fact]
-    public void UpdateCount_OneBelowThreshold_TriggersEvent()
+    public void NewMonitor_StartsInNormalState()
     {
-        var monitor = new LowFloatMonitor();
-        var triggered = false;
-        monitor.LowFloatStateTriggered += (_, _) => triggered = true;
+        var monitor =
+            new LowFloatMonitor();
 
-        monitor.UpdateCount(1000, LowFloatMonitor.LowFloatThreshold - 1); // 14
-
-        Assert.True(triggered, "Trigger must fire the first time any denomination drops below threshold.");
+        Assert.False(
+            monitor.IsLowFloat
+        );
     }
 
     [Fact]
-    public void UpdateCount_SecondDenominationDrops_DoesNotFireTriggerAgain()
+    public void UpdateCount_AtThreshold_DoesNotTriggerLowFloat()
     {
-        // Once already in LowFloat state, a second denomination going below
-        // threshold must NOT re-fire the triggered event (no re-entrancy).
-        var monitor = new LowFloatMonitor();
-        var triggerCount = 0;
-        monitor.LowFloatStateTriggered += (_, _) => triggerCount++;
+        var monitor =
+            new LowFloatMonitor();
 
-        monitor.UpdateCount(1000, 10); // triggers once → LowFloat
-        monitor.UpdateCount(5000, 5);  // still LowFloat — no second trigger
+        var triggeredCount =
+            0;
 
-        Assert.Equal(1, triggerCount);
-    }
+        monitor.LowFloatStateTriggered +=
+            (_, _) =>
+                triggeredCount++;
 
-    // -----------------------------------------------------------------------
-    // Cleared tests
-    // -----------------------------------------------------------------------
+        monitor.UpdateCount(
+            1000,
+            LowFloatMonitor.LowFloatThreshold
+        );
 
-    [Fact]
-    public void UpdateCount_RecoveryAfterTrigger_FiresClearedEvent()
-    {
-        var monitor = new LowFloatMonitor();
-        var cleared = false;
-        monitor.LowFloatStateCleared += (_, _) => cleared = true;
+        Assert.False(
+            monitor.IsLowFloat
+        );
 
-        monitor.UpdateCount(1000, 10); // go below threshold
-        monitor.UpdateCount(1000, LowFloatMonitor.LowFloatThreshold); // recover to exactly 15
+        Assert.Equal(
+            0,
+            triggeredCount
+        );
 
-        Assert.True(cleared, "Cleared must fire when the denomination recovers to or above threshold.");
-    }
-
-    [Fact]
-    public void UpdateCount_MultiDenomination_ClearsOnlyWhenAllRecover()
-    {
-        // Both denominations go below. Cleared must not fire until BOTH recover.
-        var monitor = new LowFloatMonitor();
-        var clearedCount = 0;
-        monitor.LowFloatStateCleared += (_, _) => clearedCount++;
-
-        monitor.UpdateCount(1000, 10);  // below → LowFloat
-        monitor.UpdateCount(5000, 5);   // also below — no state change
-
-        monitor.UpdateCount(1000, 20);  // 1000 recovers — 5000 still below → NOT cleared yet
-        Assert.Equal(0, clearedCount);
-
-        monitor.UpdateCount(5000, 20);  // 5000 recovers — all clear now
-        Assert.Equal(1, clearedCount);
+        Assert.Equal(
+            LowFloatMonitor.LowFloatThreshold,
+            monitor.GetCount(
+                1000
+            )
+        );
     }
 
     [Fact]
-    public void UpdateCount_NeverBelowThreshold_NeverFiresClearedEvent()
+    public void UpdateCount_BelowThreshold_TriggersLowFloat()
     {
-        var monitor = new LowFloatMonitor();
-        var cleared = false;
-        monitor.LowFloatStateCleared += (_, _) => cleared = true;
+        var monitor =
+            new LowFloatMonitor();
 
-        // All updates keep denominations at or above threshold.
-        monitor.UpdateCount(1000, 15);
-        monitor.UpdateCount(1000, 20);
-        monitor.UpdateCount(5000, 100);
+        object? eventSender =
+            null;
 
-        Assert.False(cleared, "Cleared must never fire if LowFloat was never entered.");
+        var triggeredCount =
+            0;
+
+        monitor.LowFloatStateTriggered +=
+            (sender, _) =>
+            {
+                eventSender =
+                    sender;
+
+                triggeredCount++;
+            };
+
+        monitor.UpdateCount(
+            1000,
+            LowFloatMonitor.LowFloatThreshold - 1
+        );
+
+        Assert.True(
+            monitor.IsLowFloat
+        );
+
+        Assert.Equal(
+            1,
+            triggeredCount
+        );
+
+        Assert.Same(
+            monitor,
+            eventSender
+        );
     }
 
-    // -----------------------------------------------------------------------
-    // GetAllCounts snapshot
-    // -----------------------------------------------------------------------
-
     [Fact]
-    public void GetAllCounts_ReturnsCurrentSnapshot()
+    public void UpdateCount_WhileAlreadyLow_DoesNotTriggerRepeatedEvent()
     {
-        var monitor = new LowFloatMonitor();
-        monitor.UpdateCount(1000, 10);
-        monitor.UpdateCount(5000, 30);
+        var monitor =
+            new LowFloatMonitor();
 
-        var counts = monitor.GetAllCounts();
+        var triggeredCount =
+            0;
 
-        Assert.Equal(10, counts[1000]);
-        Assert.Equal(30, counts[5000]);
+        monitor.LowFloatStateTriggered +=
+            (_, _) =>
+                triggeredCount++;
+
+        monitor.UpdateCount(
+            1000,
+            14
+        );
+
+        monitor.UpdateCount(
+            1000,
+            10
+        );
+
+        monitor.UpdateCount(
+            500,
+            5
+        );
+
+        Assert.True(
+            monitor.IsLowFloat
+        );
+
+        Assert.Equal(
+            1,
+            triggeredCount
+        );
     }
 
     [Fact]
-    public void GetAllCounts_SnapshotIsIsolated_MutationDoesNotAffectMonitor()
+    public void UpdateCount_WhenAllDenominationsRecover_ClearsLowFloat()
     {
-        var monitor = new LowFloatMonitor();
-        monitor.UpdateCount(1000, 20);
+        var monitor =
+            new LowFloatMonitor();
 
-        var snapshot = (Dictionary<int, int>)monitor.GetAllCounts();
-        snapshot[1000] = 999; // mutate the returned copy
+        var clearedCount =
+            0;
 
-        // Monitor's internal state must be unchanged.
-        Assert.Equal(20, monitor.GetAllCounts()[1000]);
+        monitor.LowFloatStateCleared +=
+            (_, _) =>
+                clearedCount++;
+
+        monitor.UpdateCount(
+            1000,
+            10
+        );
+
+        Assert.True(
+            monitor.IsLowFloat
+        );
+
+        monitor.UpdateCount(
+            1000,
+            15
+        );
+
+        Assert.False(
+            monitor.IsLowFloat
+        );
+
+        Assert.Equal(
+            1,
+            clearedCount
+        );
+    }
+
+    [Fact]
+    public void UpdateCount_WhenOneDenominationRemainsLow_DoesNotClearState()
+    {
+        var monitor =
+            new LowFloatMonitor();
+
+        var clearedCount =
+            0;
+
+        monitor.LowFloatStateCleared +=
+            (_, _) =>
+                clearedCount++;
+
+        monitor.UpdateCount(
+            1000,
+            10
+        );
+
+        monitor.UpdateCount(
+            500,
+            5
+        );
+
+        monitor.UpdateCount(
+            1000,
+            15
+        );
+
+        Assert.True(
+            monitor.IsLowFloat
+        );
+
+        Assert.Equal(
+            0,
+            clearedCount
+        );
+
+        monitor.UpdateCount(
+            500,
+            15
+        );
+
+        Assert.False(
+            monitor.IsLowFloat
+        );
+
+        Assert.Equal(
+            1,
+            clearedCount
+        );
+    }
+
+    [Fact]
+    public void UpdateCount_AfterClear_CanTriggerLowFloatAgain()
+    {
+        var monitor =
+            new LowFloatMonitor();
+
+        var triggeredCount =
+            0;
+
+        var clearedCount =
+            0;
+
+        monitor.LowFloatStateTriggered +=
+            (_, _) =>
+                triggeredCount++;
+
+        monitor.LowFloatStateCleared +=
+            (_, _) =>
+                clearedCount++;
+
+        monitor.UpdateCount(
+            1000,
+            14
+        );
+
+        monitor.UpdateCount(
+            1000,
+            15
+        );
+
+        monitor.UpdateCount(
+            1000,
+            14
+        );
+
+        Assert.True(
+            monitor.IsLowFloat
+        );
+
+        Assert.Equal(
+            2,
+            triggeredCount
+        );
+
+        Assert.Equal(
+            1,
+            clearedCount
+        );
+    }
+
+    [Fact]
+    public void UpdateCount_StoresLatestCountForEachDenomination()
+    {
+        var monitor =
+            new LowFloatMonitor();
+
+        monitor.UpdateCount(
+            1000,
+            20
+        );
+
+        monitor.UpdateCount(
+            500,
+            30
+        );
+
+        monitor.UpdateCount(
+            1000,
+            18
+        );
+
+        Assert.Equal(
+            18,
+            monitor.GetCount(
+                1000
+            )
+        );
+
+        Assert.Equal(
+            30,
+            monitor.GetCount(
+                500
+            )
+        );
+    }
+
+    [Fact]
+    public void GetCount_WhenDenominationIsNotTracked_ReturnsNull()
+    {
+        var monitor =
+            new LowFloatMonitor();
+
+        var count =
+            monitor.GetCount(
+                1000
+            );
+
+        Assert.Null(
+            count
+        );
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void UpdateCount_WhenDenominationIsNotPositive_Throws(
+        int denominationKhr)
+    {
+        var monitor =
+            new LowFloatMonitor();
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () =>
+                monitor.UpdateCount(
+                    denominationKhr,
+                    15
+                )
+        );
+    }
+
+    [Fact]
+    public void UpdateCount_WhenCountIsNegative_Throws()
+    {
+        var monitor =
+            new LowFloatMonitor();
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () =>
+                monitor.UpdateCount(
+                    1000,
+                    -1
+                )
+        );
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void GetCount_WhenDenominationIsNotPositive_Throws(
+        int denominationKhr)
+    {
+        var monitor =
+            new LowFloatMonitor();
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () =>
+                monitor.GetCount(
+                    denominationKhr
+                )
+        );
+    }
+
+    [Fact]
+    public void UpdateCount_ZeroNotes_TriggersLowFloat()
+    {
+        var monitor =
+            new LowFloatMonitor();
+
+        var triggeredCount =
+            0;
+
+        monitor.LowFloatStateTriggered +=
+            (_, _) =>
+                triggeredCount++;
+
+        monitor.UpdateCount(
+            1000,
+            0
+        );
+
+        Assert.True(
+            monitor.IsLowFloat
+        );
+
+        Assert.Equal(
+            1,
+            triggeredCount
+        );
+
+        Assert.Equal(
+            0,
+            monitor.GetCount(
+                1000
+            )
+        );
     }
 }

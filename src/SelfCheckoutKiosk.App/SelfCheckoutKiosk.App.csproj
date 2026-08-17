@@ -1,29 +1,169 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- PRESENTATION LAYER + COMPOSITION ROOT. The ONLY project that references
-       the Infrastructure and Hal.Vendor.* assemblies. Owner: UI team (views)
-       + Lead (composition root / DI).
-       Native AOT is enforced on THIS entry executable; it pulls the whole
-       object graph into the native image at publish.
-       TODO(UI/Lead): retarget to net10.0-windows and add the WinUI 3 Windows
-       App SDK once the AOT spike ratifies the presentation framework. -->
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>SelfCheckoutKiosk.App</RootNamespace>
-    <PublishAot>true</PublishAot>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <PublishProfile>win-$(Platform).pubxml</PublishProfile>
+    <UseWinUI>true</UseWinUI>
+    <WinUISDKReferences>false</WinUISDKReferences>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <Nullable>enable</Nullable>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <Platforms>AnyCPU;x64</Platforms>
+    <!--
+      Bundles the Windows App SDK runtime with the app instead of requiring
+      it pre-installed system-wide (fixes COMException 0x80040154
+      REGDB_E_CLASSNOTREG on machines without the runtime registered).
+      Works for both launch profiles in launchSettings.json: for the
+      "Package" profile (MsixPackage) the runtime is included inside the
+      MSIX; for "Unpackaged" (Project) it's copied next to the .exe. No
+      WindowsPackageType override needed here — that property only matters
+      for unpackaged deployment, and this is a single-project MSIX app
+      (no separate .wapproj), so MSBuild infers packaging from how each
+      profile launches, not from a hardcoded property.
+    -->
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Resources\**" />
+    <EmbeddedResource Remove="Resources\**" />
+    <None Remove="Resources\**" />
+    <Page Remove="Resources\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Remove="Assets\Square44x44Logo.scale-200.png.png" />
+    <Content Remove="Assets\StoreLogo.scale-100.png" />
+    <Content Remove="Assets\StoreLogo.scale-125.png" />
+    <Content Remove="Assets\StoreLogo.scale-150.png" />
+    <Content Remove="Assets\StoreLogo.scale-200.png" />
+    <Content Remove="Assets\StoreLogo.scale-400.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Views\Admin\AdminLoginView.xaml" />
+    <None Remove="Views\Customer\CartView.xaml" />
+    <None Remove="Views\Customer\HomeView.xaml" />
+    <None Remove="Views\Customer\IngestionProgressView.xaml" />
+    <None Remove="Views\Customer\PaymentOptionView.xaml" />
+    <None Remove="Views\Customer\PaymentSelectionView.xaml" />
+    <None Remove="Views\Customer\SuccessView.xaml" />
+    <None Remove="Views\KioskBaseView.xaml" />
+  </ItemGroup>
+
+  <!-- ============================================================
+       TEMPORARY PLACEHOLDER ASSETS — NOT FINAL
+       These files stand in for real branding/media assets pending
+       handoff from the frontend dev. Tracked as an open item on the
+       integration tracker. Replace before any real demo/release build.
+       ============================================================ -->
+  <ItemGroup>
+    <Content Include="Assets\Logo\PLACEHOLDER-ca.ico" Link="Assets\Logo\ca.ico" />
+    <Content Include="Assets\Images\Flag\PLACEHOLDER-en-flag.png" Link="Assets\Images\Flag\en-flag.png" />
+    <Content Include="Assets\Images\Flag\PLACEHOLDER-km-flag.png" Link="Assets\Images\Flag\km-flag.png" />
+    <Content Include="Assets\Images\Banner\PLACEHOLDER-banner4.jpg" Link="Assets\Images\Banner\banner4.jpg" />
+    <Content Include="Assets\Images\Banner\PLACEHOLDER-banner6.jpg" Link="Assets\Images\Banner\banner6.jpg" />
+    <Content Include="Assets\Images\Banner\PLACEHOLDER-banner7.jpg" Link="Assets\Images\Banner\banner7.jpg" />
+    <Content Include="Assets\Images\Banner\PLACEHOLDER-banner8.jpg" Link="Assets\Images\Banner\banner8.jpg" />
+    <Content Include="Assets\Images\Banner\PLACEHOLDER-banner9.jpg" Link="Assets\Images\Banner\banner9.jpg" />
+    <Content Include="Assets\Fonts\PLACEHOLDER-NotoSansKhmer.ttf" Link="Assets\Fonts\NotoSansKhmer.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
-    <ProjectReference Include="..\SelfCheckoutKiosk.Presentation\SelfCheckoutKiosk.Presentation.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Domain\SelfCheckoutKiosk.Domain.csproj" />
     <ProjectReference Include="..\SelfCheckoutKiosk.Infrastructure\SelfCheckoutKiosk.Infrastructure.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Presentation\SelfCheckoutKiosk.Presentation.csproj" />
     <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX.csproj" />
     <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.csproj" />
     <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.EpsonM30\SelfCheckoutKiosk.Hal.Vendor.EpsonM30.csproj" />
   </ItemGroup>
+
   <ItemGroup>
     <None Update="products.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <!--
+    Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
+    Tools extension to be activated for this project even if the Windows App SDK Nuget
+    package has not yet been restored.
+  -->
+  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2526" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\Customer\HomeView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\KioskBaseView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\Customer\CartView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\Admin\AdminLoginView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Assets\Fonts\" />
+    <Folder Include="Assets\Images\Flag\" />
+    <Folder Include="Assets\Logo\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\Customer\IngestionProgressView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\Customer\SuccessView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\Customer\PaymentOptionView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\Customer\PaymentSelectionView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
+  <!--
+    Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
+    Explorer "Package and Publish" context menu entry to be enabled for this project even if
+    the Windows App SDK Nuget package has not yet been restored.
+  -->
+  <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+  </PropertyGroup>
+
+  <!-- Publish Properties -->
+  <PropertyGroup>
+    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
+    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
+    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
+    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+  </PropertyGroup>
+  <ItemGroup>
+    <PRIResource Remove="Resources\**" />
   </ItemGroup>
 </Project>

@@ -1,106 +1,221 @@
+using System;
+using System.Collections.Generic;
+
 namespace SelfCheckoutKiosk.Core.Currency;
 
 /// <summary>
-/// Low-float safeguard (Blueprint §4). Tracks live per-denomination KHR note
-/// counts updated from cassette-inventory reads and dispense events.
+/// Tracks live KHR note counts by denomination.
 ///
-/// State machine (two states — Normal / LowFloat):
-///   Normal  → LowFloat : fires <see cref="LowFloatStateTriggered"/> the first
-///             time any tracked denomination drops below <see cref="LowFloatThreshold"/>.
-///   LowFloat → Normal  : fires <see cref="LowFloatStateCleared"/> once ALL
-///             previously-below-threshold denominations recover.
-///   No re-entrancy: transitioning from LowFloat to LowFloat (another denomination
-///   drops) does NOT fire a second Triggered event.
+/// The monitor enters low-float state when any tracked denomination
+/// contains fewer than <see cref="LowFloatThreshold"/> notes.
 ///
-/// Thread safety: <see cref="UpdateCount"/> is called from the hardware event
-/// thread; events are raised OUTSIDE the lock to avoid deadlocks with callers
-/// that subscribe and call back into this class.
+/// It leaves low-float state only after every tracked denomination
+/// has recovered to the threshold or higher.
 ///
-/// TODO(Lead): make LowFloatThreshold configurable per denomination (Blueprint §4
-/// hard-codes 15 uniformly; that is a review finding for Sprint 1).
+/// This class only tracks state and publishes events. It does not
+/// communicate with cash-recycler hardware directly.
 /// </summary>
 public sealed class LowFloatMonitor
 {
-    // -----------------------------------------------------------------------
-    // Blueprint §4: threshold = 15 per denomination (uniform for Sprint 0).
-    // -----------------------------------------------------------------------
-    public const int LowFloatThreshold = 15;
-
-    // -----------------------------------------------------------------------
-    // Events
-    // -----------------------------------------------------------------------
     /// <summary>
-    /// Raised when the first denomination drops below <see cref="LowFloatThreshold"/>.
-    /// Engine reaction (Blueprint §4): call StopAcceptingCashAsync and show lock screen.
+    /// Minimum safe note count for every tracked KHR denomination.
+    ///
+    /// A count below this value activates low-float state.
     /// </summary>
-    public event EventHandler? LowFloatStateTriggered;
+    public const int LowFloatThreshold =
+        15;
 
-    /// <summary>
-    /// Raised when ALL previously-below-threshold denominations recover to or
-    /// above <see cref="LowFloatThreshold"/> (e.g. after a manual cassette reload).
-    /// </summary>
-    public event EventHandler? LowFloatStateCleared;
+    private readonly object
+        _syncRoot =
+            new();
 
-    // -----------------------------------------------------------------------
-    // State (guarded by _lock)
-    // -----------------------------------------------------------------------
-    private readonly object _lock = new();
-    private readonly Dictionary<int, int> _counts = new();
-    private bool _isLowFloat;
+    private readonly Dictionary<int, int>
+        _countsByDenomination =
+            new();
 
-    // -----------------------------------------------------------------------
-    // Public API
-    // -----------------------------------------------------------------------
+    private bool
+        _isLowFloat;
 
     /// <summary>
-    /// Updates the count for one KHR denomination and evaluates whether the
-    /// low-float state should be entered or exited.
+    /// Raised once when the monitor changes from normal state
+    /// to low-float state.
     /// </summary>
-    /// <param name="denominationKhr">KHR denomination value (e.g. 100, 500, 1000 …).</param>
-    /// <param name="count">Current note count in the cassette for this denomination.</param>
-    public void UpdateCount(int denominationKhr, int count)
+    public event EventHandler?
+        LowFloatStateTriggered;
+
+    /// <summary>
+    /// Raised once when all tracked denominations recover and
+    /// the monitor changes from low-float state to normal state.
+    /// </summary>
+    public event EventHandler?
+        LowFloatStateCleared;
+
+    /// <summary>
+    /// Indicates whether any tracked denomination currently
+    /// contains fewer than 15 notes.
+    /// </summary>
+    public bool IsLowFloat
     {
-        bool shouldTrigger = false;
-        bool shouldClear   = false;
-
-        lock (_lock)
+        get
         {
-            _counts[denominationKhr] = count;
-
-            // Is ANY denomination currently below threshold?
-            var anyBelow = false;
-            foreach (var kvp in _counts)
+            lock (_syncRoot)
             {
-                if (kvp.Value < LowFloatThreshold)
-                {
-                    anyBelow = true;
-                    break;
-                }
-            }
-
-            if (anyBelow && !_isLowFloat)
-            {
-                _isLowFloat   = true;
-                shouldTrigger = true;
-            }
-            else if (!anyBelow && _isLowFloat)
-            {
-                _isLowFloat = false;
-                shouldClear = true;
+                return _isLowFloat;
             }
         }
-
-        // Fire events OUTSIDE the lock to prevent deadlocks.
-        if (shouldTrigger) LowFloatStateTriggered?.Invoke(this, EventArgs.Empty);
-        if (shouldClear)   LowFloatStateCleared?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Returns a snapshot of all tracked denomination counts.</summary>
-    public IReadOnlyDictionary<int, int> GetAllCounts()
+    /// <summary>
+    /// Updates the live count for one KHR denomination.
+    /// </summary>
+    /// <param name="denominationKhr">
+    /// Positive whole-KHR note denomination, such as 100,
+    /// 500, 1,000, or 5,000.
+    /// </param>
+    /// <param name="count">
+    /// Current number of notes available for that denomination.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when the denomination is not positive or the count
+    /// is negative.
+    /// </exception>
+    public void UpdateCount(
+        int denominationKhr,
+        int count)
     {
-        lock (_lock)
+        if (denominationKhr <= 0)
         {
-            return new Dictionary<int, int>(_counts);
+            throw new ArgumentOutOfRangeException(
+                nameof(denominationKhr),
+                denominationKhr,
+                "The KHR denomination must be greater than zero."
+            );
         }
+
+        if (count < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(count),
+                count,
+                "The note count cannot be negative."
+            );
+        }
+
+        var shouldRaiseTriggered =
+            false;
+
+        var shouldRaiseCleared =
+            false;
+
+        lock (_syncRoot)
+        {
+            _countsByDenomination[
+                denominationKhr
+            ] = count;
+
+            var shouldBeLowFloat =
+                HasLowDenomination();
+
+            /*
+             * Events describe state transitions, not every inventory
+             * update.
+             *
+             * Normal -> Low:
+             * raise LowFloatStateTriggered once.
+             *
+             * Low -> Normal:
+             * raise LowFloatStateCleared once.
+             */
+            if (
+                shouldBeLowFloat ==
+                _isLowFloat
+            )
+            {
+                return;
+            }
+
+            _isLowFloat =
+                shouldBeLowFloat;
+
+            shouldRaiseTriggered =
+                shouldBeLowFloat;
+
+            shouldRaiseCleared =
+                !shouldBeLowFloat;
+        }
+
+        /*
+         * Raise events outside the lock so subscribers cannot block
+         * inventory updates or create a lock-related deadlock.
+         */
+        if (shouldRaiseTriggered)
+        {
+            LowFloatStateTriggered?.Invoke(
+                this,
+                EventArgs.Empty
+            );
+        }
+
+        if (shouldRaiseCleared)
+        {
+            LowFloatStateCleared?.Invoke(
+                this,
+                EventArgs.Empty
+            );
+        }
+    }
+
+    /// <summary>
+    /// Returns the last known count for a tracked denomination.
+    /// </summary>
+    /// <returns>
+    /// The current count, or <see langword="null"/> when the
+    /// denomination has not been tracked yet.
+    /// </returns>
+    public int? GetCount(
+        int denominationKhr)
+    {
+        if (denominationKhr <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(denominationKhr),
+                denominationKhr,
+                "The KHR denomination must be greater than zero."
+            );
+        }
+
+        lock (_syncRoot)
+        {
+            if (
+                _countsByDenomination.TryGetValue(
+                    denominationKhr,
+                    out var count
+                )
+            )
+            {
+                return count;
+            }
+
+            return null;
+        }
+    }
+
+    private bool HasLowDenomination()
+    {
+        foreach (
+            var count in
+            _countsByDenomination.Values
+        )
+        {
+            if (
+                count <
+                LowFloatThreshold
+            )
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

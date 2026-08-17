@@ -1,4 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DOMAIN LAYER — centre of the onion.
+
+    References nothing:
+    - No EF Core
+    - No SQLite
+    - No hardware SDK
+    - No WinUI
+    - No dependency injection framework
+  -->
+
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk.Domain</RootNamespace>
     <Platforms>AnyCPU;x64</Platforms>
@@ -17,4 +29,3 @@
     </EmbeddedResource>
   </ItemGroup>
 </Project>
-    

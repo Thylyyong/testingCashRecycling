@@ -1,12 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- APPLICATION / BUSINESS LAYER. References ONLY Domain.
-       Never references Infrastructure or any Hal.Vendor.* project.
-       Owner: Back-End Developer. -->
+
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk.Core</RootNamespace>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\SelfCheckoutKiosk.Domain\SelfCheckoutKiosk.Domain.csproj" />
+    <ProjectReference
+      Include="..\SelfCheckoutKiosk.Domain\SelfCheckoutKiosk.Domain.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SelfCheckoutKiosk.Core.Tests" />
+    <InternalsVisibleTo Include="SelfCheckoutKiosk.Integration.Tests" />
+  </ItemGroup>
+
 </Project>

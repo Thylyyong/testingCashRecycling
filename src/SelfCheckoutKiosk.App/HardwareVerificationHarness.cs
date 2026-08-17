@@ -1,6 +1,7 @@
-using SelfCheckoutKiosk.App.Composition;
 using SelfCheckoutKiosk.Core.Abstractions;
+using SelfCheckoutKiosk.Core.Currency;
 using SelfCheckoutKiosk.Core.Engine;
+using SelfCheckoutKiosk.Core.Licensing;
 using SelfCheckoutKiosk.Domain.Enums;
 using SelfCheckoutKiosk.Domain.ValueObjects;
 using SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX;
@@ -17,7 +18,8 @@ namespace SelfCheckoutKiosk.App;
 ///   dotnet run --project src/SelfCheckoutKiosk.App -- --verify-hardware
 ///
 /// WHAT IT TESTS:
-///   [1] Composition root + USB connection (engine.InitializeAsync)
+///   [1] Engine construction + USB connection (engine.InitializeAsync — license
+///       gate runs first, matching LLCoreLogicEngine.InitializeAsync)
 ///   [2] Cash recycler arms and engine receives escrow interrupt + audit log
 ///   [3] Over-500-KHR note is physically returned to customer
 ///   [4] Full payment session completes: engine → TransactionComplete
@@ -27,7 +29,18 @@ namespace SelfCheckoutKiosk.App;
 ///
 /// ARCHITECTURE NOTE:
 ///   Lives in App — the only layer allowed to reference Hal.Vendor.* concretes.
-///   Goes through CompositionRoot.Build() exactly as production code does.
+///   The App project currently has no composition root (feature/UI removed the
+///   Sprint-0 CompositionRoot.cs when it adopted the WinUI bootstrap in
+///   App.xaml.cs), so this harness constructs the engine graph inline —
+///   mirroring what CompositionRoot used to do — rather than depending on it.
+///
+/// EVENT MODEL NOTE:
+///   The engine communicates cash-payment outcomes via OnBalanceChanged +
+///   KioskState transitions, plus a dedicated OnCashNoteRejected event for
+///   the one case those two cannot express: a note physically returned
+///   while the session stays open (no balance change, no state change).
+///   There is still no dedicated "confirmed" event — TEST 4 below relies on
+///   the TransactionComplete state transition for that.
 /// </summary>
 internal static class HardwareVerificationHarness
 {
@@ -95,6 +108,9 @@ internal static class HardwareVerificationHarness
 
         var results = new List<(string Test, bool Passed)>();
 
+        IBarcodeScanner? barcodeScanner = null;
+        IReceiptPrinter? receiptPrinter = null;
+
         // ── PRE-FLIGHT ─────────────────────────────────────────────────────
         Section("PRE-FLIGHT: Windows USB device checklist");
         Info("Open Device Manager and confirm these devices appear:");
@@ -106,87 +122,63 @@ internal static class HardwareVerificationHarness
         Prompt("Press ENTER when your target USB devices are plugged in and ready (you can test just one at a time)");
 
         // ── TEST 1 ─────────────────────────────────────────────────────────
-        Section("TEST 1 — Composition root builds and engine connects via USB");
-        KioskServices? services = null;
+        Section("TEST 1 — Engine graph builds and connects via USB");
+        ILLCoreLogicEngine? engineOrNull = null;
         try
         {
-            Info("Building composition root...");
-            services = CompositionRoot.Build();
-            Info($"Engine constructed. Initial state = {services.Engine.CurrentState}");
+            Info("Constructing engine graph (no composition root — see file header)...");
+            engineOrNull = BuildEngine(out barcodeScanner, out receiptPrinter);
+            Info($"Engine constructed. Initial state = {engineOrNull.CurrentState}");
 
-            Info("Calling InitializeAsync — wires HAL events, opens USB connection...");
+            Info("Calling InitializeAsync — validates license, wires HAL events, opens USB connection...");
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            await services.Engine.InitializeAsync(cts.Token);
+            await engineOrNull.InitializeAsync(cts.Token);
 
-            if (services.Engine.CurrentState == KioskState.Idle)
+            if (engineOrNull.CurrentState == KioskState.Idle)
             {
                 Pass("Engine is Idle after InitializeAsync — USB connection succeeded!");
-                results.Add(("Composition root + InitializeAsync over USB", true));
+                results.Add(("Engine graph + InitializeAsync over USB", true));
             }
             else
             {
-                Fail($"Engine state = {services.Engine.CurrentState} (expected Idle).");
-                results.Add(("Composition root + InitializeAsync over USB", false));
+                Fail($"Engine state = {engineOrNull.CurrentState} (expected Idle).");
+                results.Add(("Engine graph + InitializeAsync over USB", false));
             }
         }
         catch (Exception ex)
         {
             Fail($"InitializeAsync threw {ex.GetType().Name}: {ex.Message}");
-            Warn("Likely cause: wrong COM port, driver missing, or device not powered.");
+            Warn("Likely cause: wrong COM port, driver missing, device not powered, or license validation failed.");
             Warn("Fix: Ensure the CashDevice-RestAPI.exe server is running and the device is connected.");
-            results.Add(("Composition root + InitializeAsync over USB", false));
+            results.Add(("Engine graph + InitializeAsync over USB", false));
             PrintSummary(results);
             return;
         }
 
-        var engine = services.Engine;
+        var engine = engineOrNull;
 
-        // Subscribe to engine and hardware events — clean, short terminal output
-        services.CashRecycler.OnNoteInEscrow += (_, e) =>
-        {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            string val = e.Note.Currency == CurrencyCode.Usd ? $"${e.Note.Amount:F2} USD" : $"{e.Note.Amount:N0} KHR";
-            Console.WriteLine($"  💵 [INSERTED] {val}");
-            Console.ResetColor();
-        };
-
-        engine.OnStateChanged += (_, e) =>
-        {
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine($"  [STATE] {e.Previous} → {e.Current}");
-            Console.ResetColor();
-        };
-
-        engine.OnCashPaymentPending += (_, e) =>
-        {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"  🟢 [PENDING] Paid: ${e.TenderedUsd:F2} USD | Remaining: ${e.RemainingUsd:F2} USD ({e.RemainingKhr:N0} KHR) | Shutter: OPEN (Light ON)");
-            Console.ResetColor();
-        };
-
-        engine.OnCashPaymentConfirmed += (_, e) =>
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  🎉 [CONFIRMED] Paid: ${e.TenderedUsd:F2} USD | Status: COMPLETE | Shutter: CLOSED (Light OFF)");
-            Console.ResetColor();
-        };
-
-        engine.OnCashPaymentRejected += (_, e) =>
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"  ⛔ [REJECTED] Overpayment {e.OverpaymentKhr:N0} KHR exceeds 500 KHR limit | Note Ejected");
-            Console.ResetColor();
-        };
-
-        engine.OnHardwareFault += (_, e) => Warn($"FAULT from {e.Device}: {e.Message}");
+        // Subscribe to engine events for live console output. The engine reports
+        // cash-payment outcomes via OnBalanceChanged + state transitions, plus
+        // OnCashNoteRejected for the one case those can't express.
+        engine.OnStateChanged   += (_, e) => Info($"Engine state: {e.Previous} → {e.Current}");
+        engine.OnBalanceChanged += (_, e) => Info(
+            $"BALANCE — Total=${e.TotalUsd:F2}  Tendered=${e.TenderedUsd:F2}  " +
+            $"Remaining=${e.RemainingUsd:F2} / {e.RemainingUsd * DualCurrencyCalculator.DefaultUsdToKhrRate:N0} KHR");
+        engine.OnCashNoteRejected += (_, e) => Info(
+            $"REJECTED — Note={e.Note}  Remaining={e.RemainingKhr:F0} KHR — note physically returned.");
+        engine.OnHardwareFault  += (_, e) => Warn($"FAULT from {e.Device}: {e.Message}");
 
         // Capture event results for assertions
-        bool pendingFired   = false;
-        bool rejectedFired  = false;
-        bool confirmedFired = false;
-        engine.OnCashPaymentPending   += (_, _) => pendingFired   = true;
-        engine.OnCashPaymentRejected  += (_, _) => rejectedFired  = true;
-        engine.OnCashPaymentConfirmed += (_, _) => confirmedFired = true;
+        bool balanceChangedFired = false;
+        decimal lastRemainingUsd = -1m;
+        engine.OnBalanceChanged += (_, e) =>
+        {
+            balanceChangedFired = true;
+            lastRemainingUsd    = e.RemainingUsd;
+        };
+
+        bool cashNoteRejectedFired = false;
+        engine.OnCashNoteRejected += (_, _) => cashNoteRejectedFired = true;
 
         // ── TEST 2 ─────────────────────────────────────────────────────────
         Section("TEST 2 — Dual Currency Payment Session ($2.00 USD / 8,200 KHR Total)");
@@ -200,7 +192,7 @@ internal static class HardwareVerificationHarness
 
         try
         {
-            await engine.BeginCashPaymentAsync(2.00m);
+            await engine.BeginCashPaymentAsync(Money.Usd(5.00m), DualCurrencyCalculator.DefaultUsdToKhrRate);
 
             if (engine.CurrentState == KioskState.ProcessingCash)
                 Pass("Engine → ProcessingCash — recycler is now ARMED and accepting cash.");
@@ -218,6 +210,8 @@ internal static class HardwareVerificationHarness
         Warn("ACTION: Insert $1.00 USD note into the recycler slot now.");
         Warn("The engine will accept it, write an audit record, keep session PENDING, and RE-ARM the green LED light.");
         Prompt("Press ENTER AFTER inserting the $1.00 USD note");
+
+
         await Task.Delay(2_000);
 
         long logAfter = File.Exists(logPath) ? new FileInfo(logPath).Length : 0;
@@ -228,10 +222,10 @@ internal static class HardwareVerificationHarness
         else
             Fail("Audit log did NOT grow. No note detected, or HardwareAppendLog did not fire.");
 
-        if (pendingFired)
-            Pass("OnCashPaymentPending fired — engine correctly recognised under-payment ($1.00 USD / 4,100 KHR remaining). ✓");
+        if (balanceChangedFired)
+            Pass($"OnBalanceChanged fired — engine recognised the note. Remaining=${lastRemainingUsd:F2}.");
         else
-            Warn("OnCashPaymentPending not yet fired. Verify the note was inserted.");
+            Warn("OnBalanceChanged not yet fired. Verify the note was inserted and the USB interrupt arrived.");
 
         results.Add(("Cash Recycler: ARM + note detected + audit log", auditGrew));
 
@@ -243,43 +237,31 @@ internal static class HardwareVerificationHarness
         Console.WriteLine();
         Warn("ACTION: Insert an overpaying note into the cash recycler now.");
         Prompt("Press ENTER AFTER inserting the overpaying note");
-        
-        // Interactive simulation fallback if no physical note inserted
-        if (!rejectedFired && services.CashRecycler is VendorXCashRecycler vendorRecycler3)
-        {
-            try { vendorRecycler3.SimulateNoteInserted(Money.Usd(10.00m)); } catch { }
-        }
+        cashNoteRejectedFired = false;
+        await Task.Delay(3_000);
 
-        await Task.Delay(2_000);
-
-        if (rejectedFired)
-            Pass("OnCashPaymentRejected fired — note was physically returned. Engine kept session open. ✓");
+        if (cashNoteRejectedFired)
+            Pass("OnCashNoteRejected fired — note was physically returned. Engine kept session open. ✓");
         else
-            Warn("OnCashPaymentRejected has not fired. Ensure the inserted note exceeded the 500 KHR tolerance.");
+            Warn("OnCashNoteRejected has not fired. Ensure the inserted note exceeded the 500 KHR tolerance.");
 
-        results.Add(("Cash Recycler: Over-500-KHR note rejected", rejectedFired));
+        results.Add(("Cash Recycler: Over-500-KHR note rejected", cashNoteRejectedFired));
 
         // ── TEST 4 ─────────────────────────────────────────────────────────
-        Section("TEST 4 — Complete Dual-Currency Payment: 4,100 KHR (or $1.00 USD)");
-        Info("Insert 4,100 KHR (or $1.00 USD) note to cover the remaining $1.00 USD balance.");
-        Info("OnCashPaymentConfirmed will fire, engine transitions to TransactionComplete, and receipt prints!");
+        Section("TEST 4 — Complete payment: engine → TransactionComplete");
+        Info("Insert notes to cover the remaining balance (within 500 KHR of exact).");
+        Info("Engine should reach TransactionComplete (no dedicated 'confirmed' event — see file header).");
         Console.WriteLine();
         Warn("ACTION: Insert 4,100 KHR (or $1.00 USD) note into the cash recycler now.");
         Prompt("Press ENTER AFTER inserting the completing note");
 
-        // Interactive simulation fallback if no physical note inserted
-        if (!confirmedFired && services.CashRecycler is VendorXCashRecycler vendorRecycler4)
-        {
-            try { vendorRecycler4.SimulateNoteInserted(Money.Khr(4100m)); } catch { }
-        }
-
         await Task.Delay(2_000);
 
-        bool txComplete = engine.CurrentState == KioskState.TransactionComplete && confirmedFired;
+        bool txComplete = engine.CurrentState == KioskState.TransactionComplete;
         if (txComplete)
-            Pass("OnCashPaymentConfirmed fired & Engine → TransactionComplete — mixed USD + KHR payment flow verified! ✓");
+            Pass("Engine → TransactionComplete — full cash payment flow verified! ✓");
         else
-            Warn($"Engine state = {engine.CurrentState}, OnCashPaymentConfirmed={confirmedFired}. Payment may not be complete or an error occurred.");
+            Warn($"Engine state = {engine.CurrentState}. Payment may not be complete or an error occurred.");
 
         results.Add(("Full cash payment: engine → TransactionComplete", txComplete));
 
@@ -340,18 +322,20 @@ internal static class HardwareVerificationHarness
         Info("Connecting to Datalogic Barcode Scanner on COM4...");
         try
         {
-            await services.BarcodeScanner.ConnectAsync();
+            ArgumentNullException.ThrowIfNull(barcodeScanner);
+
+            await barcodeScanner.ConnectAsync();
             bool scanFired = false;
             string scannedCode = "";
 
-            services.BarcodeScanner.OnBarcodeScanned += (_, e) =>
+            barcodeScanner.OnBarcodeScanned += (_, e) =>
             {
                 scanFired = true;
                 scannedCode = e.RawBarcode;
                 Pass($"[SCANNER 📷] BARCODE SCANNED: {e.RawBarcode}");
             };
 
-            if (services.BarcodeScanner is SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.DatalogicBarcodeScanner datalogicScanner)
+            if (barcodeScanner is SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.DatalogicBarcodeScanner datalogicScanner)
             {
                 datalogicScanner.SimulateBarcodeScanned("8886037000185");
             }
@@ -374,11 +358,13 @@ internal static class HardwareVerificationHarness
         Info("Connecting to Epson TM-m30 Thermal Printer...");
         try
         {
-            await services.ReceiptPrinter.ConnectAsync();
-            bool paperOk = await services.ReceiptPrinter.IsPaperPresentAsync();
+            ArgumentNullException.ThrowIfNull(receiptPrinter);
+
+            await receiptPrinter.ConnectAsync();
+            bool paperOk = await receiptPrinter.IsPaperPresentAsync();
             Pass($"Paper Sensor Status: {(paperOk ? "OK (Paper Present)" : "EMPTY")}");
 
-            if (services.ReceiptPrinter is SelfCheckoutKiosk.Hal.Vendor.EpsonM30.EpsonReceiptPrinter epsonPrinter)
+            if (receiptPrinter is SelfCheckoutKiosk.Hal.Vendor.EpsonM30.EpsonReceiptPrinter epsonPrinter)
             {
                 await epsonPrinter.PrintReceiptAsync(2.00m, 2.00m, 0m);
             }
@@ -409,68 +395,48 @@ internal static class HardwareVerificationHarness
         Console.WriteLine("╚═══════════════════════════════════════════════════════════════╝");
         Console.ResetColor();
 
-        // 1. Build composition root using Real Hardware REST API
-        // For real physical hardware testing, the API key is read from a local,
-        // git-ignored file for security.
-        string? apiKey = null;
-        try
-        {
-            apiKey = File.ReadAllText("api_key.secret").Trim();
-        }
-        catch (Exception)
-        {
-            // Fail gracefully if the key file is missing. The HAL will report the error.
-        }
+        // 1. Build the engine graph using the real hardware REST API.
+        //    SECURITY: engine.InitializeAsync() below runs the license gate
+        //    (OfflineLicenseManager.EnforceFeatureAccess) BEFORE ConnectAsync
+        //    touches the real device — do not reorder this. Constructing
+        //    VendorXCashRecycler itself does not open a connection.
+        var engine = BuildEngine(useRealApi: true);
 
-        ICashRecycler cashRecycler = new VendorXCashRecycler(
-            "http://localhost:5000",
-            apiKey: apiKey,
-            useRealApi: true);
-        IBarcodeScanner barcodeScanner = new SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.DatalogicBarcodeScanner();
-        IReceiptPrinter receiptPrinter = new SelfCheckoutKiosk.Hal.Vendor.EpsonM30.EpsonReceiptPrinter();
-        var calculator = new SelfCheckoutKiosk.Core.Currency.DualCurrencyCalculator();
-        var lowFloatMonitor = new SelfCheckoutKiosk.Core.Currency.LowFloatMonitor();
-        var licenseManager = new SelfCheckoutKiosk.Core.Licensing.OfflineLicenseManager();
-        var logPath = GetAuditLogPath();
-        var hardwareAppendLog = new SelfCheckoutKiosk.Core.Engine.HardwareAppendLog(logPath);
-
-        ILLCoreLogicEngine engine = new LLCoreLogicEngine(
-            cashRecycler, barcodeScanner, receiptPrinter,
-            calculator, lowFloatMonitor, licenseManager, hardwareAppendLog);
-
-        // 2. Subscribe live terminal alert listeners
+        // 2. Subscribe live terminal alert listeners. The engine reports cash
+        //    outcomes via OnBalanceChanged + state transitions, plus
+        //    OnCashNoteRejected for the one case those can't express (still
+        //    no dedicated "confirmed" event — see file header).
         engine.OnStateChanged += (_, e) =>
         {
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [STATE] {e.Previous} → {e.Current}");
             Console.ResetColor();
+
+            if (e.Current == KioskState.TransactionComplete)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"\n[{DateTime.Now:HH:mm:ss}] 🎉 PAYMENT COMPLETE!");
+                Console.WriteLine($"   ► Status        : Order Approved! Printing receipt...");
+                Console.ResetColor();
+            }
         };
 
-        engine.OnCashPaymentPending += (_, e) =>
+        engine.OnBalanceChanged += (_, e) =>
         {
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"\n[{DateTime.Now:HH:mm:ss}] 💵 NOTE ACCEPTED & VAULTED!");
             Console.WriteLine($"   ► Total Tendered : ${e.TenderedUsd:F2}");
-            Console.WriteLine($"   ► Remaining Due  : ${e.RemainingUsd:F2} USD  ({e.RemainingKhr:N0} KHR)");
+            Console.WriteLine($"   ► Remaining Due  : ${e.RemainingUsd:F2} USD  ({e.RemainingUsd * DualCurrencyCalculator.DefaultUsdToKhrRate:N0} KHR)");
             Console.ResetColor();
         };
 
-        engine.OnCashPaymentConfirmed += (_, e) =>
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"\n[{DateTime.Now:HH:mm:ss}] 🎉 PAYMENT COMPLETE & CONFIRMED!");
-            Console.WriteLine($"   ► Total Paid    : ${e.TenderedUsd:F2}");
-            Console.WriteLine($"   ► Overpayment   : {e.OverpaymentKhr:N0} KHR");
-            Console.WriteLine($"   ► Status        : Order Approved! Printing receipt...");
-            Console.ResetColor();
-        };
-
-        engine.OnCashPaymentRejected += (_, e) =>
+        engine.OnCashNoteRejected += (_, e) =>
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"\n[{DateTime.Now:HH:mm:ss}] ⛔ NOTE REJECTED & EJECTED!");
-            Console.WriteLine($"   ► Reason        : Overpayment exceeds 500 KHR limit ({e.OverpaymentKhr:N0} KHR)");
-            Console.WriteLine($"   ► Action        : Bill physically pushed back out of machine slot.");
+            Console.WriteLine($"   ► Note           : {e.Note}");
+            Console.WriteLine($"   ► Remaining Due  : {e.RemainingKhr:F0} KHR (unchanged)");
+            Console.WriteLine($"   ► Action         : Bill physically pushed back out of machine slot.");
             Console.ResetColor();
         };
 
@@ -484,10 +450,9 @@ internal static class HardwareVerificationHarness
         // 3. Connect hardware & start session
         Console.WriteLine("\nConnecting to Cash Recycler REST API server...");
         await engine.InitializeAsync();
-        
-        decimal sampleTotal = 5.00m;
+
         Console.WriteLine($"Opening $5.00 cash payment session... Intaking shutter ARMED.");
-        await engine.BeginCashPaymentAsync(sampleTotal);
+        await engine.BeginCashPaymentAsync(Money.Usd(5.00m), DualCurrencyCalculator.DefaultUsdToKhrRate);
 
         Console.ForegroundColor = ConsoleColor.Cyan;
         Console.WriteLine("\n" + new string('═', 65));
@@ -512,6 +477,50 @@ internal static class HardwareVerificationHarness
         => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "SelfCheckoutKiosk", "logs", "cash_hardware.log");
+
+    /// <summary>
+    /// Constructs the engine graph directly — mirrors what the deleted
+    /// Sprint-0 CompositionRoot used to do (see file header). Constructing
+    /// these objects does not itself open any connection or bypass the
+    /// license gate: that gate lives in LLCoreLogicEngine.InitializeAsync
+    /// and always runs before ICashRecycler.ConnectAsync.
+    /// </summary>
+    private static ILLCoreLogicEngine BuildEngine(bool useRealApi = true)
+        => BuildEngine(out _, out _, useRealApi);
+
+    private static ILLCoreLogicEngine BuildEngine(
+        out IBarcodeScanner barcodeScannerOut,
+        out IReceiptPrinter receiptPrinterOut,
+        bool useRealApi = true)
+    {
+        string? apiKey = null;
+        try
+        {
+            apiKey = File.ReadAllText("api_key.secret").Trim();
+        }
+        catch (Exception)
+        {
+            // Fail gracefully if the key file is missing. The HAL will report the error.
+        }
+
+        ICashRecycler cashRecycler = new VendorXCashRecycler(
+            "http://localhost:5000",
+            apiKey: apiKey,
+            useRealApi: useRealApi);
+        IBarcodeScanner barcodeScanner = new SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.DatalogicBarcodeScanner();
+        IReceiptPrinter receiptPrinter = new SelfCheckoutKiosk.Hal.Vendor.EpsonM30.EpsonReceiptPrinter();
+        var calculator = new DualCurrencyCalculator();
+        var lowFloatMonitor = new LowFloatMonitor();
+        var licenseManager = new OfflineLicenseManager();
+        var hardwareAppendLog = new HardwareAppendLog(GetAuditLogPath());
+
+        barcodeScannerOut = barcodeScanner;
+        receiptPrinterOut = receiptPrinter;
+
+        return new LLCoreLogicEngine(
+            cashRecycler, barcodeScanner, receiptPrinter,
+            calculator, lowFloatMonitor, licenseManager, hardwareAppendLog);
+    }
 
     private static void PrintSummary(List<(string Test, bool Passed)> results)
     {
