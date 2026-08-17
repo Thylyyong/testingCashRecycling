@@ -185,7 +185,33 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
         sb.AppendLine("----------------------------------------");
         sb.AppendLine($"Due    : ${totalUsd:F2} USD  ({(totalUsd * 4100m):N0} KHR)");
         sb.AppendLine($"Paid   : ${tenderedUsd:F2} USD");
-        sb.AppendLine($"Change : {overpaymentKhr:N0} KHR");
+
+        sb.AppendLine("----------------------------------------");
+        sb.AppendLine("      THANK YOU FOR SHOPPING!");
+        sb.AppendLine("========================================");
+
+        byte[] payload = Encoding.UTF8.GetBytes(sb.ToString());
+        byte[] full = EscPosInit.Concat(EscPosAlignLeft).Concat(payload);
+        await PrintRawAsync(full, cancellationToken);
+    }
+
+    public async Task PrintItemReceiptAsync(string description, string barcode, decimal totalUsd, decimal tenderedUsd, decimal overpaymentKhr, CancellationToken cancellationToken = default)
+    {
+        var sb = new StringBuilder();
+        sb.Append("\x1B\x21\x30").AppendLine("SELF-CHECKOUT KIOSK").Append("\x1B\x21\x00");
+        sb.AppendLine("Phnom Penh, Cambodia").AppendLine("========================================");
+        sb.AppendLine($"Date   : {DateTime.Now:yyyy-MM-dd  HH:mm:ss}");
+        sb.AppendLine($"Receipt: {Guid.NewGuid().ToString()[..8].ToUpper()}");
+        sb.AppendLine("----------------------------------------");
+        sb.AppendLine($"Item   : {description}");
+        sb.AppendLine($"Barcode: {barcode}");
+        sb.AppendLine("----------------------------------------");
+        sb.AppendLine($"Due    : ${totalUsd:F2} USD  ({(totalUsd * 4100m):N0} KHR)");
+        sb.AppendLine($"Paid   : ${tenderedUsd:F2} USD");
+        if (overpaymentKhr > 0)
+        {
+            sb.AppendLine($"Change : {overpaymentKhr:N0} KHR");
+        }
         sb.AppendLine("----------------------------------------");
         sb.AppendLine("      THANK YOU FOR SHOPPING!");
         sb.AppendLine("========================================");

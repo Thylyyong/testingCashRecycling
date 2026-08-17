@@ -107,7 +107,59 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
     /// </summary>
     private async Task AutoDetectAndConnectAsync(CancellationToken cancellationToken)
     {
-        // 1. Check REST API connected devices list first
+        // 1. Check if device is ALREADY connected on the REST API server
+        try
+        {
+            using var statusCheck = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetDeviceStatus?deviceID={_activeDeviceId}", cancellationToken);
+            if (statusCheck.IsSuccessStatusCode)
+            {
+                string json = await statusCheck.Content.ReadAsStringAsync(cancellationToken);
+                using var doc = JsonDocument.Parse(json);
+
+                var items = new List<JsonElement>();
+                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var el in doc.RootElement.EnumerateArray()) items.Add(el);
+                }
+                else if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    if (doc.RootElement.TryGetProperty("devices", out var devArr) && devArr.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var el in devArr.EnumerateArray()) items.Add(el);
+                    }
+                    else
+                    {
+                        items.Add(doc.RootElement);
+                    }
+                }
+
+                foreach (var item in items)
+                {
+                    string id = GetStringFromElement(item, "deviceID", "id", "deviceName", "name");
+                    string port = GetStringFromElement(item, "comPort", "port", "serialPort");
+                    string status = GetStringFromElement(item, "status", "state", "stateAsString", "eventTypeAsString");
+
+                    bool isDisconnected = status.Equals("Disconnected", StringComparison.OrdinalIgnoreCase) ||
+                                         status.Equals("Offline", StringComparison.OrdinalIgnoreCase) ||
+                                         status.Equals("Closed", StringComparison.OrdinalIgnoreCase) ||
+                                         status.Equals("Error", StringComparison.OrdinalIgnoreCase);
+
+                    if (!isDisconnected && (!string.IsNullOrEmpty(port) || !string.IsNullOrEmpty(id)))
+                    {
+                        if (!string.IsNullOrEmpty(port)) _activeComPort = port;
+                        if (!string.IsNullOrEmpty(id)) _activeDeviceId = id;
+
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"\n  [SUCCESS] Device already connected & active: {_activeDeviceId} (Port: {_activeComPort}) ✓\n");
+                        Console.ResetColor();
+                        return;
+                    }
+                }
+            }
+        }
+        catch { }
+
+        // 2. Check REST API connected devices list
         try
         {
             using var resp = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetConnectedDevices", cancellationToken);
@@ -115,78 +167,88 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
             {
                 string json = await resp.Content.ReadAsStringAsync(cancellationToken);
                 using var doc = JsonDocument.Parse(json);
+
+                var items = new List<JsonElement>();
                 if (doc.RootElement.ValueKind == JsonValueKind.Array)
                 {
-                    foreach (var item in doc.RootElement.EnumerateArray())
+                    foreach (var el in doc.RootElement.EnumerateArray()) items.Add(el);
+                }
+                else if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    items.Add(doc.RootElement);
+                }
+
+                foreach (var item in items)
+                {
+                    string id = GetStringFromElement(item, "deviceID", "id", "deviceName", "name");
+                    string port = GetStringFromElement(item, "comPort", "port", "serialPort");
+
+                    if (!string.IsNullOrEmpty(port) && !port.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
+                        port = $"COM{port}";
+
+                    if (!string.IsNullOrEmpty(id) || !string.IsNullOrEmpty(port))
                     {
-                        string id = GetStringFromElement(item, "deviceID", "id", "deviceName");
-                        if (!string.IsNullOrEmpty(id) && id.Contains("NOTE_VALIDATOR", StringComparison.OrdinalIgnoreCase))
-                        {
-                            _activeDeviceId = id;
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"\n  [AUTO-DETECT] Active note validator discovered: {_activeDeviceId} ✓\n");
-                            Console.ResetColor();
-                            return;
-                        }
+                        if (!string.IsNullOrEmpty(port)) _activeComPort = port;
+                        if (!string.IsNullOrEmpty(id)) _activeDeviceId = id;
+                        else if (!string.IsNullOrEmpty(port)) _activeDeviceId = $"NOTE_VALIDATOR-{port}";
+
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"\n  [AUTO-DETECT] Connected device found via REST API: {_activeDeviceId} (Port: {_activeComPort}) ✓\n");
+                        Console.ResetColor();
+                        return;
                     }
                 }
             }
         }
         catch { }
 
-        // 2. Query active Windows system COM ports dynamically from Device Manager
-        string[] systemPorts = Array.Empty<string>();
+        // 3. Query ONLY physical serial ports currently registered in Windows Device Manager
+        string[] actualPorts;
         try
         {
-            systemPorts = SerialPort.GetPortNames().Distinct().OrderBy(p => p).ToArray();
+            actualPorts = SerialPort.GetPortNames().Distinct().OrderBy(p => p).ToArray();
         }
-        catch { }
+        catch
+        {
+            actualPorts = new[] { _activeComPort };
+        }
 
-        if (systemPorts.Length > 0)
+        if (actualPorts.Length > 0)
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"  [AUTO-DISCOVERY] Probing active system COM ports ({string.Join(", ", systemPorts)})...");
+            Console.WriteLine($"  [AUTO-DISCOVERY] Probing active Windows serial ports: {string.Join(", ", actualPorts)}...");
             Console.ResetColor();
 
-            foreach (var port in systemPorts)
+            foreach (var port in actualPorts)
             {
                 string candidateId = $"NOTE_VALIDATOR-{port}";
 
                 try
                 {
                     using var openContent = new StringContent($"{{\"comPort\":\"{port}\"}}", Encoding.UTF8, "application/json");
-                    await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/OpenConnection", openContent, cancellationToken);
-                }
-                catch { }
+                    var openResp = await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/OpenConnection", openContent, cancellationToken);
 
-                try
-                {
-                    using var statusResp = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetDeviceStatus?deviceID={candidateId}", cancellationToken);
-                    if (statusResp.IsSuccessStatusCode)
+                    if (openResp.IsSuccessStatusCode)
                     {
-                        _activeComPort = port;
-                        _activeDeviceId = candidateId;
+                        using var statusResp = await _httpClient.GetAsync($"{_apiBaseUrl}/api/CashDevice/GetDeviceStatus?deviceID={candidateId}", cancellationToken);
+                        if (statusResp.IsSuccessStatusCode)
+                        {
+                            _activeComPort = port;
+                            _activeDeviceId = candidateId;
 
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"\n  [SUCCESS] Auto-verified note validator on {port} ({_activeDeviceId})! ✓\n");
-                        Console.ResetColor();
-                        return;
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"\n  [SUCCESS] Connected to note validator on {port} ({_activeDeviceId})! ✓\n");
+                            Console.ResetColor();
+                            return;
+                        }
                     }
                 }
                 catch { }
             }
         }
 
-        // Fallback: Default to COM7 if no auto-detection response
-        try
-        {
-            using var fallbackContent = new StringContent("{\"comPort\":\"COM7\"}", Encoding.UTF8, "application/json");
-            await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/OpenConnection", fallbackContent, cancellationToken);
-        }
-        catch { }
-
         Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine($"  [AUTO-DETECT] Defaulting to {_activeDeviceId}. Hardware connection ready.\n");
+        Console.WriteLine($"  [AUTO-DETECT] Ready on active device handle: {_activeDeviceId}\n");
         Console.ResetColor();
     }
 
@@ -458,10 +520,35 @@ public sealed class VendorXCashRecycler : ICashRecycler, IDisposable
         {
             try
             {
-                using var content = new StringContent("{}", Encoding.UTF8, "application/json");
-                using var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/escrow/reject", content, cancellationToken);
+                using var c1 = new StringContent($"{{\"deviceID\":\"{_activeDeviceId}\"}}", Encoding.UTF8, "application/json");
+                await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/RejectNote?deviceID={_activeDeviceId}", c1, cancellationToken);
             }
             catch { }
+
+            try
+            {
+                using var c2 = new StringContent($"{{\"deviceID\":\"{_activeDeviceId}\"}}", Encoding.UTF8, "application/json");
+                await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/RejectEscrow?deviceID={_activeDeviceId}", c2, cancellationToken);
+            }
+            catch { }
+
+            try
+            {
+                using var c3 = new StringContent($"{{\"deviceID\":\"{_activeDeviceId}\"}}", Encoding.UTF8, "application/json");
+                await _httpClient.PostAsync($"{_apiBaseUrl}/api/CashDevice/ReturnNote?deviceID={_activeDeviceId}", c3, cancellationToken);
+            }
+            catch { }
+
+            try
+            {
+                using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+                await _httpClient.PostAsync($"{_apiBaseUrl}/api/escrow/reject", content, cancellationToken);
+            }
+            catch { }
+
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"\n  ⛔ [HARDWARE MOTOR] Physical bill rejected & returned from validator slot! ↩️\n");
+            Console.ResetColor();
         }
     }
 

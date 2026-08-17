@@ -21,4 +21,9 @@
     <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.csproj" />
     <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.EpsonM30\SelfCheckoutKiosk.Hal.Vendor.EpsonM30.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="products.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

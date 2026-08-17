@@ -1,5 +1,7 @@
 using System;
 using System.IO.Ports;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SelfCheckoutKiosk.Core.Abstractions;
@@ -8,74 +10,84 @@ namespace SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner;
 
 /// <summary>
 /// HAL adapter for a Datalogic barcode scanner over USB-COM virtual serial port.
-/// The scanner emulates a standard RS-232 COM port via its USB-COM driver.
-///
-/// Real device setup:
-///   1. Install Datalogic USB-COM driver (creates e.g. COM4 in Device Manager).
-///   2. Set <comPort> to match the assigned port (e.g. "COM4").
-///   3. Baud rate 9600, 8N1 — Datalogic factory default.
-///
-/// If the scanner is in HID keyboard-wedge mode (no COM port visible):
-///   ConnectAsync / DisconnectAsync become no-ops.
-///   Barcodes arrive as keystroke events; read them via Console/WinUI TextInput.
-///
-/// Architecture rule: this adapter emits the raw barcode string only.
-/// Classification (EAN/QR/PLU) is entirely the engine RegexRouter's responsibility.
+/// Supports 1D barcodes (EAN/UPC/Code128) and 2D QR codes with streaming buffer parsing.
 /// </summary>
 public sealed class DatalogicBarcodeScanner : IBarcodeScanner, IAsyncDisposable
 {
-    private SerialPort?          _port;
+    private SerialPort?              _port;
     private CancellationTokenSource? _cts;
-    private readonly string      _comPort;
-    private readonly int         _baudRate;
+    private string                   _comPort;
+    private readonly int             _baudRate;
 
-    /// <summary>True once <see cref="ConnectAsync"/> succeeds and the port is open.</summary>
     public bool IsConnected => _port?.IsOpen == true;
 
     public event EventHandler<BarcodeScannedEventArgs>? OnBarcodeScanned;
 
-    /// <param name="comPort">
-    ///   Windows COM port the Datalogic USB-COM driver assigned (e.g. "COM4").
-    ///   Check Device Manager → Ports (COM &amp; LPT).
-    /// </param>
-    /// <param name="baudRate">
-    ///   Scanner baud rate. Factory default is 9600; change only if reconfigured via Datalogic Aladdin.
-    /// </param>
     public DatalogicBarcodeScanner(string comPort = "COM4", int baudRate = 9600)
     {
         _comPort  = comPort;
         _baudRate = baudRate;
     }
 
-    /// <summary>
-    /// Opens the COM port and starts listening for barcode data in the background.
-    /// Fires <see cref="OnBarcodeScanned"/> for each complete scan line received.
-    /// </summary>
     public Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         if (_port?.IsOpen == true)
-            return Task.CompletedTask; // already open
+            return Task.CompletedTask;
 
-        _port = new SerialPort(_comPort, _baudRate, Parity.None, 8, StopBits.One)
+        // Try opening configured COM port first
+        if (TryOpenPort(_comPort))
+            return Task.CompletedTask;
+
+        // If configured port fails, probe all active system COM ports
+        try
         {
-            ReadTimeout  = 500,  // ms — short so reads don't block forever
-            WriteTimeout = 500,
-            NewLine      = "\r"  // Datalogic default suffix; "\r\n" also works
-        };
+            var activePorts = SerialPort.GetPortNames().Distinct();
+            foreach (var p in activePorts)
+            {
+                if (p.Equals(_comPort, StringComparison.OrdinalIgnoreCase)) continue;
+                if (TryOpenPort(p))
+                {
+                    _comPort = p;
+                    return Task.CompletedTask;
+                }
+            }
+        }
+        catch { }
 
-        _port.Open();
-
-        _cts = new CancellationTokenSource();
-        CancellationToken ct = _cts.Token;
-
-        // Background reader — one scan per line
-        _ = Task.Run(() => ReadLoopAsync(ct), ct);
-
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine($"[DatalogicBarcodeScanner] Serial port {_comPort} open @ {_baudRate} baud. Listening for scans... ✓");
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.WriteLine($"[DatalogicBarcodeScanner] USB-COM port not detected (Scanner may be in USB-HID Keyboard mode or offline). Ready for scan events.");
         Console.ResetColor();
 
         return Task.CompletedTask;
+    }
+
+    private bool TryOpenPort(string portName)
+    {
+        try
+        {
+            var p = new SerialPort(portName, _baudRate, Parity.None, 8, StopBits.One)
+            {
+                ReadTimeout  = 500,
+                WriteTimeout = 500
+            };
+            p.Open();
+            _port = p;
+
+            _cts = new CancellationTokenSource();
+            CancellationToken ct = _cts.Token;
+            _ = Task.Run(() => ReadLoopAsync(ct), ct);
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"[DatalogicBarcodeScanner] Serial port {portName} open @ {_baudRate} baud. Listening for 1D Barcodes & 2D QR codes... ✓");
+            Console.ResetColor();
+            return true;
+        }
+        catch
+        {
+            _port?.Dispose();
+            _port = null;
+            return false;
+        }
     }
 
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
@@ -96,24 +108,57 @@ public sealed class DatalogicBarcodeScanner : IBarcodeScanner, IAsyncDisposable
         Console.WriteLine($"[DatalogicBarcodeScanner] Disconnected from {_comPort}.");
     }
 
-    // -----------------------------------------------------------------------
-    // Background serial read loop
-    // -----------------------------------------------------------------------
     private async Task ReadLoopAsync(CancellationToken ct)
     {
+        var buffer = new StringBuilder();
+
         while (!ct.IsCancellationRequested)
         {
             try
             {
-                // ReadLine blocks until \r (or \r\n) arrives from the scanner
-                string raw = _port!.ReadLine();
-                if (!string.IsNullOrWhiteSpace(raw))
-                    OnBarcodeScanned?.Invoke(this, new BarcodeScannedEventArgs(raw.Trim()));
-            }
-            catch (TimeoutException)
-            {
-                // No data this window — normal; keep looping
-                await Task.Delay(10, ct).ConfigureAwait(false);
+                if (_port != null && _port.IsOpen && _port.BytesToRead > 0)
+                {
+                    string incoming = _port.ReadExisting();
+                    if (!string.IsNullOrEmpty(incoming))
+                    {
+                        buffer.Append(incoming);
+
+                        if (buffer.ToString().Contains('\r') || buffer.ToString().Contains('\n'))
+                        {
+                            string full = buffer.ToString().Trim();
+                            buffer.Clear();
+                            if (!string.IsNullOrWhiteSpace(full))
+                            {
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                Console.WriteLine($"\n  📷 [HARDWARE SCANNER] Scanned Code: {full}");
+                                Console.ResetColor();
+                                OnBarcodeScanned?.Invoke(this, new BarcodeScannedEventArgs(full));
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // If buffer has content but no newline arrived within 120ms (e.g. raw QR code stream without suffix), flush it
+                    if (buffer.Length > 0)
+                    {
+                        await Task.Delay(120, ct).ConfigureAwait(false);
+                        if (_port?.BytesToRead == 0 && buffer.Length > 0)
+                        {
+                            string full = buffer.ToString().Trim();
+                            buffer.Clear();
+                            if (!string.IsNullOrWhiteSpace(full))
+                            {
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                Console.WriteLine($"\n  📷 [HARDWARE SCANNER] Scanned Code: {full}");
+                                Console.ResetColor();
+                                OnBarcodeScanned?.Invoke(this, new BarcodeScannedEventArgs(full));
+                            }
+                        }
+                    }
+                }
+
+                await Task.Delay(20, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -121,23 +166,12 @@ public sealed class DatalogicBarcodeScanner : IBarcodeScanner, IAsyncDisposable
             }
             catch (Exception ex)
             {
-                // Log hardware fault but keep loop alive so a momentary glitch
-                // does not kill the background thread permanently.
                 Console.Error.WriteLine($"[DatalogicBarcodeScanner] Read error: {ex.Message}");
                 await Task.Delay(250, ct).ConfigureAwait(false);
             }
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Test / verification helper — lets the hardware harness inject a scan
-    // without physical hardware present.
-    // -----------------------------------------------------------------------
-
-    /// <summary>
-    /// Injects a barcode as if the physical scanner had read it.
-    /// Used by <see cref="HardwareVerificationHarness"/> and unit tests only.
-    /// </summary>
     public void SimulateBarcodeScanned(string barcode)
     {
         if (!string.IsNullOrWhiteSpace(barcode))

@@ -1,0 +1,42 @@
+[
+  {
+    "ean13": "8886037000185",
+    "description": "Coca-Cola Original 330ml Can",
+    "usdPrice": 0.75
+  },
+  {
+    "ean13": "8848858120011",
+    "description": "Angkor Beer Can 330ml",
+    "usdPrice": 1.25
+  },
+  {
+    "ean13": "8850718801435",
+    "description": "Lay's Classic Potato Chips",
+    "usdPrice": 1.50
+  },
+  {
+    "ean13": "8846015180021",
+    "description": "Dasani Mineral Water 500ml",
+    "usdPrice": 0.50
+  },
+  {
+    "ean13": "9002490100070",
+    "description": "Red Bull Energy Drink 250ml",
+    "usdPrice": 1.00
+  },
+  {
+    "ean13": "5711953026096",
+    "description": "Starbucks Iced Mocha 280ml",
+    "usdPrice": 2.50
+  },
+  {
+    "ean13": "7622210449283",
+    "description": "Oreo Vanilla Cookies 133g",
+    "usdPrice": 1.20
+  },
+  {
+    "ean13": "8992753211119",
+    "description": "Indomie Mi Goreng Instant",
+    "usdPrice": 0.60
+  }
+]
