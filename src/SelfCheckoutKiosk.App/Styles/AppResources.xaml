@@ -15,6 +15,9 @@
     <!-- Implicit Style for Dialog -->
     <Style TargetType="ContentDialog">
         <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="RequestedTheme" Value="Light"/>
     </Style>
 
     <!-- Implicit Style for TextBlock -->
@@ -25,6 +28,9 @@
     <!-- Implicit Style for TextBox / PasswordBox / AutoSuggestBox -->
     <Style TargetType="TextBox">
         <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}" />
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="Foreground" Value="#1A202C"/>
+        <Setter Property="BorderBrush" Value="#CBD5E1"/>
     </Style>
 
     <!-- Implicit Style for Button -->
@@ -34,11 +40,29 @@
 
     <Style x:Key="DialogButtonStyle" TargetType="Button">
         <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+        <Setter Property="Background" Value="#F1F5F9"/>
+        <Setter Property="Foreground" Value="#1E293B"/>
+        <Setter Property="BorderBrush" Value="#CBD5E1"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="16,8"/>
+    </Style>
+
+    <Style x:Key="AccentButtonStyle" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+        <Setter Property="Background" Value="#2563EB"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="16,8"/>
     </Style>
 
     <Style x:Key="KioskContentDialogStyle" TargetType="ContentDialog">
         <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
-        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="RequestedTheme" Value="Light"/>
     </Style>
     
     <!-- Font Sizes -->

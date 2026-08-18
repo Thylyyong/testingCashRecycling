@@ -43,12 +43,12 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
         }
 
+        public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
+
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-
             ViewModel.InitializeTransaction();
-            RefreshUI();
         }
 
         private void AttemptRow_Loaded(object sender, RoutedEventArgs e)
@@ -85,31 +85,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private void SubmitCash(decimal amount, bool isUsd)
         {
             bool accepted = ViewModel.SubmitCash(amount, isUsd, out string reason);
-
             Debug.WriteLine($"[PAYMENT] {(accepted ? "Accepted" : "Rejected")} {amount} {(isUsd ? "USD" : "KHR")} — {reason}");
-
-            RefreshUI();
-        }
-
-        private void RefreshUI()
-        {
-            TotalDueText.Text = ViewModel.FormattedTotalDue;
-            TotalPaidText.Text = ViewModel.FormattedTotalPaid;
-            RemainingDueText.Text = ViewModel.FormattedRemaining;
-
-            PaidProgressBar.Value = ViewModel.TotalDueUsd > 0
-                ? (double)(ViewModel.TotalPaidUsd / ViewModel.TotalDueUsd) * 100
-                : 0;
-
-            AttemptsListControl.ItemsSource = null;
-            AttemptsListControl.ItemsSource = ViewModel.Attempts;
-
-            ConfirmPaymentButton.IsEnabled = ViewModel.IsFullyPaid;
-            RemainingDueText.Foreground = new SolidColorBrush(ViewModel.IsFullyPaid
-                ? Windows.UI.Color.FromArgb(255, 5, 150, 105)
-                : Windows.UI.Color.FromArgb(255, 220, 38, 38));
-
-            BackButton.Visibility = ViewModel.CanNavigateBack ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private async void BackButton_Click(object sender, RoutedEventArgs e)

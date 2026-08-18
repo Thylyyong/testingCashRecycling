@@ -212,6 +212,7 @@
                         HorizontalAlignment="Left" 
                         VerticalAlignment="Center" 
                         CornerRadius="10"
+                        Visibility="{x:Bind local:IngestionProgressView.BoolToVisibility(ViewModel.CanNavigateBack), Mode=OneWay}"
                         Style="{StaticResource HeaderChipButtonStyle}">
 
                     <Button.Resources>
@@ -254,8 +255,8 @@
                 <Border x:Name="RemainingDueCard" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" Padding="16,12">
                     <StackPanel Spacing="6">
                         <TextBlock x:Name="RemainingDueLabel" Text="{x:Bind Localizer.GetString('AmountRemaining'), Mode=OneWay}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}" HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="RemainingDueText" FontSize="{StaticResource FontSizeHeroLarge}" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" HorizontalAlignment="Center"/>
-                        <ProgressBar x:Name="PaidProgressBar" Minimum="0" Maximum="100" Value="0" Height="8" CornerRadius="4"
+                        <TextBlock x:Name="RemainingDueText" Text="{x:Bind ViewModel.FormattedRemaining, Mode=OneWay}" FontSize="{StaticResource FontSizeHeroLarge}" FontWeight="Bold" Foreground="{StaticResource DangerBrush}" HorizontalAlignment="Center"/>
+                        <ProgressBar x:Name="PaidProgressBar" Minimum="0" Maximum="100" Value="{x:Bind ViewModel.ProgressPercent, Mode=OneWay}" Height="8" CornerRadius="4"
                                      Foreground="{StaticResource SuccessBrush}" Background="{StaticResource CardBorderBrush}"/>
                     </StackPanel>
                 </Border>
@@ -270,14 +271,14 @@
                     <Border x:Name="TotalDueCard" Grid.Column="0" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="12,10">
                         <StackPanel Spacing="2">
                             <TextBlock x:Name="TotalDueLabel" Text="{x:Bind Localizer.GetString('TotalDue'), Mode=OneWay}" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
-                            <TextBlock x:Name="TotalDueText" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource TextItemNameBrush}"/>
+                            <TextBlock x:Name="TotalDueText" Text="{x:Bind ViewModel.FormattedTotalDue, Mode=OneWay}" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource TextItemNameBrush}"/>
                         </StackPanel>
                     </Border>
 
                     <Border x:Name="TotalPaidCard" Grid.Column="1" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="12,10">
                         <StackPanel Spacing="2">
                             <TextBlock x:Name="TotalPaidLabel" Text="{x:Bind Localizer.GetString('AmountPaid'), Mode=OneWay}" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
-                            <TextBlock x:Name="TotalPaidText" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}"/>
+                            <TextBlock x:Name="TotalPaidText" Text="{x:Bind ViewModel.FormattedTotalPaid, Mode=OneWay}" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}"/>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -331,7 +332,7 @@
 
                 <Border x:Name="ActivityBorder" Grid.Row="1" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="4">
                     <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
-                        <ItemsControl x:Name="AttemptsListControl">
+                        <ItemsControl x:Name="AttemptsListControl" ItemsSource="{x:Bind ViewModel.Attempts}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="models:PaymentAttempt">
                                     <Border Padding="12" Margin="4" CornerRadius="10" BorderThickness="1" Loaded="AttemptRow_Loaded">
@@ -341,65 +342,65 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
 
-                                            <FontIcon x:Name="StatusIcon" Grid.Column="0" FontFamily="Segoe Fluent Icons"
-                                                      FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                             <FontIcon x:Name="StatusIcon" Grid.Column="0" FontFamily="Segoe Fluent Icons"
+                                                       FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
-                                            <StackPanel Grid.Column="1" Spacing="2">
-                                                <TextBlock x:Name="AmountText" Text="{x:Bind DisplayAmount}" FontWeight="Bold" FontFamily="{StaticResource GlobalAppFont}" FontSize="15"/>
-                                                <TextBlock x:Name="ReasonText" Text="{x:Bind Reason}" FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource GlobalAppFont}" Foreground="{StaticResource TextQuantityBrush}" TextWrapping="Wrap"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Border>
-            </Grid>
-        </Grid>
+                                             <StackPanel Grid.Column="1" Spacing="2">
+                                                 <TextBlock x:Name="AmountText" Text="{x:Bind DisplayAmount}" FontWeight="Bold" FontFamily="{StaticResource GlobalAppFont}" FontSize="15"/>
+                                                 <TextBlock x:Name="ReasonText" Text="{x:Bind Reason}" FontSize="{StaticResource FontSizeBody}" FontFamily="{StaticResource GlobalAppFont}" Foreground="{StaticResource TextQuantityBrush}" TextWrapping="Wrap"/>
+                                             </StackPanel>
+                                         </Grid>
+                                     </Border>
+                                 </DataTemplate>
+                             </ItemsControl.ItemTemplate>
+                         </ItemsControl>
+                     </ScrollViewer>
+                 </Border>
+             </Grid>
+         </Grid>
 
-        <!-- 3. FOOTER -->
-        <Border x:Name="FooterBorder" Grid.Row="2" Background="{StaticResource CardBackgroundBrush}" Padding="24,20" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
-            <StackPanel Spacing="10">
+         <!-- 3. FOOTER -->
+         <Border x:Name="FooterBorder" Grid.Row="2" Background="{StaticResource CardBackgroundBrush}" Padding="24,20" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
+             <StackPanel Spacing="10">
 
-                <!-- Currency Acceptance Note -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                    <FontIcon x:Name="CurrencyInfoIcon"
-                              FontFamily="Segoe Fluent Icons" 
-                              Glyph="&#xE946;" 
-                              FontSize="{StaticResource FontSizeSubtitle}" 
-                              Foreground="{StaticResource SuccessBrush}" 
-                              VerticalAlignment="Center"/>
-                    <TextBlock x:Name="CurrencyInfoText"
-                               Text="{x:Bind Localizer.GetString('CurrencyInfoText'), Mode=OneWay}"
-                               FontSize="{StaticResource FontSizeBodyLarge}" 
-                               FontWeight="SemiBold" 
-                               Foreground="{StaticResource SuccessBrush}"
+                 <!-- Currency Acceptance Note -->
+                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                     <FontIcon x:Name="CurrencyInfoIcon"
+                               FontFamily="Segoe Fluent Icons" 
+                               Glyph="&#xE946;" 
+                               FontSize="{StaticResource FontSizeSubtitle}" 
+                               Foreground="{StaticResource SuccessBrush}" 
                                VerticalAlignment="Center"/>
-                </StackPanel>
+                     <TextBlock x:Name="CurrencyInfoText"
+                                Text="{x:Bind Localizer.GetString('CurrencyInfoText'), Mode=OneWay}"
+                                FontSize="{StaticResource FontSizeBodyLarge}" 
+                                FontWeight="SemiBold" 
+                                Foreground="{StaticResource SuccessBrush}"
+                                VerticalAlignment="Center"/>
+                 </StackPanel>
 
-                <!-- Confirm Button -->
-                <Button x:Name="ConfirmPaymentButton"
-                        Content="{x:Bind Localizer.GetString('ConfirmPayment'), Mode=OneWay}"
-                        HorizontalAlignment="Stretch"
-                        Height="80"
-                        FontSize="24"
-                        FontWeight="Bold"
-                        Foreground="{StaticResource TextOnAccentBrush}"
-                        CornerRadius="{StaticResource KioskHeroCardCornerRadius}"
-                        IsEnabled="False"
-                        Background="{StaticResource PrimaryCardGradientBrush}">
-                    <Button.Resources>
-                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#005A9E"/>
-                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#004578"/>
-                        <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#E2E8F0"/>
-                        <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#94A3B8"/>
+                 <!-- Confirm Button -->
+                 <Button x:Name="ConfirmPaymentButton"
+                         Content="{x:Bind Localizer.GetString('ConfirmPayment'), Mode=OneWay}"
+                         HorizontalAlignment="Stretch"
+                         Height="80"
+                         FontSize="24"
+                         FontWeight="Bold"
+                         Foreground="{StaticResource TextOnAccentBrush}"
+                         CornerRadius="{StaticResource KioskHeroCardCornerRadius}"
+                         IsEnabled="{x:Bind ViewModel.IsFullyPaid, Mode=OneWay}"
+                         Background="{StaticResource PrimaryCardGradientBrush}">
+                     <Button.Resources>
+                         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#005A9E"/>
+                         <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#004578"/>
+                         <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#E2E8F0"/>
+                         <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#94A3B8"/>
 
-                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White"/>
-                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
-                    </Button.Resources>
-                </Button>
-            </StackPanel>
-        </Border>
+                         <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White"/>
+                         <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
+                     </Button.Resources>
+                 </Button>
+             </StackPanel>
+         </Border>
     </Grid>
 </Page>

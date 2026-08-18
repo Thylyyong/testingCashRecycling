@@ -67,10 +67,12 @@
             {
                 if (App.MainWindowInstance?.Content is FrameworkElement root)
                 {
+                    root.KeyDown -= Page_KeyDown;
                     root.KeyDown += Page_KeyDown;
                 }
                 else
                 {
+                    this.KeyDown -= Page_KeyDown;
                     this.KeyDown += Page_KeyDown;
                 }
 

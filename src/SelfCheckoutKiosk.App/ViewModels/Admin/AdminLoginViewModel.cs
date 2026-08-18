@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Views;
 using SelfCheckoutKiosk.App.Views.Customer;
 using SelfCheckoutKiosk.App.Helpers;
@@ -44,7 +44,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
         public void ReturnToCustomerMode()
         {
             App.MainWindowInstance?.NavigationService?.NavigateTo(
-                typeof(KioskBaseView2),
+                typeof(KioskBaseView),
                 null,
                 new SuppressNavigationTransitionInfo()
             );

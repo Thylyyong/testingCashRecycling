@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
@@ -27,6 +27,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         public bool IsFullyPaid => _paymentService.IsFullyPaid;
         public bool CanNavigateBack => !_paymentService.HasAcceptedAnyPayment;
+        public double ProgressPercent => TotalDueUsd > 0 ? Math.Min(100, (double)(TotalPaidUsd / TotalDueUsd) * 100) : 0;
 
         public string FormattedTotalDue => $"${TotalDueUsd:0.00}  (≈ ៛{TotalDueKhr:N0})";
         public string FormattedTotalPaid => $"${TotalPaidUsd:0.00}  (≈ ៛{TotalPaidKhr:N0})";
@@ -85,6 +86,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             OnPropertyChanged(nameof(RemainingDueKhr));
             OnPropertyChanged(nameof(IsFullyPaid));
             OnPropertyChanged(nameof(CanNavigateBack));
+            OnPropertyChanged(nameof(ProgressPercent));
             OnPropertyChanged(nameof(FormattedTotalDue));
             OnPropertyChanged(nameof(FormattedTotalPaid));
             OnPropertyChanged(nameof(FormattedRemaining));

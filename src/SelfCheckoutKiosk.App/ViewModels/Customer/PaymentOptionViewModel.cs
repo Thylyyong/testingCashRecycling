@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
 
@@ -15,7 +15,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public void ProceedToKioskBaseView()
         {
             NavigationService.NavigateTo(
-                typeof(KioskBaseView2),
+                typeof(KioskBaseView),
                 null,
                 SlideNavigationTransitionEffect.FromLeft);
         }

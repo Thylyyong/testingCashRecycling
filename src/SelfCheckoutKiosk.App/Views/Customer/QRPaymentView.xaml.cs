@@ -35,14 +35,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
-
             ViewModel.InitializeTransaction();
-            RefreshUI();
-        }
-
-        private void RefreshUI()
-        {
-            TotalDueText.Text = ViewModel.FormattedTotalDue;
         }
 
         private async void BackButton_Click(object sender, RoutedEventArgs e)

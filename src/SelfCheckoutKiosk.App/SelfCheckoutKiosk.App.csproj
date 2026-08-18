@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
@@ -32,8 +32,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Remove="Styles\AppResources.xaml" />
-		<None Remove="Views\Customer\QRPaymentView.xaml" />
+		<ProjectReference Include="..\SelfCheckoutKiosk.Domain\SelfCheckoutKiosk.Domain.csproj" />
+		<ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
+		<ProjectReference Include="..\SelfCheckoutKiosk.Presentation\SelfCheckoutKiosk.Presentation.csproj" />
+		<ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX.csproj" />
+		<ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.csproj" />
+		<ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.EpsonM30\SelfCheckoutKiosk.Hal.Vendor.EpsonM30.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -47,18 +51,6 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2526" />
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Page Update="Views\Customer\QRPaymentView.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </Page>
-	</ItemGroup>
-
-	<ItemGroup>
-		<Page Update="Styles\AppResources.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</Page>
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
