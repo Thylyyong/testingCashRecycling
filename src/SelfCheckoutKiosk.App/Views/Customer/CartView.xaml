@@ -11,7 +11,6 @@
     mc:Ignorable="d">
 
     <Page.Resources>
-
         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource ButtonBackgroundPointerOverBrush}, Path=Color}"/>
         <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource ButtonBackgroundPressedBrush}, Path=Color}"/>
 
@@ -25,9 +24,11 @@
             <Setter Property="Background" Value="{StaticResource AccentBlueBrush}"/>
             <Setter Property="Foreground" Value="{StaticResource TextOnAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="CornerRadius" Value="{StaticResource KioskChipCornerRadius}"/>
+            <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Height" Value="40"/>
+            <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+            <Setter Property="IsTabStop" Value="False"/>
         </Style>
 
         <Storyboard x:Name="ScanAnimation" RepeatBehavior="Forever" AutoReverse="True">
@@ -38,17 +39,16 @@
             </DoubleAnimation>
         </Storyboard>
 
-        <!-- CART ITEM TEMPLATE (Slightly larger fonts and touch targets) -->
+        <!-- CART ITEM TEMPLATE -->
         <DataTemplate x:Key="CartItemTemplate" x:DataType="models:CartItem">
             <Border x:Name="RowBorder" 
                     Loaded="CartItemRow_Loaded" 
+                    Background="White"
                     BorderBrush="{StaticResource CardBorderBrush}" 
-                    BorderThickness="0,0,0,1" 
-                    Padding="12,12">
-
-                <Border.Background>
-                    <SolidColorBrush x:Name="RowBackground" Color="Transparent" />
-                </Border.Background>
+                    BorderThickness="1" 
+                    CornerRadius="{StaticResource KioskCardCornerRadius}"
+                    Margin="0,0,0,8"
+                    Padding="16,12">
 
                 <Border.Resources>
                     <Storyboard x:Key="FlashAnimation">
@@ -67,17 +67,20 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" Spacing="8" Margin="0,0,16,0" VerticalAlignment="Center">
-                        <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="21" Foreground="{StaticResource TextItemNameBrush}" TextTrimming="CharacterEllipsis"/>
+                    <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="18" Foreground="{StaticResource TextItemNameBrush}" TextTrimming="CharacterEllipsis"/>
 
-                        <StackPanel Orientation="Horizontal" Spacing="16">
-                            <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="15">
-                                <Run Text="SKU:"/>
-                                <Run Text="{x:Bind Sku}"/>
-                            </TextBlock>
-                            <TextBlock FontSize="15" Foreground="{StaticResource TextQuantityBrush}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Background="{StaticResource SurfaceHoverBrush}" CornerRadius="4" Padding="6,2">
+                                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold">
+                                    <Run Text="SKU:"/>
+                                    <Run Text="{x:Bind Sku}"/>
+                                </TextBlock>
+                            </Border>
+
+                            <TextBlock FontSize="13" Foreground="{StaticResource TextQuantityBrush}" VerticalAlignment="Center">
                                 <Run Text="Qty:"/>
-                                <Run Text="{x:Bind Quantity, Mode=OneWay}"/>
+                                <Run Text="{x:Bind Quantity, Mode=OneWay}" FontWeight="Bold"/>
                                 <Run Text="  •  $"/>
                                 <Run Text="{x:Bind UnitPrice}"/>
                                 <Run Text="each"/>
@@ -91,30 +94,30 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Column="0" FontWeight="Bold" FontSize="23" Foreground="{StaticResource AccentBlueBrush}" VerticalAlignment="Center" Margin="0,0,20,0">
+                        <TextBlock Grid.Column="0" FontWeight="Bold" FontSize="22" Foreground="{StaticResource PrimaryBrandBrush}" VerticalAlignment="Center" Margin="0,0,14,0">
                             <Run Text="$"/><Run Text="{x:Bind LineTotal, Mode=OneWay}"/>
                         </TextBlock>
 
-                        <Button Grid.Column="1" Width="52" Height="52" CornerRadius="10" Foreground="{StaticResource DangerBrush}" Padding="0" Tag="{x:Bind}">
+                        <Button Grid.Column="1" Width="44" Height="44" CornerRadius="8" Foreground="{StaticResource DangerBrush}" Background="{StaticResource DangerLightBrush}" BorderBrush="{StaticResource DangerBorderBrush}" BorderThickness="1" Padding="0" Tag="{x:Bind}">
                             <Button.Resources>
-                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource DangerLightBrush}, Path=Color}"/>
-                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource DangerLightPressedBrush}, Path=Color}"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource DangerLightPressedBrush}, Path=Color}"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FCA5A5"/>
                             </Button.Resources>
-                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74D;" FontSize="22" Foreground="{StaticResource DangerBrush}"/>
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74D;" FontSize="16" Foreground="{StaticResource DangerBrush}"/>
                             <Button.Flyout>
-                                <Flyout Placement="Right">
+                                <Flyout Placement="Left">
                                     <Flyout.FlyoutPresenterStyle>
                                         <Style TargetType="FlyoutPresenter">
                                             <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}"/>
                                             <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}"/>
                                             <Setter Property="BorderThickness" Value="1"/>
-                                            <Setter Property="CornerRadius" Value="12"/>
-                                            <Setter Property="Padding" Value="16"/>
+                                            <Setter Property="CornerRadius" Value="10"/>
+                                            <Setter Property="Padding" Value="14"/>
                                         </Style>
                                     </Flyout.FlyoutPresenterStyle>
-                                    <StackPanel Spacing="12" Width="190">
-                                        <TextBlock Text="Remove this item?" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        <Button Content="Remove" HorizontalAlignment="Stretch" Height="42" Background="{StaticResource DangerBrush}" Foreground="{StaticResource TextOnAccentBrush}" CornerRadius="8" Tag="{x:Bind}" Click="ConfirmRemove_Click">
+                                    <StackPanel Spacing="10" Width="180">
+                                        <TextBlock Text="Remove this item?" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <Button Content="Remove" HorizontalAlignment="Stretch" Height="38" Background="{StaticResource DangerBrush}" Foreground="{StaticResource TextOnAccentBrush}" CornerRadius="8" Tag="{x:Bind}" Click="ConfirmRemove_Click">
                                             <Button.Resources>
                                                 <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource DangerHoverBrush}, Path=Color}"/>
                                                 <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource DangerPressedBrush}, Path=Color}"/>
@@ -134,48 +137,46 @@
         <VisualStateManager.VisualStateGroups>
             <VisualStateGroup x:Name="LayoutStates">
 
-                <!-- 1. SMALL VERTICAL TEST STATE (Compact portrait test window, base/default) -->
+                <!-- 1. SMALL VERTICAL TEST STATE -->
                 <VisualState x:Name="SmallVerticalTestState">
                     <VisualState.StateTriggers>
                         <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="0"/>
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
                         <Setter Target="HeaderBorder.Padding" Value="16,10"/>
-                        <Setter Target="HeaderTitle.FontSize" Value="16"/>
-                        <Setter Target="HeaderIcon.FontSize" Value="22"/>
-                        <Setter Target="ItemCountLabel.FontSize" Value="11"/>
-                        <Setter Target="NetworkIcon.FontSize" Value="13"/>
-                        <Setter Target="NetworkStatusLabel.FontSize" Value="10"/>
-                        <Setter Target="BannerText.FontSize" Value="11"/>
+                        <Setter Target="HeaderTitle.FontSize" Value="18"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="24"/>
+                        <Setter Target="ItemCountLabel.FontSize" Value="12"/>
+                        <Setter Target="NetworkIcon.FontSize" Value="14"/>
+                        <Setter Target="NetworkStatusLabel.FontSize" Value="11"/>
+                        <Setter Target="BannerText.FontSize" Value="12"/>
 
                         <Setter Target="EmptyCardBorder.Padding" Value="24,18"/>
-                        <Setter Target="EmptyTitleText.FontSize" Value="18"/>
-                        <Setter Target="EmptySubText.FontSize" Value="13"/>
+                        <Setter Target="EmptyTitleText.FontSize" Value="20"/>
+                        <Setter Target="EmptySubText.FontSize" Value="14"/>
 
                         <Setter Target="TotalsBorder.Padding" Value="16,10"/>
-                        <Setter Target="TotalToPayLabel.FontSize" Value="13"/>
-                        <Setter Target="ItemCountSubLabel.FontSize" Value="11"/>
-                        <Setter Target="TotalUSDLabel.FontSize" Value="22"/>
-                        <Setter Target="TotalKHRLabel.FontSize" Value="13"/>
+                        <Setter Target="TotalToPayLabel.FontSize" Value="14"/>
+                        <Setter Target="ItemCountSubLabel.FontSize" Value="12"/>
+                        <Setter Target="TotalUSDLabel.FontSize" Value="26"/>
+                        <Setter Target="TotalKHRLabel.FontSize" Value="14"/>
 
                         <Setter Target="FooterArea.Padding" Value="12,10"/>
-                        <Setter Target="BackButton.Width" Value="52"/>
-                        <Setter Target="BackButton.Height" Value="52"/>
-                        <Setter Target="BackIcon.FontSize" Value="17"/>
-                        <Setter Target="CheckoutButton.Height" Value="52"/>
-                        <Setter Target="PayNowText.FontSize" Value="17"/>
-                        <Setter Target="RowBorder.Padding" Value="0,12"/>
-
+                        <Setter Target="BackButton.Width" Value="56"/>
+                        <Setter Target="BackButton.Height" Value="56"/>
+                        <Setter Target="BackIcon.FontSize" Value="18"/>
+                        <Setter Target="CheckoutButton.Height" Value="56"/>
+                        <Setter Target="PayNowText.FontSize" Value="18"/>
                     </VisualState.Setters>
                 </VisualState>
 
-                <!-- 2. HORIZONTAL KIOSK STATE: 16:9, 17.3 Inches (1920x1080) -->
+                <!-- 2. HORIZONTAL KIOSK STATE: 16:9 (1920x1080) -->
                 <VisualState x:Name="Horizontal17InchState">
                     <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="1400" MinWindowHeight="0"/>
+                        <AdaptiveTrigger MinWindowWidth="1200" MinWindowHeight="0"/>
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="HeaderBorder.Padding" Value="24,14"/>
+                        <Setter Target="HeaderBorder.Padding" Value="32,12"/>
                         <Setter Target="HeaderTitle.FontSize" Value="20"/>
                         <Setter Target="HeaderIcon.FontSize" Value="26"/>
                         <Setter Target="ItemCountLabel.FontSize" Value="13"/>
@@ -183,55 +184,55 @@
                         <Setter Target="NetworkStatusLabel.FontSize" Value="12"/>
                         <Setter Target="BannerText.FontSize" Value="13"/>
 
-                        <Setter Target="EmptyCardBorder.Padding" Value="44,34"/>
+                        <Setter Target="EmptyCardBorder.Padding" Value="40,28"/>
                         <Setter Target="EmptyTitleText.FontSize" Value="24"/>
-                        <Setter Target="EmptySubText.FontSize" Value="16"/>
+                        <Setter Target="EmptySubText.FontSize" Value="15"/>
 
                         <Setter Target="TotalsBorder.Padding" Value="24,12"/>
                         <Setter Target="TotalToPayLabel.FontSize" Value="16"/>
                         <Setter Target="ItemCountSubLabel.FontSize" Value="14"/>
-                        <Setter Target="TotalUSDLabel.FontSize" Value="30"/>
+                        <Setter Target="TotalUSDLabel.FontSize" Value="32"/>
                         <Setter Target="TotalKHRLabel.FontSize" Value="16"/>
 
-                        <Setter Target="FooterArea.Padding" Value="18,10"/>
-                        <Setter Target="BackButton.Width" Value="64"/>
-                        <Setter Target="BackButton.Height" Value="64"/>
-                        <Setter Target="BackIcon.FontSize" Value="20"/>
-                        <Setter Target="CheckoutButton.Height" Value="64"/>
+                        <Setter Target="FooterArea.Padding" Value="24,12"/>
+                        <Setter Target="BackButton.Width" Value="68"/>
+                        <Setter Target="BackButton.Height" Value="68"/>
+                        <Setter Target="BackIcon.FontSize" Value="22"/>
+                        <Setter Target="CheckoutButton.Height" Value="68"/>
                         <Setter Target="PayNowText.FontSize" Value="20"/>
                     </VisualState.Setters>
                 </VisualState>
 
-                <!-- 3. VERTICAL KIOSK STATE: 9:16, 27.5 Inches (1080x1920) -->
+                <!-- 3. VERTICAL KIOSK STATE: 9:16, 21.5" & 27.5" (1080x1920 / 1440x2560) -->
                 <VisualState x:Name="Vertical27InchState">
                     <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="1200"/>
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="1100"/>
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="HeaderBorder.Padding" Value="24,20"/>
+                        <Setter Target="HeaderBorder.Padding" Value="32,20"/>
                         <Setter Target="HeaderTitle.FontSize" Value="26"/>
-                        <Setter Target="HeaderIcon.FontSize" Value="34"/>
+                        <Setter Target="HeaderIcon.FontSize" Value="32"/>
                         <Setter Target="ItemCountLabel.FontSize" Value="16"/>
-                        <Setter Target="NetworkIcon.FontSize" Value="20"/>
+                        <Setter Target="NetworkIcon.FontSize" Value="18"/>
                         <Setter Target="NetworkStatusLabel.FontSize" Value="15"/>
-                        <Setter Target="BannerText.FontSize" Value="16"/>
+                        <Setter Target="BannerText.FontSize" Value="15"/>
 
-                        <Setter Target="EmptyCardBorder.Padding" Value="56,40"/>
+                        <Setter Target="EmptyCardBorder.Padding" Value="48,36"/>
                         <Setter Target="EmptyTitleText.FontSize" Value="28"/>
-                        <Setter Target="EmptySubText.FontSize" Value="18"/>
+                        <Setter Target="EmptySubText.FontSize" Value="17"/>
 
                         <Setter Target="TotalsBorder.Padding" Value="28,16"/>
-                        <Setter Target="TotalToPayLabel.FontSize" Value="20"/>
-                        <Setter Target="ItemCountSubLabel.FontSize" Value="16"/>
+                        <Setter Target="TotalToPayLabel.FontSize" Value="18"/>
+                        <Setter Target="ItemCountSubLabel.FontSize" Value="15"/>
                         <Setter Target="TotalUSDLabel.FontSize" Value="38"/>
-                        <Setter Target="TotalKHRLabel.FontSize" Value="20"/>
+                        <Setter Target="TotalKHRLabel.FontSize" Value="18"/>
 
-                        <Setter Target="FooterArea.Padding" Value="24,20"/>
-                        <Setter Target="BackButton.Width" Value="100"/>
-                        <Setter Target="BackButton.Height" Value="100"/>
-                        <Setter Target="BackIcon.FontSize" Value="32"/>
-                        <Setter Target="CheckoutButton.Height" Value="100"/>
-                        <Setter Target="PayNowText.FontSize" Value="30"/>
+                        <Setter Target="FooterArea.Padding" Value="28,20"/>
+                        <Setter Target="BackButton.Width" Value="84"/>
+                        <Setter Target="BackButton.Height" Value="84"/>
+                        <Setter Target="BackIcon.FontSize" Value="26"/>
+                        <Setter Target="CheckoutButton.Height" Value="84"/>
+                        <Setter Target="PayNowText.FontSize" Value="24"/>
                     </VisualState.Setters>
                 </VisualState>
 
@@ -257,112 +258,131 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <FontIcon x:Name="HeaderIcon" Grid.Column="0" FontFamily="Segoe Fluent Icons" Glyph="&#xE7BF;" FontSize="28" Foreground="{StaticResource TextOnAccentBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <FontIcon x:Name="HeaderIcon" Grid.Column="0" FontFamily="Segoe Fluent Icons" Glyph="&#xE7BF;" FontSize="24" Foreground="{StaticResource TextOnAccentBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
-                        <TextBlock x:Name="HeaderTitle" Text="{x:Bind Localizer.GetString('YourCart'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock x:Name="HeaderTitle" Text="{x:Bind Localizer.GetString('YourCart'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="18" FontWeight="Bold"/>
                         <StackPanel Orientation="Horizontal" Spacing="4">
                             <TextBlock x:Name="ItemCountLabel"
                                Text="{x:Bind ViewModel.ItemCountText, Mode=OneWay}"
                                Foreground="{StaticResource AccentBlueSoftBrush}"
-                               FontSize="13"/>
+                               FontSize="12"/>
 
                             <TextBlock Text="{x:Bind Localizer.GetString('Items'), Mode=OneWay}"
                                Foreground="{StaticResource AccentBlueSoftBrush}"
-                               FontSize="13"/>
+                               FontSize="12"/>
                         </StackPanel>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <FontIcon x:Name="NetworkIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE701;" FontSize="16" Foreground="{StaticResource SuccessBrush}"/>
-                        <TextBlock x:Name="NetworkStatusLabel" Text="Online" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12" VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <Border Grid.Column="2" Background="#26FFFFFF" CornerRadius="12" Padding="10,4" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon x:Name="NetworkIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE701;" FontSize="14" Foreground="{StaticResource SuccessLightBrush}"/>
+                            <TextBlock x:Name="NetworkStatusLabel" Text="Online" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
 
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+                    <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Left">
 
-                        <Button x:Name="AddItemManuallyButton" Style="{StaticResource HeaderChipButtonStyle}" Click="AddItemManuallyLink_Click">
-                            <Button.Resources>
-                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
-                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
-                            </Button.Resources>
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE710;" FontSize="15" Foreground="{StaticResource TextOnAccentBrush}"/>
-                                <TextBlock Text="{x:Bind Localizer.GetString('AddItem'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12"/>
-                            </StackPanel>
-                        </Button>
+                            <!-- ADD ITEM MANUALLY -->
+                            <Button x:Name="AddItemManuallyButton" Style="{StaticResource HeaderChipButtonStyle}" Click="AddItemManuallyLink_Click">
+                                <Button.Resources>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
+                                </Button.Resources>
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE710;" FontSize="13" Foreground="{StaticResource TextOnAccentBrush}"/>
+                                    <TextBlock Text="{x:Bind Localizer.GetString('AddItem'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
 
-                        <Button x:Name="CheckPriceButton" Style="{StaticResource HeaderChipButtonStyle}" Click="CheckPriceButton_Click">
-                            <Button.Resources>
-                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
-                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
-                            </Button.Resources>
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8EF;" FontSize="15" Foreground="{StaticResource TextOnAccentBrush}"/>
-                                <TextBlock Text="{x:Bind Localizer.GetString('CheckPrice'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12"/>
-                            </StackPanel>
-                        </Button>
+                            <!-- CHECK PRICE -->
+                            <Button x:Name="CheckPriceButton" Style="{StaticResource HeaderChipButtonStyle}" Click="CheckPriceButton_Click">
+                                <Button.Resources>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
+                                </Button.Resources>
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8EF;" FontSize="13" Foreground="{StaticResource TextOnAccentBrush}"/>
+                                    <TextBlock Text="{x:Bind Localizer.GetString('CheckPrice'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
 
-                        <Button x:Name="RecallButton" Style="{StaticResource HeaderChipButtonStyle}" Click="RecallButton_Click">
-                            <Button.Resources>
-                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
-                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
-                            </Button.Resources>
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7A7;" FontSize="15" Foreground="{StaticResource TextOnAccentBrush}"/>
-                                <TextBlock Text="{x:Bind Localizer.GetString('Recall'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12"/>
-                            </StackPanel>
-                        </Button>
+                            <!-- RECALL SAVED CART -->
+                            <Button x:Name="RecallButton" Style="{StaticResource HeaderChipButtonStyle}" Click="RecallButton_Click">
+                                <Button.Resources>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
+                                </Button.Resources>
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7A7;" FontSize="13" Foreground="{StaticResource TextOnAccentBrush}"/>
+                                    <TextBlock Text="{x:Bind Localizer.GetString('Recall'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
 
-                        <Button x:Name="CurrencySwitchButton" Style="{StaticResource HeaderChipButtonStyle}" Click="CurrencySwitch_Click">
-                            <Button.Resources>
-                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
-                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
-                            </Button.Resources>
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE825;" FontSize="15" Foreground="{StaticResource TextOnAccentBrush}"/>
-                                <TextBlock x:Name="CurrencySwitchLabel" Text="{x:Bind ViewModel.CurrencyLabel, Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                            <!-- SAVE CART FOR LATER -->
+                            <Button x:Name="SaveCartButton" Style="{StaticResource HeaderChipButtonStyle}" Click="SaveCartButton_Click">
+                                <Button.Resources>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
+                                </Button.Resources>
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74E;" FontSize="13" Foreground="{StaticResource TextOnAccentBrush}"/>
+                                    <TextBlock Text="{x:Bind Localizer.GetString('SaveCart'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
 
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                        <Button x:Name="HelpButton" Style="{StaticResource HeaderChipButtonStyle}" Click="HelpButton_Click">
-                            <Button.Resources>
-                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
-                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
-                            </Button.Resources>
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE9CE;" FontSize="16" Foreground="{StaticResource TextOnAccentBrush}"/>
-                                <TextBlock Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                            <!-- CURRENCY SWITCH -->
+                            <Button x:Name="CurrencySwitchButton" Style="{StaticResource HeaderChipButtonStyle}" Click="CurrencySwitch_Click">
+                                <Button.Resources>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
+                                </Button.Resources>
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE825;" FontSize="13" Foreground="{StaticResource TextOnAccentBrush}"/>
+                                    <TextBlock x:Name="CurrencySwitchLabel" Text="{x:Bind ViewModel.CurrencyLabel, Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- NEED HELP -->
+                    <Button x:Name="HelpButton" Grid.Column="1" Margin="6,0,0,0" Style="{StaticResource HeaderChipButtonStyle}" Click="HelpButton_Click">
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE897;" FontSize="14" Foreground="{StaticResource TextOnAccentBrush}"/>
+                            <TextBlock Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="12" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
                 </Grid>
 
             </StackPanel>
         </Border>
 
         <!-- 2. PAYMENT METHODS BANNER -->
-        <Border Grid.Row="1" Height="44" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{StaticResource HeaderBannerGradientBrush}">
+        <Border Grid.Row="1" Height="42" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{StaticResource HeaderBannerGradientBrush}">
             <TextBlock x:Name="BannerText" Text="{x:Bind Localizer.GetString('PaymentMethodsAccepted')}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
 
         <!-- EXPANDED & SCALED EMPTY CART STATE -->
         <Border x:Name="EmptyCartState" Grid.Row="2" Background="{StaticResource PageBackgroundBrush}" Visibility="Visible">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
 
-                <Border x:Name="EmptyCardBorder" Background="{StaticResource CardBackgroundBrush}" CornerRadius="16" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="2" Padding="40,32">
+                <Border x:Name="EmptyCardBorder" Background="{StaticResource CardBackgroundBrush}" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1.5" Padding="36,28">
                     <Grid>
                         <StackPanel Orientation="Horizontal" Spacing="24" HorizontalAlignment="Center" VerticalAlignment="Center">
 
-                            <!-- LARGER BARCODE GRAPHIC -->
+                            <!-- BARCODE GRAPHIC -->
                             <StackPanel Orientation="Horizontal" Spacing="4" Height="75" VerticalAlignment="Stretch">
                                 <Rectangle Width="4" Fill="{StaticResource TextItemNameBrush}"/>
                                 <Rectangle Width="8" Fill="{StaticResource TextItemNameBrush}"/>
@@ -379,29 +399,13 @@
                             <!-- Divider -->
                             <Rectangle Width="2" Height="75" Fill="{StaticResource CardBorderBrush}"/>
 
-                            <!-- LARGER QR CODE GRAPHIC -->
+                            <!-- QR CODE GRAPHIC -->
                             <Grid Width="75" Height="75">
                                 <Grid.RowDefinitions>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
+                                    <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition/>
-                                    <ColumnDefinition/>
+                                    <ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/>
                                 </Grid.ColumnDefinitions>
 
                                 <Rectangle Grid.Row="0" Grid.Column="0" Fill="{StaticResource TextItemNameBrush}"/>
@@ -459,7 +463,7 @@
                             </Grid>
                         </StackPanel>
 
-                        <!-- UPDATED ANIMATED SCAN LINE -->
+                        <!-- ANIMATED SCAN LINE -->
                         <Rectangle x:Name="ScanLine" Height="4" Fill="{StaticResource AccentBlueBrush}" VerticalAlignment="Top" HorizontalAlignment="Stretch" Opacity="0.85">
                             <Rectangle.RenderTransform>
                                 <TranslateTransform x:Name="ScanLineTransform" Y="0"/>
@@ -469,15 +473,15 @@
                     </Grid>
                 </Border>
 
-                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                <StackPanel Spacing="6" HorizontalAlignment="Center">
                     <TextBlock x:Name="EmptyTitleText" Text="{x:Bind Localizer.GetString('YourCartIsEmpty'), Mode=OneWay}" FontWeight="Bold" FontSize="24" Foreground="{StaticResource TextItemNameBrush}" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="EmptySubText" Text="{x:Bind Localizer.GetString('ScanItemToAdd'), Mode=OneWay}" FontSize="16" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="EmptySubText" Text="{x:Bind Localizer.GetString('ScanItemToAdd'), Mode=OneWay}" FontSize="15" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </StackPanel>
         </Border>
 
         <!-- POPULATED CART STATE -->
-        <Border x:Name="ItemsListArea" Grid.Row="2" Background="{StaticResource PageBackgroundBrush}" Padding="16,6" Visibility="Collapsed">
+        <Border x:Name="ItemsListArea" Grid.Row="2" Background="{StaticResource PageBackgroundBrush}" Padding="16,8" Visibility="Collapsed">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl x:Name="CartItemsControl" ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}" ItemTemplate="{StaticResource CartItemTemplate}">
                     <ItemsControl.ItemsPanel>
@@ -490,7 +494,7 @@
         </Border>
 
         <!-- 3. TOTALS SUMMARY BREAKDOWN -->
-        <Border x:Name="TotalsBorder" Grid.Row="3" Background="{StaticResource CardBackgroundBrush}" Padding="24,12" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
+        <Border x:Name="TotalsBorder" Grid.Row="3" Background="{StaticResource CardBackgroundBrush}" Padding="24,14" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0">
             <Grid VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -498,7 +502,7 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
-                    <TextBlock x:Name="TotalToPayLabel" Text="{x:Bind Localizer.GetString('TotalToPay'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock x:Name="TotalToPayLabel" Text="{x:Bind Localizer.GetString('TotalToPay'), Mode=OneWay}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}"/>
 
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <TextBlock x:Name="ItemCountSubLabel"
@@ -512,29 +516,29 @@
                     </StackPanel>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="0">
-                    <TextBlock x:Name="TotalUSDLabel" Text="{x:Bind ViewModel.FormattedTotalUsd, Mode=OneWay}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="30" Foreground="{StaticResource AccentBlueBrush}"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="1">
+                    <TextBlock x:Name="TotalUSDLabel" Text="{x:Bind ViewModel.FormattedTotalUsd, Mode=OneWay}" HorizontalAlignment="Right" FontWeight="Bold" FontSize="30" Foreground="{StaticResource PrimaryBrandBrush}"/>
                     <TextBlock x:Name="TotalKHRLabel" Text="{x:Bind ViewModel.FormattedTotalKhr, Mode=OneWay}" HorizontalAlignment="Right" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- 4. BOTTOM ACTION BUTTON AREA -->
-        <Grid x:Name="FooterArea" Grid.Row="4" Background="{StaticResource CardBackgroundBrush}" Padding="16" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid x:Name="FooterArea" Grid.Row="4" Background="{StaticResource CardBackgroundBrush}" Padding="16,12" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" x:Name="BackButton" Width="80" Height="80" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0,0,10,0" CornerRadius="16" Background="{StaticResource SurfaceLightBrush}" Foreground="{StaticResource TextDarkSlateBrush}">
+            <Button Grid.Column="0" x:Name="BackButton" Width="72" Height="72" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0,0,12,0" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" Background="{StaticResource SurfaceHoverBrush}" Foreground="{StaticResource TextDarkSlateBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
                 <Button.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource ButtonBackgroundPointerOverBrush}, Path=Color}"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource ButtonBackgroundPressedBrush}, Path=Color}"/>
                 </Button.Resources>
-                <FontIcon x:Name="BackIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE830;" FontSize="24" Foreground="{StaticResource TextPrimaryBrush}"/>
+                <FontIcon x:Name="BackIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE830;" FontSize="22" Foreground="{StaticResource TextPrimaryBrush}"/>
             </Button>
 
-            <Button Grid.Column="1" x:Name="CheckoutButton" IsEnabled="{x:Bind ViewModel.HasItems, Mode=OneWay}" HorizontalAlignment="Stretch" Height="80" VerticalAlignment="Center" CornerRadius="16" Background="{StaticResource CheckoutButtonGradientBrush}">
+            <Button Grid.Column="1" x:Name="CheckoutButton" IsEnabled="{x:Bind ViewModel.HasItems, Mode=OneWay}" HorizontalAlignment="Stretch" Height="72" VerticalAlignment="Center" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" Background="{StaticResource CheckoutButtonGradientBrush}">
                 <Button.Resources>
                     <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueBrush}, Path=Color}"/>
                     <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource PrimaryBrandPressedBrush}, Path=Color}"/>

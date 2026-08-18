@@ -62,6 +62,8 @@
         <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
         <Setter Property="CornerRadius" Value="14"/>
         <Setter Property="Background" Value="White"/>
+        <Setter Property="BorderBrush" Value="#E2E8F0"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="RequestedTheme" Value="Light"/>
     </Style>
     
@@ -84,6 +86,8 @@
     <SolidColorBrush x:Key="PrimaryBrandBrush" Color="#2563EB"/>
     <SolidColorBrush x:Key="PrimaryBrandHoverBrush" Color="#1D4ED8"/>
     <SolidColorBrush x:Key="PrimaryBrandPressedBrush" Color="#1E40AF"/>
+    <SolidColorBrush x:Key="PrimaryBrandLightBrush" Color="#EFF6FF"/>
+    <SolidColorBrush x:Key="PrimaryBrandBorderBrush" Color="#BFDBFE"/>
 
     <!-- Accent / Secondary -->
     <SolidColorBrush x:Key="AccentBlueBrush" Color="#0067C0"/>
@@ -119,12 +123,11 @@
     <!-- Success / Highlight -->
     <SolidColorBrush x:Key="SuccessBrush" Color="#059669"/>
     <SolidColorBrush x:Key="SuccessLightBrush" Color="#10B981"/>
+    <SolidColorBrush x:Key="SuccessSoftBrush" Color="#ECFDF5"/>
+    <SolidColorBrush x:Key="SuccessBorderBrush" Color="#A7F3D0"/>
     <SolidColorBrush x:Key="RowHighlightBrush" Color="#3310B981"/>
     <SolidColorBrush x:Key="RowFlashStartBrush" Color="#4010B981"/>
     <SolidColorBrush x:Key="RowDefaultBackgroundBrush" Color="Transparent"/>
-    <!--<Color x:Key="RowFlashStartColor">#4010B981</Color>-->
-    <!--<Color x:Key="TransparentColor">Transparent</Color>-->
-
 
     <!-- Danger / Destructive -->
     <SolidColorBrush x:Key="DangerBrush" Color="#DC2626"/>
@@ -132,9 +135,15 @@
     <SolidColorBrush x:Key="DangerPressedBrush" Color="#991B1B"/>
     <SolidColorBrush x:Key="DangerLightBrush" Color="#FEE2E2"/>
     <SolidColorBrush x:Key="DangerLightPressedBrush" Color="#FECACA"/>
+    <SolidColorBrush x:Key="DangerBorderBrush" Color="#FECACA"/>
 
     <!-- Gradients -->
     <LinearGradientBrush x:Key="PrimaryCardGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#2563EB" Offset="0"/>
+        <GradientStop Color="#1D4ED8" Offset="1"/>
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="PrimaryHeroGradientBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#2563EB" Offset="0"/>
         <GradientStop Color="#1D4ED8" Offset="1"/>
     </LinearGradientBrush>
@@ -149,12 +158,18 @@
         <GradientStop Color="#1D4ED8" Offset="1"/>
     </LinearGradientBrush>
 
+    <LinearGradientBrush x:Key="SuccessGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#059669" Offset="0"/>
+        <GradientStop Color="#10B981" Offset="1"/>
+    </LinearGradientBrush>
+
     <!-- ========================================================= -->
     <!-- KIOSK UI LAYOUT METRICS -->
     <!-- ========================================================= -->
-    <CornerRadius x:Key="KioskCardCornerRadius">12</CornerRadius>
-    <CornerRadius x:Key="KioskHeroCardCornerRadius">16</CornerRadius>
-    <CornerRadius x:Key="KioskButtonCornerRadius">14</CornerRadius>
+    <CornerRadius x:Key="KioskCardCornerRadius">10</CornerRadius>
+    <CornerRadius x:Key="KioskHeroCardCornerRadius">12</CornerRadius>
+    <CornerRadius x:Key="KioskButtonCornerRadius">10</CornerRadius>
     <CornerRadius x:Key="KioskChipCornerRadius">8</CornerRadius>
+    <CornerRadius x:Key="KioskPillCornerRadius">24</CornerRadius>
 
 </ResourceDictionary>

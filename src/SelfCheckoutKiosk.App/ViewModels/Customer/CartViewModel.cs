@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
@@ -68,7 +68,6 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
                 OnPropertyChanged(nameof(CurrencyLabel));
             }
 
-
             OnPropertyChanged(nameof(FormattedTotalUsd));
             OnPropertyChanged(nameof(FormattedTotalKhr));
         }
@@ -109,6 +108,38 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public void ClearCart()
         {
             _cartService.ClearCart();
+        }
+
+        /// <summary>
+        /// Saves the current cart to SavedCartService for up to 2 hours, clears active cart, and returns the 6-digit PIN.
+        /// </summary>
+        public string? SaveCartForLater()
+        {
+            if (IsEmpty) return null;
+
+            string pin = SavedCartService.Instance.SaveCart(Items);
+            ClearCart();
+            return pin;
+        }
+
+        /// <summary>
+        /// Recalls a saved cart by 6-digit PIN and populates the cart items.
+        /// </summary>
+        public bool TryRecallSavedCart(string pin, out string errorMessage)
+        {
+            if (SavedCartService.Instance.TryRecallCart(pin, out var savedItems, out errorMessage))
+            {
+                ClearCart();
+                if (savedItems != null)
+                {
+                    foreach (var item in savedItems)
+                    {
+                        AddItem(item.Name, item.Sku, item.Price, item.Quantity);
+                    }
+                }
+                return true;
+            }
+            return false;
         }
 
         public void CancelOrderAndProceedHome()

@@ -1,231 +1,365 @@
-    using Microsoft.UI.Text;
-    using Microsoft.UI.Xaml;
-    using Microsoft.UI.Xaml.Controls;
-    using Microsoft.UI.Xaml.Controls.Primitives;
-    using Microsoft.UI.Xaml.Input;
-    using Microsoft.UI.Xaml.Media;
-    using Microsoft.UI.Xaml.Media.Animation;
-    using SelfCheckoutKiosk.App.Models;
-    using SelfCheckoutKiosk.App.Services;
-    using SelfCheckoutKiosk.App.ViewModels.Customer;
-    using System;
-    using System.Diagnostics;
-    using System.Text;
-    using System.Threading.Tasks;
-    using Windows.System;
+using Microsoft.UI.Text;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
+using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.ViewModels.Customer;
+using System;
+using System.Diagnostics;
+using System.Text;
+using System.Threading.Tasks;
+using Windows.System;
 
-    namespace SelfCheckoutKiosk.App.Views.Customer
+namespace SelfCheckoutKiosk.App.Views.Customer
+{
+    public sealed partial class CartView : Page
     {
-        public sealed partial class CartView : Page
+        public LocalizationService Localizer => LocalizationService.Instance;
+        public string RemoveItemText => Localizer.GetString("RemoveItemText");
+        public string RemoveText => Localizer.GetString("RemoveText");
+        private const int MaxKeyIntervalMs = 80;
+
+        private readonly StringBuilder _barcodeBuffer = new();
+        private DateTime _lastKeyTime = DateTime.MinValue;
+
+        private bool _isOnline = true;
+        private bool _isUsd = true;
+        private enum ScanBehavior { AddToCart, PriceCheck, Blocked }
+        private ScanBehavior _scanBehavior = ScanBehavior.AddToCart;
+
+        private ContentDialog? _activeDialog;
+        private StackPanel? _activePriceResultPanel;
+
+        private readonly KeyEventHandler _dialogScanKeyHandler;
+
+        public CartViewModel ViewModel { get; }
+
+        public CartView()
         {
-            public LocalizationService Localizer => LocalizationService.Instance;
-            public string RemoveItemText => Localizer.GetString("RemoveItemText");
-            public string RemoveText => Localizer.GetString("RemoveText");
-            private const int MaxKeyIntervalMs = 80;
+            InitializeComponent();
 
-            private readonly StringBuilder _barcodeBuffer = new();
-            private DateTime _lastKeyTime = DateTime.MinValue;
+            _dialogScanKeyHandler = new KeyEventHandler(Page_KeyDown);
 
-            private bool _isEnglish = true;
-            private bool _isOnline = true;
-            private bool _isUsd = true;
-            private enum ScanBehavior { AddToCart, PriceCheck, Blocked }
-            private ScanBehavior _scanBehavior = ScanBehavior.AddToCart;
+            INavigationService navigationService = App.MainWindowInstance?.NavigationService
+                ?? new NavigationService(Frame);
 
-            private ContentDialog? _activeDialog;
-            private StackPanel? _activePriceResultPanel;
+            ViewModel = new CartViewModel(
+                navigationService,
+                App.ProductServiceInstance,
+                App.CartServiceInstance
+            );
 
-            private readonly KeyEventHandler _dialogScanKeyHandler;
+            this.IsTabStop = true;
 
-            public CartViewModel ViewModel { get; }
+            BackButton.Click += BackButton_Click;
+            CheckoutButton.Click += CheckoutButton_Click;
 
-            public CartView()
+            this.Loaded += CartView_Loaded;
+            this.Unloaded += CartView_Unloaded;
+        }
+
+        private void CartView_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (App.MainWindowInstance?.Content is FrameworkElement root)
             {
-                InitializeComponent();
-
-                _dialogScanKeyHandler = new KeyEventHandler(Page_KeyDown);
-
-                INavigationService navigationService = App.MainWindowInstance?.NavigationService
-                    ?? new NavigationService(Frame);
-
-                ViewModel = new CartViewModel(
-                    navigationService,
-                    App.ProductServiceInstance,
-                    App.CartServiceInstance
-                );
-
-                this.IsTabStop = true;
-
-                BackButton.Click += BackButton_Click;
-                CheckoutButton.Click += CheckoutButton_Click;
-
-                this.Loaded += CartView_Loaded;
-                this.Unloaded += CartView_Unloaded;
+                root.KeyDown -= Page_KeyDown;
+                root.KeyDown += Page_KeyDown;
+            }
+            else
+            {
+                this.KeyDown -= Page_KeyDown;
+                this.KeyDown += Page_KeyDown;
             }
 
-            private void CartView_Loaded(object sender, RoutedEventArgs e)
-            {
-                if (App.MainWindowInstance?.Content is FrameworkElement root)
-                {
-                    root.KeyDown -= Page_KeyDown;
-                    root.KeyDown += Page_KeyDown;
-                }
-                else
-                {
-                    this.KeyDown -= Page_KeyDown;
-                    this.KeyDown += Page_KeyDown;
-                }
+            RefreshNetworkStatusUI();
+            RefreshCurrencyLabel();
+            UpdateCartStateUI();
+        }
 
-                RefreshNetworkStatusUI();
-                RefreshCurrencyLabel();
+        private void CartView_Unloaded(object sender, RoutedEventArgs e)
+        {
+            if (App.MainWindowInstance?.Content is FrameworkElement root)
+            {
+                root.KeyDown -= Page_KeyDown;
+            }
+            else
+            {
+                this.KeyDown -= Page_KeyDown;
+            }
+        }
+
+        private async void Page_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            var now = DateTime.Now;
+            var elapsed = (now - _lastKeyTime).TotalMilliseconds;
+            _lastKeyTime = now;
+
+            if (elapsed > MaxKeyIntervalMs && _barcodeBuffer.Length > 0)
+            {
+                _barcodeBuffer.Clear();
+            }
+
+            if (e.Key == VirtualKey.Enter)
+            {
+                if (_barcodeBuffer.Length > 0)
+                {
+                    string scannedSku = _barcodeBuffer.ToString().Trim();
+                    _barcodeBuffer.Clear();
+                    e.Handled = true;
+
+                    switch (_scanBehavior)
+                    {
+                        case ScanBehavior.AddToCart:
+                            await ProcessScannedBarcodeAsync(scannedSku);
+                            break;
+
+                        case ScanBehavior.PriceCheck:
+                            if (_activePriceResultPanel != null)
+                            {
+                                RenderPriceCheckResult(_activePriceResultPanel, scannedSku);
+                            }
+                            break;
+
+                        case ScanBehavior.Blocked:
+                            break;
+                    }
+                }
+            }
+            else
+            {
+                char character = GetCharFromVirtualKey(e.Key);
+                if (character != '\0')
+                {
+                    _barcodeBuffer.Append(character);
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private char GetCharFromVirtualKey(VirtualKey key)
+        {
+            if (key >= VirtualKey.Number0 && key <= VirtualKey.Number9)
+                return (char)('0' + (key - VirtualKey.Number0));
+
+            if (key >= VirtualKey.NumberPad0 && key <= VirtualKey.NumberPad9)
+                return (char)('0' + (key - VirtualKey.NumberPad0));
+
+            if (key >= VirtualKey.A && key <= VirtualKey.Z)
+                return (char)('A' + (key - VirtualKey.A));
+
+            return '\0';
+        }
+
+        private async Task ProcessScannedBarcodeAsync(string sku)
+        {
+            bool added = ViewModel.TryAddScannedBarcode(sku, out _);
+
+            if (added)
+            {
                 UpdateCartStateUI();
             }
-
-            private void CartView_Unloaded(object sender, RoutedEventArgs e)
+            else
             {
-                if (App.MainWindowInstance?.Content is FrameworkElement root)
-                {
-                    root.KeyDown -= Page_KeyDown;
-                }
-                else
-                {
-                    this.KeyDown -= Page_KeyDown;
-                }
+                var dialog = CreateBaseDialog("Item Not Found", $"No product found for barcode: {sku}");
+                dialog.CloseButtonText = "OK";
+                await ShowDialogBlockingScansAsync(dialog);
             }
+        }
 
-            private async void Page_KeyDown(object sender, KeyRoutedEventArgs e)
+        private void UpdateCartStateUI()
+        {
+            if (ViewModel.IsEmpty)
             {
-                var now = DateTime.Now;
-                var elapsed = (now - _lastKeyTime).TotalMilliseconds;
-                _lastKeyTime = now;
+                EmptyCartState.Visibility = Visibility.Visible;
+                ItemsListArea.Visibility = Visibility.Collapsed;
+                ScanAnimation.Begin();
+            }
+            else
+            {
+                ScanAnimation.Stop();
+                EmptyCartState.Visibility = Visibility.Collapsed;
+                ItemsListArea.Visibility = Visibility.Visible;
+                CartItemsControl.ItemsSource = ViewModel.Items;
+            }
+        }
 
-                if (elapsed > MaxKeyIntervalMs && _barcodeBuffer.Length > 0)
-                {
-                    _barcodeBuffer.Clear();
-                }
+        private void RefreshNetworkStatusUI()
+        {
+            if (_isOnline)
+            {
+                NetworkIcon.Glyph = "\uE701";
+                NetworkIcon.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 124, 252, 154));
+                NetworkStatusLabel.Text = Localizer.GetString("Online");
+            }
+            else
+            {
+                NetworkIcon.Glyph = "\xEB5E";
+                NetworkIcon.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 138, 138));
+                NetworkStatusLabel.Text = Localizer.GetString("Offline");
+            }
+        }
 
-                if (e.Key == VirtualKey.Enter)
+        private void CurrencySwitch_Click(object sender, RoutedEventArgs e)
+        {
+            _isUsd = !_isUsd;
+            ViewModel.ToggleCurrency();
+            RefreshCurrencyLabel();
+        }
+
+        private void RefreshCurrencyLabel()
+        {
+            CurrencySwitchLabel.Text = Localizer.GetString(_isUsd ? "USD" : "KHR");
+        }
+
+        private async void HelpButton_Click(object sender, RoutedEventArgs e)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
+            var dialog = new ContentDialog
+            {
+                Content = new StackPanel
                 {
-                    if (_barcodeBuffer.Length > 0)
+                    Spacing = 16,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Children =
                     {
-                        string scannedSku = _barcodeBuffer.ToString().Trim();
-                        _barcodeBuffer.Clear();
-                        e.Handled = true;
-
-                        switch (_scanBehavior)
+                        new FontIcon
                         {
-                            case ScanBehavior.AddToCart:
-                                await ProcessScannedBarcodeAsync(scannedSku);
-                                break;
-
-                            case ScanBehavior.PriceCheck:
-                                if (_activePriceResultPanel != null)
-                                {
-                                    RenderPriceCheckResult(_activePriceResultPanel, scannedSku);
-                                }
-                                break;
-
-                            case ScanBehavior.Blocked:
-                                break;
+                            Glyph = "\uE946",
+                            FontFamily = new FontFamily("Segoe Fluent Icons"),
+                            FontSize = 42,
+                            Foreground = (Brush)Application.Current.Resources["AccentBlueBrush"],
+                            HorizontalAlignment = HorizontalAlignment.Center
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("HelpIsOnTheWay"),
+                            FontSize = 20,
+                            FontWeight = FontWeights.SemiBold,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = globalFont
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("HelpMessage"),
+                            FontSize = 16,
+                            TextWrapping = TextWrapping.Wrap,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = globalFont
                         }
                     }
-                }
-                else
+                },
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                CloseButtonText = Localizer.GetString("OK"),
+                CloseButtonStyle = (Style)Application.Current.Resources["DialogButtonStyle"],
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
+
+            await ShowDialogBlockingScansAsync(dialog);
+        }
+
+        private async void CheckPriceButton_Click(object sender, RoutedEventArgs e)
+        {
+            var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16) };
+            ShowPriceCheckPlaceholder(resultPanel);
+
+            var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
+                Localizer.GetString("EnterEan13"),
+                onClear: () => ShowPriceCheckPlaceholder(resultPanel)
+            );
+
+            var contentPanel = new StackPanel { Spacing = 0 };
+            contentPanel.Children.Add(resultPanel);
+            contentPanel.Children.Add(keypadPanel);
+
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+            var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
+            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+
+            var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
+            var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
+            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+
+            var dialog = new ContentDialog
+            {
+                Title = new TextBlock
                 {
-                    char character = GetCharFromVirtualKey(e.Key);
-                    if (character != '\0')
+                    Text = Localizer.GetString("CheckPriceTitle"),
+                    FontFamily = globalFont,
+                    FontSize = 22,
+                    FontWeight = FontWeights.SemiBold
+                },
+                Content = contentPanel,
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                PrimaryButtonText = Localizer.GetString("CheckPrice"),
+                CloseButtonText = Localizer.GetString("Close"),
+                PrimaryButtonStyle = primaryButtonStyleWithFont,
+                CloseButtonStyle = closeButtonStyleWithFont,
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
+
+            dialog.PrimaryButtonClick += (s, args) =>
+            {
+                args.Cancel = true; // Keep dialog open
+                var deferral = args.GetDeferral();
+
+                try
+                {
+                    string code = getEnteredCode();
+
+                    if (string.IsNullOrWhiteSpace(code))
                     {
-                        _barcodeBuffer.Append(character);
-                        e.Handled = true;
+                        ShowInlineError(resultPanel, Localizer.GetString("ErrorBarcodeRequired"));
+                        entryBox.Focus(FocusState.Programmatic);
+                        return;
                     }
+
+                    RenderPriceCheckResult(resultPanel, code);
+                    entryBox.Focus(FocusState.Programmatic);
                 }
-            }
-
-            private char GetCharFromVirtualKey(VirtualKey key)
-            {
-                if (key >= VirtualKey.Number0 && key <= VirtualKey.Number9)
-                    return (char)('0' + (key - VirtualKey.Number0));
-
-                if (key >= VirtualKey.NumberPad0 && key <= VirtualKey.NumberPad9)
-                    return (char)('0' + (key - VirtualKey.NumberPad0));
-
-                if (key >= VirtualKey.A && key <= VirtualKey.Z)
-                    return (char)('A' + (key - VirtualKey.A));
-
-                return '\0';
-            }
-
-            private async Task ProcessScannedBarcodeAsync(string sku)
-            {
-                bool added = ViewModel.TryAddScannedBarcode(sku, out _);
-
-                if (added)
+                finally
                 {
-                    UpdateCartStateUI();
+                    deferral.Complete();
                 }
-                else
-                {
-                    var dialog = CreateBaseDialog("Item Not Found", $"No product found for barcode: {sku}");
-                    dialog.CloseButtonText = "OK";
-                    await ShowDialogBlockingScansAsync(dialog);
-                }
-            }
+            };
 
-            private void UpdateCartStateUI()
+            dialog.AddHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler, true);
+            dialog.Opened += (s, args) => entryBox.Focus(FocusState.Programmatic);
+
+            _scanBehavior = ScanBehavior.PriceCheck;
+            _activeDialog = dialog;
+            _activePriceResultPanel = resultPanel;
+
+            try
             {
-                if (ViewModel.IsEmpty)
-                {
-                    EmptyCartState.Visibility = Visibility.Visible;
-                    ItemsListArea.Visibility = Visibility.Collapsed;
-                    ScanAnimation.Begin();
-                }
-                else
-                {
-                    ScanAnimation.Stop();
-                    EmptyCartState.Visibility = Visibility.Collapsed;
-                    ItemsListArea.Visibility = Visibility.Visible;
-                    CartItemsControl.ItemsSource = ViewModel.Items;
-                }
+                await dialog.ShowAsync();
             }
-
-            private void RefreshNetworkStatusUI()
+            finally
             {
-                if (_isOnline)
-                {
-                    NetworkIcon.Glyph = "\uE701";
-                    NetworkIcon.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 124, 252, 154));
-                    NetworkStatusLabel.Text = Localizer.GetString("Online");
-                }
-                else
-                {
-                    NetworkIcon.Glyph = "\xEB5E";
-                    NetworkIcon.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 138, 138));
-                    NetworkStatusLabel.Text = Localizer.GetString("Offline");
+                dialog.RemoveHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler);
+                _activeDialog = null;
+                _activePriceResultPanel = null;
+                _scanBehavior = ScanBehavior.AddToCart;
+                ResetFocus();
             }
-            }
+        }
 
-            private void CurrencySwitch_Click(object sender, RoutedEventArgs e)
+        private async void SaveCartButton_Click(object sender, RoutedEventArgs e)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
+            if (ViewModel.IsEmpty)
             {
-                _isUsd = !_isUsd;
-
-                ViewModel.ToggleCurrency();
-
-                RefreshCurrencyLabel();
-            }
-
-            private void RefreshCurrencyLabel()
-            {
-                CurrencySwitchLabel.Text = Localizer.GetString(_isUsd ? "USD" : "KHR");
-            }
-
-            private void LanguageSwitch_Click(object sender, RoutedEventArgs e)
-            {
-                _isEnglish = !_isEnglish;
-            }
-
-            private async void HelpButton_Click(object sender, RoutedEventArgs e)
-            {
-                var dialog = new ContentDialog
+                var emptyDialog = new ContentDialog
                 {
                     Content = new StackPanel
                     {
@@ -235,7 +369,7 @@
                         {
                             new FontIcon
                             {
-                                Glyph = "\uE946",
+                                Glyph = "\uE7BF",
                                 FontFamily = new FontFamily("Segoe Fluent Icons"),
                                 FontSize = 42,
                                 Foreground = (Brush)Application.Current.Resources["AccentBlueBrush"],
@@ -243,21 +377,21 @@
                             },
                             new TextBlock
                             {
-                                Text = Localizer.GetString("HelpIsOnTheWay"),
+                                Text = Localizer.GetString("CartEmptyTitle"),
                                 FontSize = 20,
                                 FontWeight = FontWeights.SemiBold,
                                 TextAlignment = TextAlignment.Center,
                                 HorizontalAlignment = HorizontalAlignment.Center,
-                                FontFamily = (FontFamily)Application.Current.Resources["GlobalAppFont"]
+                                FontFamily = globalFont
                             },
                             new TextBlock
                             {
-                                Text = Localizer.GetString("HelpMessage"),
+                                Text = Localizer.GetString("CartEmptySaveMessage"),
                                 FontSize = 16,
                                 TextWrapping = TextWrapping.Wrap,
                                 TextAlignment = TextAlignment.Center,
                                 HorizontalAlignment = HorizontalAlignment.Center,
-                                FontFamily = (FontFamily)Application.Current.Resources["GlobalAppFont"]
+                                FontFamily = globalFont
                             }
                         }
                     },
@@ -268,245 +402,279 @@
                     RequestedTheme = ElementTheme.Light
                 };
 
-                await ShowDialogBlockingScansAsync(dialog);
+                await ShowDialogBlockingScansAsync(emptyDialog);
+                return;
             }
 
-            private async void CheckPriceButton_Click(object sender, RoutedEventArgs e)
+            string? pin = ViewModel.SaveCartForLater();
+            if (pin == null) return;
+
+            var savedSuccessDialog = new ContentDialog
             {
-                var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16) };
-                ShowPriceCheckPlaceholder(resultPanel);
-
-                // Pass onClear callback to reset the price display when Clear is pressed
-                var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
-                    Localizer.GetString("EnterEan13"),
-                    onClear: () => ShowPriceCheckPlaceholder(resultPanel)
-                );
-
-                var contentPanel = new StackPanel { Spacing = 0 };
-                contentPanel.Children.Add(resultPanel);
-                contentPanel.Children.Add(keypadPanel);
-
-                // Apply GlobalAppFont explicitly to Primary and Close buttons
-                var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
-                var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
-                primaryButtonStyleWithFont.Setters.Add(new Setter(
-                    Control.FontFamilyProperty,
-                    (FontFamily)Application.Current.Resources["GlobalAppFont"]
-                ));
-
-                var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
-                var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
-                closeButtonStyleWithFont.Setters.Add(new Setter(
-                    Control.FontFamilyProperty,
-                    (FontFamily)Application.Current.Resources["GlobalAppFont"]
-                ));
-
-                var dialog = new ContentDialog
+                Content = new StackPanel
                 {
-                    Title = new TextBlock
-                    {
-                        Text = Localizer.GetString("CheckPriceTitle"),
-                        FontFamily = (FontFamily)Application.Current.Resources["GlobalAppFont"],
-                        FontSize = 24,
-                        FontWeight = FontWeights.SemiBold
-                    },
-                    Content = contentPanel,
-                    Style = (Style)Application.Current.Resources["KioskContentDialogStyle"], // Applies CornerRadius="12"
-                    PrimaryButtonText = Localizer.GetString("CheckPrice"),
-                    CloseButtonText = Localizer.GetString("Close"),
-                    PrimaryButtonStyle = primaryButtonStyleWithFont,
-                    CloseButtonStyle = closeButtonStyleWithFont,
-                    XamlRoot = this.XamlRoot,
-                    RequestedTheme = ElementTheme.Light
-                };
-
-                dialog.PrimaryButtonClick += (s, args) =>
-                {
-                    args.Cancel = true; // Keep dialog open
-                    var deferral = args.GetDeferral();
-
-                    try
-                    {
-                        string code = getEnteredCode();
-
-                        if (string.IsNullOrWhiteSpace(code))
-                        {
-                            ShowInlineError(resultPanel, Localizer.GetString("ErrorBarcodeRequired"));
-                            entryBox.Focus(FocusState.Programmatic);
-                            return;
-                        }
-
-                        RenderPriceCheckResult(resultPanel, code);
-                        entryBox.Focus(FocusState.Programmatic);
-                    }
-                    finally
-                    {
-                        deferral.Complete();
-                    }
-                };
-
-                dialog.AddHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler, true);
-                dialog.Opened += (s, args) => entryBox.Focus(FocusState.Programmatic);
-
-                _scanBehavior = ScanBehavior.PriceCheck;
-                _activeDialog = dialog;
-                _activePriceResultPanel = resultPanel;
-
-                try
-                {
-                    await dialog.ShowAsync();
-                }
-                finally
-                {
-                    dialog.RemoveHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler);
-                    _activeDialog = null;
-                    _activePriceResultPanel = null;
-                    _scanBehavior = ScanBehavior.AddToCart;
-                    ResetFocus();
-                }
-            }
-
-            private async void RecallButton_Click(object sender, RoutedEventArgs e)
-            {
-                var latestItem = ViewModel.Items.FirstOrDefault();
-
-                if (latestItem == null)
-                {
-                    var emptyDialog = new ContentDialog
-                    {
-                        Content = new StackPanel
-                        {
-                            Spacing = 16,
-                            HorizontalAlignment = HorizontalAlignment.Center,
-                            Children =
+                    Spacing = 16,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Children =
                     {
                         new FontIcon
                         {
-                            Glyph = "\uE7BF", // Shopping cart icon
+                            Glyph = "\uE73E", // Checkmark icon
                             FontFamily = new FontFamily("Segoe Fluent Icons"),
-                            FontSize = 42,
-                            Foreground = (Brush)Application.Current.Resources["AccentBlueBrush"],
+                            FontSize = 44,
+                            Foreground = (Brush)Application.Current.Resources["SuccessBrush"],
                             HorizontalAlignment = HorizontalAlignment.Center
                         },
                         new TextBlock
                         {
-                            Text = Localizer.GetString("CartEmptyTitle"),
-                            FontSize = 20,
-                            FontWeight = FontWeights.SemiBold,
+                            Text = Localizer.GetString("CartSavedTitle"),
+                            FontSize = 22,
+                            FontWeight = FontWeights.Bold,
                             TextAlignment = TextAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            FontFamily = (FontFamily)Application.Current.Resources["GlobalAppFont"]
+                            FontFamily = globalFont
                         },
                         new TextBlock
                         {
-                            Text = Localizer.GetString("CartEmptyMessage"),
-                            FontSize = 16,
+                            Text = Localizer.GetString("RecallCodeLabel"),
+                            FontSize = 14,
+                            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = globalFont
+                        },
+                        new Border
+                        {
+                            Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 239, 246, 255)),
+                            BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 191, 219, 254)),
+                            BorderThickness = new Thickness(2),
+                            CornerRadius = new CornerRadius(12),
+                            Padding = new Thickness(24, 12, 24, 12),
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            Child = new TextBlock
+                            {
+                                Text = pin,
+                                FontSize = 36,
+                                FontWeight = FontWeights.Black,
+                                CharacterSpacing = 140,
+                                Foreground = (Brush)Application.Current.Resources["PrimaryBrandBrush"],
+                                HorizontalAlignment = HorizontalAlignment.Center
+                            }
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("RecallCodeNotice"),
+                            FontSize = 14,
                             TextWrapping = TextWrapping.Wrap,
                             TextAlignment = TextAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            FontFamily = (FontFamily)Application.Current.Resources["GlobalAppFont"]
+                            MaxWidth = 380,
+                            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 71, 85, 105)),
+                            FontFamily = globalFont
                         }
                     }
-                        },
-                        Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
-                        CloseButtonText = Localizer.GetString("OK"),
-                        CloseButtonStyle = (Style)Application.Current.Resources["DialogButtonStyle"],
-                        XamlRoot = this.XamlRoot,
-                        RequestedTheme = ElementTheme.Light
-                    };
+                },
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                PrimaryButtonText = Localizer.GetString("OK"),
+                PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"],
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
 
-                    await ShowDialogBlockingScansAsync(emptyDialog);
-                    return;
-                }
+            await ShowDialogBlockingScansAsync(savedSuccessDialog);
+            ViewModel.ProceedToHome();
+        }
 
-                ViewModel.DecrementOrRemove(latestItem);
-                UpdateCartStateUI();
-                ResetFocus();
-            }
-            private void ConfirmRemove_Click(object sender, RoutedEventArgs e)
+        private async void RecallButton_Click(object sender, RoutedEventArgs e)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16) };
+
+            resultPanel.Children.Add(new TextBlock
             {
-                if (sender is Button innerButton)
-                {
-                    CloseFlyoutForElement(innerButton);
+                Text = Localizer.GetString("RecallCartInstruction"),
+                FontSize = 14,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
+                FontFamily = globalFont
+            });
 
-                    if (innerButton.DataContext is CartItem item)
+            var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
+                "6-Digit PIN",
+                onClear: () =>
+                {
+                    resultPanel.Children.Clear();
+                    resultPanel.Children.Add(new TextBlock
                     {
-                        ViewModel.DecrementOrRemove(item);
+                        Text = Localizer.GetString("RecallCartInstruction"),
+                        FontSize = 14,
+                        TextWrapping = TextWrapping.Wrap,
+                        Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
+                        FontFamily = globalFont
+                    });
+                }
+            );
+
+            var contentPanel = new StackPanel { Spacing = 0 };
+            contentPanel.Children.Add(resultPanel);
+            contentPanel.Children.Add(keypadPanel);
+
+            var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+            var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
+            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+
+            var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
+            var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
+            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+
+            var dialog = new ContentDialog
+            {
+                Title = new TextBlock
+                {
+                    Text = Localizer.GetString("RecallCartTitle"),
+                    FontFamily = globalFont,
+                    FontSize = 22,
+                    FontWeight = FontWeights.SemiBold
+                },
+                Content = contentPanel,
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                PrimaryButtonText = Localizer.GetString("RestoreCart"),
+                CloseButtonText = Localizer.GetString("Cancel"),
+                PrimaryButtonStyle = primaryButtonStyleWithFont,
+                CloseButtonStyle = closeButtonStyleWithFont,
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
+
+            dialog.PrimaryButtonClick += (s, args) =>
+            {
+                args.Cancel = true; // Keep dialog open while validating
+                var deferral = args.GetDeferral();
+
+                try
+                {
+                    string pin = getEnteredCode()?.Trim() ?? string.Empty;
+
+                    if (string.IsNullOrWhiteSpace(pin) || pin.Length != 6)
+                    {
+                        ShowInlineError(resultPanel, Localizer.GetString("ErrorInvalidPin"));
+                        entryBox.Focus(FocusState.Programmatic);
+                        return;
+                    }
+
+                    if (ViewModel.TryRecallSavedCart(pin, out string errorReason))
+                    {
                         UpdateCartStateUI();
+                        dialog.Hide(); // Successfully restored, dismiss dialog
+                    }
+                    else
+                    {
+                        string displayError = string.IsNullOrWhiteSpace(errorReason)
+                            ? Localizer.GetString("ErrorInvalidPin")
+                            : errorReason;
+                        ShowInlineError(resultPanel, displayError);
+                        entryBox.Focus(FocusState.Programmatic);
                     }
                 }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Recall Exception] {ex}");
+                    ShowInlineError(resultPanel, "An error occurred while recalling your cart.");
+                }
+                finally
+                {
+                    deferral.Complete();
+                }
+            };
 
-                ResetFocus();
+            dialog.Opened += (s, args) => entryBox.Focus(FocusState.Programmatic);
+
+            await ShowDialogBlockingScansAsync(dialog);
+        }
+
+        private void ConfirmRemove_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button innerButton)
+            {
+                CloseFlyoutForElement(innerButton);
+
+                if (innerButton.DataContext is CartItem item)
+                {
+                    ViewModel.DecrementOrRemove(item);
+                    UpdateCartStateUI();
+                }
             }
 
-            private async void AddItemManuallyLink_Click(object sender, RoutedEventArgs e)
+            ResetFocus();
+        }
+
+        private async void AddItemManuallyLink_Click(object sender, RoutedEventArgs e)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16) };
+
+            TextBlock CreateInstructionText() => new TextBlock
             {
-                var globalFont = (FontFamily)Application.Current.Resources["GlobalAppFont"];
+                Text = Localizer.GetString("EnterBarcodeInstruction"),
+                FontSize = 14,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
+                FontFamily = globalFont
+            };
 
-                var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16) };
+            resultPanel.Children.Add(CreateInstructionText());
 
-                // Helper method to create formatted instruction text
-                TextBlock CreateInstructionText() => new TextBlock
+            var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
+                Localizer.GetString("EnterEan13"),
+                onClear: () =>
                 {
-                    Text = Localizer.GetString("EnterBarcodeInstruction"),
-                    FontSize = 14,
-                    TextWrapping = TextWrapping.Wrap,
-                    Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
-                    FontFamily = globalFont
-                };
+                    resultPanel.Children.Clear();
+                    resultPanel.Children.Add(CreateInstructionText());
+                }
+            );
 
-                // Show default instruction text in the result panel
-                resultPanel.Children.Add(CreateInstructionText());
+            var contentPanel = new StackPanel { Spacing = 0 };
+            contentPanel.Children.Add(resultPanel);
+            contentPanel.Children.Add(keypadPanel);
 
-                var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
-                    Localizer.GetString("EnterEan13"),
-                    onClear: () =>
-                    {
-                        resultPanel.Children.Clear();
-                        resultPanel.Children.Add(CreateInstructionText());
-                    }
-                );
+            var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+            var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
+            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
 
-                var contentPanel = new StackPanel { Spacing = 0 };
-                contentPanel.Children.Add(resultPanel);
-                contentPanel.Children.Add(keypadPanel);
+            var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
+            var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
+            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
 
-                // Primary Button: AccentButtonStyle + GlobalAppFont
-                var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
-                var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
-                primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
-
-                // Close Button: DialogButtonStyle + GlobalAppFont
-                var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
-                var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
-                closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
-
-                var dialog = new ContentDialog
+            var dialog = new ContentDialog
+            {
+                Title = new TextBlock
                 {
-                    Title = new TextBlock
-                    {
-                        Text = Localizer.GetString("AddItemManuallyTitle"),
-                        FontFamily = globalFont,
-                        FontSize = 22,
-                        FontWeight = FontWeights.SemiBold
-                    },
-                    Content = contentPanel,
-                    Style = (Style)Application.Current.Resources["KioskContentDialogStyle"], // Applies CornerRadius="12"
-                    PrimaryButtonText = Localizer.GetString("AddToCart"),
-                    CloseButtonText = Localizer.GetString("Close"),
-                    PrimaryButtonStyle = primaryButtonStyleWithFont,
-                    CloseButtonStyle = closeButtonStyleWithFont,
-                    XamlRoot = this.XamlRoot,
-                    RequestedTheme = ElementTheme.Light
-                };
+                    Text = Localizer.GetString("AddItemManuallyTitle"),
+                    FontFamily = globalFont,
+                    FontSize = 22,
+                    FontWeight = FontWeights.SemiBold
+                },
+                Content = contentPanel,
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                PrimaryButtonText = Localizer.GetString("AddToCart"),
+                CloseButtonText = Localizer.GetString("Close"),
+                PrimaryButtonStyle = primaryButtonStyleWithFont,
+                CloseButtonStyle = closeButtonStyleWithFont,
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
 
-                dialog.PrimaryButtonClick += (s, args) =>
+            dialog.PrimaryButtonClick += (s, args) =>
+            {
+                args.Cancel = true; // Keep dialog open while processing
+                var deferral = args.GetDeferral();
+
+                try
                 {
-                    string code = getEnteredCode();
+                    string code = getEnteredCode()?.Trim() ?? string.Empty;
 
                     if (string.IsNullOrWhiteSpace(code))
                     {
-                        args.Cancel = true; // Keep dialog open
                         ShowInlineError(resultPanel, Localizer.GetString("ErrorBarcodeRequired"));
                         entryBox.Focus(FocusState.Programmatic);
                         return;
@@ -517,354 +685,478 @@
                     if (added)
                     {
                         UpdateCartStateUI();
-                        // Dialog closes naturally on success
+                        dialog.Hide(); // Close dialog on success
                     }
                     else
                     {
-                        args.Cancel = true; // Keep dialog open on error
                         ShowInlineError(resultPanel, $"{Localizer.GetString("ErrorProductNotFoundForBarcode")}\n{code}");
                         entryBox.Focus(FocusState.Programmatic);
                     }
-                };
-
-                dialog.AddHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler, true);
-                dialog.Opened += (s, args) => entryBox.Focus(FocusState.Programmatic);
-
-                _scanBehavior = ScanBehavior.AddToCart;
-                _activeDialog = dialog;
-
-                try
+                }
+                catch (Exception ex)
                 {
-                    await dialog.ShowAsync();
+                    Debug.WriteLine($"[Add Item Exception] {ex}");
+                    ShowInlineError(resultPanel, "An error occurred while adding this item.");
                 }
                 finally
                 {
-                    dialog.RemoveHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler);
-                    _activeDialog = null;
-                    _scanBehavior = ScanBehavior.AddToCart;
-                    ResetFocus();
+                    deferral.Complete();
                 }
-            }
+            };
 
-            private async void BackButton_Click(object sender, RoutedEventArgs e)
+            dialog.AddHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler, true);
+            dialog.Opened += (s, args) => entryBox.Focus(FocusState.Programmatic);
+
+            _scanBehavior = ScanBehavior.AddToCart;
+            _activeDialog = dialog;
+
+            try
             {
-                // Create custom styles to ensure Khmer font loads properly on both buttons
-                var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
-                var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
-                primaryButtonStyleWithFont.Setters.Add(new Setter(
-                    Control.FontFamilyProperty,
-                    (FontFamily)Application.Current.Resources["GlobalAppFont"]
-                ));
-
-                var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
-                var secondaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
-                secondaryButtonStyleWithFont.Setters.Add(new Setter(
-                    Control.FontFamilyProperty,
-                    (FontFamily)Application.Current.Resources["GlobalAppFont"]
-                ));
-
-                var dialog = new ContentDialog
-                {
-                    Content = new StackPanel
-                    {
-                        Spacing = 16,
-                        HorizontalAlignment = HorizontalAlignment.Center,
-                        Children =
-                        {
-                            new FontIcon
-                            {
-                                Glyph = "\uE814", // Warning / Alert Icon
-                                FontFamily = new FontFamily("Segoe Fluent Icons"),
-                                FontSize = 42,
-                                Foreground = (Brush)Application.Current.Resources["DangerBrush"],
-                                HorizontalAlignment = HorizontalAlignment.Center
-                            },
-                            new TextBlock
-                            {
-                                Text = Localizer.GetString("CancelOrderTitle"),
-                                FontSize = 20,
-                                FontWeight = FontWeights.SemiBold,
-                                TextAlignment = TextAlignment.Center,
-                                HorizontalAlignment = HorizontalAlignment.Center,
-                                FontFamily = (FontFamily)Application.Current.Resources["GlobalAppFont"]
-                            },
-                            new TextBlock
-                            {
-                                Text = Localizer.GetString("CancelOrderMessage"),
-                                FontSize = 16,
-                                TextWrapping = TextWrapping.Wrap,
-                                TextAlignment = TextAlignment.Center,
-                                HorizontalAlignment = HorizontalAlignment.Center,
-                                MaxWidth = 450,
-                                FontFamily = (FontFamily)Application.Current.Resources["GlobalAppFont"]
-                            }
-                        }
-                    },
-                    Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
-                    PrimaryButtonText = Localizer.GetString("KeepScanning"),
-                    SecondaryButtonText = Localizer.GetString("CancelOrder"),
-                    PrimaryButtonStyle = primaryButtonStyleWithFont,
-                    SecondaryButtonStyle = secondaryButtonStyleWithFont,
-                    XamlRoot = this.XamlRoot,
-                    RequestedTheme = ElementTheme.Light
-                };
-
-                var result = await ShowDialogBlockingScansAsync(dialog);
-
-                if (result == ContentDialogResult.Secondary)
-                {
-                    ViewModel.CancelOrderAndProceedHome();
-                }
+                await dialog.ShowAsync();
             }
+            finally
+            {
+                dialog.RemoveHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler);
+                _activeDialog = null;
+                _scanBehavior = ScanBehavior.AddToCart;
+                ResetFocus();
+            }
+        }
 
-            private void CheckoutButton_Click(object sender, RoutedEventArgs e)
+        private async void BackButton_Click(object sender, RoutedEventArgs e)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+            var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
+            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+
+            var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
+            var secondaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
+            secondaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+
+            var dialog = new ContentDialog
+            {
+                Content = new StackPanel
+                {
+                    Spacing = 16,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Children =
+                    {
+                        new FontIcon
+                        {
+                            Glyph = "\uE814", // Warning / Alert Icon
+                            FontFamily = new FontFamily("Segoe Fluent Icons"),
+                            FontSize = 42,
+                            Foreground = (Brush)Application.Current.Resources["DangerBrush"],
+                            HorizontalAlignment = HorizontalAlignment.Center
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("CancelOrderTitle"),
+                            FontSize = 20,
+                            FontWeight = FontWeights.SemiBold,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = globalFont
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("CancelOrderMessage"),
+                            FontSize = 16,
+                            TextWrapping = TextWrapping.Wrap,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            MaxWidth = 450,
+                            FontFamily = globalFont
+                        }
+                    }
+                },
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                PrimaryButtonText = Localizer.GetString("KeepScanning"),
+                SecondaryButtonText = Localizer.GetString("CancelOrder"),
+                PrimaryButtonStyle = primaryButtonStyleWithFont,
+                SecondaryButtonStyle = secondaryButtonStyleWithFont,
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
+
+            var result = await ShowDialogBlockingScansAsync(dialog);
+
+            if (result == ContentDialogResult.Secondary)
+            {
+                ViewModel.CancelOrderAndProceedHome();
+            }
+        }
+
+        private void CheckoutButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (ViewModel.HasItems)
             {
                 ViewModel.ProceedToPaymentSelection();
             }
+        }
 
-            private void ShowPriceCheckPlaceholder(StackPanel panel)
+        private void ResetFocus()
+        {
+            this.Focus(FocusState.Programmatic);
+        }
+
+        private async Task<ContentDialogResult> ShowDialogBlockingScansAsync(ContentDialog dialog)
+        {
+            _scanBehavior = ScanBehavior.Blocked;
+            _activeDialog = dialog;
+
+            try
             {
-                panel.Children.Clear();
-                panel.Children.Add(new TextBlock
-                {
-                    Text = Localizer.GetString("ScanOrTypeCode"),
-                    FontSize = 14,
-                    TextWrapping = TextWrapping.Wrap,
-                    Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139))
-                });
+                return await dialog.ShowAsync();
             }
-
-            private void ShowInlineError(StackPanel panel, string message)
+            finally
             {
-                panel.Children.Clear();
-                panel.Children.Add(new TextBlock
+                _activeDialog = null;
+                _scanBehavior = ScanBehavior.AddToCart;
+                ResetFocus();
+            }
+        }
+
+        private ContentDialog CreateBaseDialog(string title, string message)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+            var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
+            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+
+            return new ContentDialog
+            {
+                Title = new TextBlock
+                {
+                    Text = title,
+                    FontFamily = globalFont,
+                    FontSize = 22,
+                    FontWeight = FontWeights.SemiBold
+                },
+                Content = new TextBlock
                 {
                     Text = message,
-                    FontSize = 15,
-                    FontWeight = FontWeights.SemiBold,
-                    Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 220, 38, 38)),
-                    TextWrapping = TextWrapping.Wrap
-                });
-            }
+                    FontSize = 16,
+                    TextWrapping = TextWrapping.Wrap,
+                    FontFamily = globalFont
+                },
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                CloseButtonStyle = closeButtonStyleWithFont,
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
+        }
 
-            private void RenderPriceCheckResult(StackPanel panel, string sku)
+        private void ShowInlineError(StackPanel targetPanel, string errorMessage)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            targetPanel.Children.Clear();
+
+            Brush dangerLight = (Application.Current.Resources.TryGetValue("DangerLightBrush", out var bg) && bg is Brush bgb)
+                ? bgb : new SolidColorBrush(Windows.UI.Color.FromArgb(255, 254, 226, 226));
+
+            Brush dangerBorder = (Application.Current.Resources.TryGetValue("DangerBorderBrush", out var br) && br is Brush brb)
+                ? brb : new SolidColorBrush(Windows.UI.Color.FromArgb(255, 254, 202, 202));
+
+            Brush dangerFg = (Application.Current.Resources.TryGetValue("DangerBrush", out var fg) && fg is Brush fgb)
+                ? fgb : new SolidColorBrush(Windows.UI.Color.FromArgb(255, 220, 38, 38));
+
+            var errorBorder = new Border
             {
-                panel.Children.Clear();
+                Background = dangerLight,
+                BorderBrush = dangerBorder,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(12, 10, 12, 10),
+                Margin = new Thickness(0, 0, 0, 4)
+            };
 
-                var product = ViewModel.FindProductBySku(sku);
-
-                if (product != null)
-                {
-                    decimal priceKHR = product.Price * ViewModel.ExchangeRate;
-                    panel.Children.Add(new TextBlock { Text = product.Name, FontSize = 20, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap });
-                    panel.Children.Add(new TextBlock { Text = $"SKU: {product.Sku}", FontSize = 14, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)) });
-                    panel.Children.Add(new TextBlock { Text = $"${product.Price:0.00} (≈ ៛{priceKHR:N0})", FontSize = 28, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 185, 129)) });
-                }
-                else
-                {
-                    ShowInlineError(panel, $"No product found for barcode:\n{sku}");
-                }
-            }
-
-            private async Task<ContentDialogResult> ShowDialogBlockingScansAsync(ContentDialog dialog)
+            var errorPanel = new StackPanel
             {
-                _scanBehavior = ScanBehavior.Blocked;
-                _activeDialog = dialog;
-                try
-                {
-                    return await dialog.ShowAsync();
-                }
-                finally
-                {
-                    _activeDialog = null;
-                    _scanBehavior = ScanBehavior.AddToCart;
-                    ResetFocus();
-                }
-            }
+                Orientation = Orientation.Horizontal,
+                Spacing = 8,
+                VerticalAlignment = VerticalAlignment.Center
+            };
 
-            private void ResetFocus()
+            var icon = new FontIcon
             {
-                this.Focus(FocusState.Programmatic);
-            }
+                Glyph = "\uE783", // Error / Warning Icon
+                FontFamily = new FontFamily("Segoe Fluent Icons"),
+                FontSize = 16,
+                Foreground = dangerFg,
+                VerticalAlignment = VerticalAlignment.Center
+            };
 
-            private ContentDialog CreateBaseDialog(string title, object? content)
+            var errorText = new TextBlock
             {
-                return new ContentDialog
+                Text = errorMessage,
+                Foreground = dangerFg,
+                FontSize = 14,
+                FontWeight = FontWeights.SemiBold,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Center,
+                FontFamily = globalFont
+            };
+
+            errorPanel.Children.Add(icon);
+            errorPanel.Children.Add(errorText);
+            errorBorder.Child = errorPanel;
+            targetPanel.Children.Add(errorBorder);
+        }
+
+        private void ShowPriceCheckPlaceholder(StackPanel targetPanel)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            targetPanel.Children.Clear();
+            targetPanel.Children.Add(new TextBlock
+            {
+                Text = Localizer.GetString("ScanOrTypeCode"),
+                FontSize = 14,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
+                FontFamily = globalFont
+            });
+        }
+
+        private void RenderPriceCheckResult(StackPanel targetPanel, string code)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var product = ViewModel.FindProductBySku(code);
+            targetPanel.Children.Clear();
+
+            if (product != null)
+            {
+                var card = new Border
                 {
-                    Title = title,
-                    Content = content,
-                    XamlRoot = this.Content?.XamlRoot ?? this.XamlRoot,
-                    RequestedTheme = ElementTheme.Light
+                    Background = (Brush)Application.Current.Resources["SuccessSoftBrush"],
+                    BorderBrush = (Brush)Application.Current.Resources["SuccessBorderBrush"],
+                    BorderThickness = new Thickness(1.5),
+                    CornerRadius = new CornerRadius(10),
+                    Padding = new Thickness(16, 12, 16, 12),
+                    Margin = new Thickness(0, 0, 0, 4)
                 };
-            }
 
-            private (ContentDialog Dialog, Func<string> GetEnteredCode) CreateNumericKeypadDialog(string title, string placeholderText, string primaryButtonText)
-            {
-                var (panel, getCode, _, _) = BuildKeypadPanel(placeholderText);
+                var row = new Grid();
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-                var dialog = CreateBaseDialog(title, panel);
-                dialog.PrimaryButtonText = primaryButtonText;
-                dialog.CloseButtonText = "Close";
-                dialog.DefaultButton = ContentDialogButton.Primary;
-                dialog.PrimaryButtonStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
-
-                return (dialog, getCode);
-            }
-
-            private (StackPanel Panel, Func<string> GetEnteredCode, Action ClearEntry, TextBox EntryBox) BuildKeypadPanel(string placeholderText, Action? onClear = null)
-            {
-                string enteredCode = "";
-
-                var entryBox = new TextBox
+                var leftStack = new StackPanel { Spacing = 2 };
+                leftStack.Children.Add(new TextBlock
                 {
-                    FontSize = 32,
+                    Text = product.Name,
                     FontWeight = FontWeights.Bold,
-                    TextAlignment = TextAlignment.Center,
-                    IsReadOnly = true,
-                    PlaceholderText = placeholderText,
-                    MaxLength = 13,
-                    HorizontalAlignment = HorizontalAlignment.Stretch
+                    FontSize = 16,
+                    Foreground = (Brush)Application.Current.Resources["TextPrimaryBrush"],
+                    FontFamily = globalFont
+                });
+                leftStack.Children.Add(new TextBlock
+                {
+                    Text = $"SKU: {product.Sku}",
+                    FontSize = 12,
+                    Foreground = (Brush)Application.Current.Resources["TextSecondaryBrush"],
+                    FontFamily = globalFont
+                });
+
+                var rightStack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
+                rightStack.Children.Add(new TextBlock
+                {
+                    Text = $"${product.Price:0.00}",
+                    FontWeight = FontWeights.Bold,
+                    FontSize = 22,
+                    Foreground = (Brush)Application.Current.Resources["SuccessBrush"],
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    FontFamily = globalFont
+                });
+                rightStack.Children.Add(new TextBlock
+                {
+                    Text = $"≈ ៛{product.Price * ViewModel.ExchangeRate:N0}",
+                    FontSize = 13,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = (Brush)Application.Current.Resources["TextSecondaryBrush"],
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    FontFamily = globalFont
+                });
+
+                Grid.SetColumn(leftStack, 0);
+                Grid.SetColumn(rightStack, 1);
+                row.Children.Add(leftStack);
+                row.Children.Add(rightStack);
+                card.Child = row;
+                targetPanel.Children.Add(card);
+            }
+            else
+            {
+                ShowInlineError(targetPanel, $"{Localizer.GetString("ErrorProductNotFoundForBarcode")}\n{code}");
+            }
+        }
+
+        private (FrameworkElement Panel, Func<string> GetCode, Action Clear, TextBox EntryBox) BuildKeypadPanel(
+            string placeholder,
+            Action? onClear = null)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            string enteredCode = string.Empty;
+
+            var entryBox = new TextBox
+            {
+                PlaceholderText = placeholder,
+                FontSize = 24,
+                FontWeight = FontWeights.Bold,
+                TextAlignment = TextAlignment.Center,
+                Height = 52,
+                CharacterSpacing = 100,
+                IsReadOnly = true,
+                Margin = new Thickness(0, 0, 0, 8),
+                CornerRadius = new CornerRadius(8),
+                BorderBrush = (Brush)Application.Current.Resources["CardBorderBrush"],
+                BorderThickness = new Thickness(1.5),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                FontFamily = globalFont
+            };
+
+            void AppendDigit(string digit)
+            {
+                if (enteredCode.Length < 16)
+                {
+                    enteredCode += digit;
+                    entryBox.Text = enteredCode;
+                }
+            }
+
+            void ClearAll()
+            {
+                enteredCode = string.Empty;
+                entryBox.Text = string.Empty;
+                onClear?.Invoke();
+            }
+
+            void DeleteLast()
+            {
+                if (enteredCode.Length > 0)
+                {
+                    enteredCode = enteredCode.Substring(0, enteredCode.Length - 1);
+                    entryBox.Text = enteredCode;
+                }
+            }
+
+            var keypadGrid = new Grid
+            {
+                Margin = new Thickness(0, 8, 0, 0),
+                Width = 380,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            for (int i = 0; i < 3; i++) keypadGrid.ColumnDefinitions.Add(new ColumnDefinition());
+            for (int i = 0; i < 4; i++) keypadGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(56) });
+
+            Button MakeKeyButton(object content, Action onClick, SolidColorBrush? bg = null, SolidColorBrush? fg = null, double? fontSize = null)
+            {
+                var btn = new Button
+                {
+                    Content = content,
+                    FontSize = fontSize ?? 22,
+                    FontWeight = FontWeights.SemiBold,
+                    Margin = new Thickness(3),
+                    CornerRadius = new CornerRadius(8),
+                    Background = bg ?? new SolidColorBrush(Windows.UI.Color.FromArgb(255, 241, 245, 249)),
+                    Foreground = fg ?? new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 41, 59)),
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    VerticalAlignment = VerticalAlignment.Stretch,
+                    FontFamily = globalFont
                 };
-
-                void AppendDigit(string digit)
+                btn.Click += (s, args) =>
                 {
-                    if (enteredCode.Length < 13)
-                    {
-                        enteredCode += digit;
-                        entryBox.Text = enteredCode;
-                    }
-                }
-
-                void ClearAll()
-                {
-                    enteredCode = "";
-                    entryBox.Text = "";
-                    onClear?.Invoke(); // Resets the price display panel
-                }
-
-                void DeleteLast()
-                {
-                    if (enteredCode.Length > 0)
-                    {
-                        enteredCode = enteredCode[..^1];
-                        entryBox.Text = enteredCode;
-                    }
-                }
-
-                var keypadGrid = new Grid { Margin = new Thickness(0, 16, 0, 0) };
-                for (int i = 0; i < 3; i++) keypadGrid.ColumnDefinitions.Add(new ColumnDefinition());
-                for (int i = 0; i < 4; i++) keypadGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(64) });
-
-                Button MakeKeyButton(object content, Action onClick, SolidColorBrush? bg = null, SolidColorBrush? fg = null, double? fontSize = null)
-                {
-                    var btn = new Button
-                    {
-                        Content = content,
-                        FontSize = fontSize ?? 22,
-                        FontWeight = FontWeights.SemiBold,
-                        Margin = new Thickness(4),
-                        CornerRadius = new CornerRadius(10),
-                        Background = bg ?? new SolidColorBrush(Windows.UI.Color.FromArgb(255, 241, 245, 249)),
-                        Foreground = fg ?? new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 41, 59)),
-                        HorizontalAlignment = HorizontalAlignment.Stretch,
-                        VerticalAlignment = VerticalAlignment.Stretch
-                    };
-                    btn.Click += (s, args) =>
-                    {
-                        onClick();
-                        entryBox.Focus(FocusState.Programmatic);
-                    };
-                    return btn;
-                }
-
-                for (int row = 0; row < 3; row++)
-                {
-                    for (int col = 0; col < 3; col++)
-                    {
-                        string digit = (row * 3 + col + 1).ToString();
-                        var btn = MakeKeyButton(digit, () => AppendDigit(digit));
-                        Grid.SetRow(btn, row);
-                        Grid.SetColumn(btn, col);
-                        keypadGrid.Children.Add(btn);
-                    }
-                }
-
-                var clearBtn = MakeKeyButton("Clear", ClearAll,
-                    new SolidColorBrush(Windows.UI.Color.FromArgb(255, 254, 226, 226)),
-                    new SolidColorBrush(Windows.UI.Color.FromArgb(255, 220, 38, 38)),
-                    18);
-                Grid.SetRow(clearBtn, 3); Grid.SetColumn(clearBtn, 0); keypadGrid.Children.Add(clearBtn);
-
-                var zeroBtn = MakeKeyButton("0", () => AppendDigit("0"));
-                Grid.SetRow(zeroBtn, 3); Grid.SetColumn(zeroBtn, 1); keypadGrid.Children.Add(zeroBtn);
-
-                var deleteBtn = MakeKeyButton(
-                    new FontIcon { Glyph = "\xE925", FontSize = 30 },
-                    DeleteLast,
-                    new SolidColorBrush(Windows.UI.Color.FromArgb(255, 241, 245, 249)),
-                    new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 41, 59))
-                );
-
-                Grid.SetRow(deleteBtn, 3);
-                Grid.SetColumn(deleteBtn, 2);
-                keypadGrid.Children.Add(deleteBtn);
-
-                var contentPanel = new StackPanel { Spacing = 0 };
-                contentPanel.Children.Add(entryBox);
-                contentPanel.Children.Add(keypadGrid);
-                
-                return (contentPanel, () => enteredCode, ClearAll, entryBox);
+                    onClick();
+                    entryBox.Focus(FocusState.Programmatic);
+                };
+                return btn;
             }
 
-            private void CloseFlyoutForElement(FrameworkElement element)
+            for (int row = 0; row < 3; row++)
             {
-                var popups = VisualTreeHelper.GetOpenPopupsForXamlRoot(element.XamlRoot);
-                foreach (var popup in popups)
+                for (int col = 0; col < 3; col++)
                 {
-                    if (popup.Child is FlyoutPresenter presenter && IsChildOf(element, presenter))
-                    {
-                        popup.IsOpen = false;
-                        break;
-                    }
+                    string digit = (row * 3 + col + 1).ToString();
+                    var btn = MakeKeyButton(digit, () => AppendDigit(digit));
+                    Grid.SetRow(btn, row);
+                    Grid.SetColumn(btn, col);
+                    keypadGrid.Children.Add(btn);
                 }
             }
 
-            private bool IsChildOf(DependencyObject? child, DependencyObject parent)
+            var clearBtn = MakeKeyButton("Clear", ClearAll,
+                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 254, 226, 226)),
+                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 220, 38, 38)),
+                16);
+            Grid.SetRow(clearBtn, 3); Grid.SetColumn(clearBtn, 0); keypadGrid.Children.Add(clearBtn);
+
+            var zeroBtn = MakeKeyButton("0", () => AppendDigit("0"));
+            Grid.SetRow(zeroBtn, 3); Grid.SetColumn(zeroBtn, 1); keypadGrid.Children.Add(zeroBtn);
+
+            var deleteBtn = MakeKeyButton(
+                new FontIcon { Glyph = "\uE925", FontSize = 24 },
+                DeleteLast,
+                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 241, 245, 249)),
+                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 41, 59))
+            );
+
+            Grid.SetRow(deleteBtn, 3);
+            Grid.SetColumn(deleteBtn, 2);
+            keypadGrid.Children.Add(deleteBtn);
+
+            var contentPanel = new StackPanel { Spacing = 0, HorizontalAlignment = HorizontalAlignment.Center, Width = 380 };
+            contentPanel.Children.Add(entryBox);
+            contentPanel.Children.Add(keypadGrid);
+
+            return (contentPanel, () => enteredCode, ClearAll, entryBox);
+        }
+
+        private void CloseFlyoutForElement(FrameworkElement element)
+        {
+            var popups = VisualTreeHelper.GetOpenPopupsForXamlRoot(element.XamlRoot);
+            foreach (var popup in popups)
             {
-                while (child != null)
+                if (popup.Child is FlyoutPresenter presenter && IsChildOf(element, presenter))
                 {
-                    if (child == parent) return true;
-                    child = VisualTreeHelper.GetParent(child);
-                }
-                return false;
-            }
-
-            private void CartItemRow_Loaded(object sender, RoutedEventArgs e)
-            {
-                if (sender is Border border && border.DataContext is CartItem item)
-                {
-                    // Unsubscribe first to avoid duplicate subscriptions if UI elements refresh
-                    item.ItemUpdated -= OnItemUpdated;
-                    item.ItemUpdated += OnItemUpdated;
-
-                    void OnItemUpdated(object? s, EventArgs args)
-                    {
-                        // Find and play the FlashAnimation defined in this Border's Resources
-                        if (border.Resources["FlashAnimation"] is Storyboard flashAnimation)
-                        {
-                            flashAnimation.Begin();
-                        }
-                    }
-
-                    // Clean up event listener when element unloads (scrolled off-screen or removed)
-                    RoutedEventHandler? unloadedHandler = null;
-                    unloadedHandler = (s, ev) =>
-                    {
-                        border.Unloaded -= unloadedHandler;
-                        item.ItemUpdated -= OnItemUpdated;
-                    };
-                    border.Unloaded += unloadedHandler;
+                    popup.IsOpen = false;
+                    break;
                 }
             }
         }
+
+        private bool IsChildOf(DependencyObject? child, DependencyObject parent)
+        {
+            while (child != null)
+            {
+                if (child == parent) return true;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return false;
+        }
+
+        private void CartItemRow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is Border border && border.DataContext is CartItem item)
+            {
+                item.ItemUpdated -= OnItemUpdated;
+                item.ItemUpdated += OnItemUpdated;
+
+                void OnItemUpdated(object? s, EventArgs args)
+                {
+                    if (border.Resources["FlashAnimation"] is Storyboard flashAnimation)
+                    {
+                        flashAnimation.Begin();
+                    }
+                }
+
+                RoutedEventHandler? unloadedHandler = null;
+                unloadedHandler = (s, ev) =>
+                {
+                    border.Unloaded -= unloadedHandler;
+                    item.ItemUpdated -= OnItemUpdated;
+                };
+                border.Unloaded += unloadedHandler;
+            }
+        }
     }
+}
