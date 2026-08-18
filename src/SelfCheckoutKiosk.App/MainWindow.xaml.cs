@@ -153,14 +153,29 @@ namespace SelfCheckoutKiosk.App
             var shift = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)
                 .HasFlag(CoreVirtualKeyStates.Down);
 
-            // Ctrl + Shift + A -> Admin Login
+            // Ctrl + Shift + A -> Admin Login or Toggle Back to Kiosk if already in Admin
             if (ctrl && shift && e.Key == VirtualKey.A)
             {
-                NavigationService.NavigateTo(
-                    typeof(AdminLoginView),
-                    null,
-                    SlideNavigationTransitionEffect.FromBottom
-                );
+                var currentPageType = RootFrame.Content?.GetType();
+                if (currentPageType == typeof(AdminLoginView) ||
+                    currentPageType == typeof(AdminDiagnosticsView) ||
+                    currentPageType == typeof(MediaBrandingView))
+                {
+                    NavigationService.NavigateTo(
+                        typeof(KioskBaseView),
+                        null,
+                        SlideNavigationTransitionEffect.FromBottom
+                    );
+                }
+                else
+                {
+                    NavigationService.NavigateTo(
+                        typeof(AdminLoginView),
+                        null,
+                        SlideNavigationTransitionEffect.FromBottom
+                    );
+                }
+                e.Handled = true;
             }
 
             // Ctrl + Shift + Backspace -> Welcome Page

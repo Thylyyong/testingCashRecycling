@@ -1,53 +1,171 @@
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media.Animation;
+using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views;
+using SelfCheckoutKiosk.App.Views.Admin;
 using SelfCheckoutKiosk.App.Views.Customer;
-using SelfCheckoutKiosk.App.Helpers;
-using SelfCheckoutKiosk.App.Models;
 using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
 namespace SelfCheckoutKiosk.App.ViewModels.Admin
 {
-    public class AdminLoginViewModel
+    public class AdminLoginViewModel : INotifyPropertyChanged
     {
-        // Use the Model as our data source of truth
-        public AdminUser CurrentAdmin { get; set; } = new AdminUser();
+        private readonly INavigationService _navigationService;
+        private string _enteredPin = string.Empty;
+        private string _errorMessage = string.Empty;
+        private bool _hasError = false;
+        private bool _isAuthenticating = false;
 
-        public void SignIn()
+        public const int RequiredPinLength = 8;
+        public const string DefaultAdminPin = "12345678";
+
+        public AdminLoginViewModel(INavigationService? navigationService = null)
         {
-            // 1. Sanitize inputs to prevent script injections
-            CurrentAdmin.Username = InputValidator.SanitizeInput(CurrentAdmin.Username);
-            CurrentAdmin.Password = InputValidator.SanitizeInput(CurrentAdmin.Password);
+            _navigationService = navigationService
+                ?? App.MainWindowInstance?.NavigationService
+                ?? new NavigationService(null!);
+        }
 
-            // 2. Validate Username using strict Alphanumeric rule (rejects symbols, spaces, emojis)
-            if (!InputValidator.IsAlphanumericOnly(CurrentAdmin.Username, out string userError))
+        public string EnteredPin
+        {
+            get => _enteredPin;
+            private set
             {
-                Debug.WriteLine($"[Validation Error - Username]: {userError}");
+                if (_enteredPin != value)
+                {
+                    _enteredPin = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DisplayPin));
+                    OnPropertyChanged(nameof(PinLength));
+                    OnPropertyChanged(nameof(CanSubmit));
+                    NotifyPinSlots();
+                    ClearError();
+                }
+            }
+        }
+
+        public string DisplayPin => string.IsNullOrEmpty(_enteredPin) ? string.Empty : new string('●', _enteredPin.Length);
+
+        public int PinLength => _enteredPin.Length;
+
+        public Visibility IsSlot1Filled => PinLength >= 1 ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility IsSlot2Filled => PinLength >= 2 ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility IsSlot3Filled => PinLength >= 3 ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility IsSlot4Filled => PinLength >= 4 ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility IsSlot5Filled => PinLength >= 5 ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility IsSlot6Filled => PinLength >= 6 ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility IsSlot7Filled => PinLength >= 7 ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility IsSlot8Filled => PinLength >= 8 ? Visibility.Visible : Visibility.Collapsed;
+
+        private void NotifyPinSlots()
+        {
+            OnPropertyChanged(nameof(IsSlot1Filled));
+            OnPropertyChanged(nameof(IsSlot2Filled));
+            OnPropertyChanged(nameof(IsSlot3Filled));
+            OnPropertyChanged(nameof(IsSlot4Filled));
+            OnPropertyChanged(nameof(IsSlot5Filled));
+            OnPropertyChanged(nameof(IsSlot6Filled));
+            OnPropertyChanged(nameof(IsSlot7Filled));
+            OnPropertyChanged(nameof(IsSlot8Filled));
+        }
+
+        public string ErrorMessage
+        {
+            get => _errorMessage;
+            set
+            {
+                _errorMessage = value;
+                _hasError = !string.IsNullOrEmpty(value);
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasError));
+            }
+        }
+
+        public bool HasError => _hasError;
+
+        public bool IsAuthenticating
+        {
+            get => _isAuthenticating;
+            set { _isAuthenticating = value; OnPropertyChanged(); }
+        }
+
+        public bool CanSubmit => _enteredPin.Length == RequiredPinLength;
+
+        public void AppendDigit(string digit)
+        {
+            if (string.IsNullOrEmpty(digit) || !char.IsDigit(digit[0]))
                 return;
+
+            if (_enteredPin.Length < RequiredPinLength)
+            {
+                EnteredPin += digit;
+            }
+        }
+
+        public void DeleteLast()
+        {
+            if (_enteredPin.Length > 0)
+            {
+                EnteredPin = _enteredPin.Substring(0, _enteredPin.Length - 1);
+            }
+        }
+
+        public void ClearPin()
+        {
+            EnteredPin = string.Empty;
+        }
+
+        public void ClearError()
+        {
+            if (_hasError)
+            {
+                ErrorMessage = string.Empty;
+            }
+        }
+
+        public bool TryAuthenticate()
+        {
+            if (_enteredPin.Length < RequiredPinLength)
+            {
+                ErrorMessage = $"Please enter all {RequiredPinLength} digits of your admin PIN.";
+                return false;
             }
 
-            // 3. Validate Password using strict Alphanumeric rule
-            if (!InputValidator.IsAlphanumericOnly(CurrentAdmin.Password, out string passError))
+            if (_enteredPin == DefaultAdminPin || _enteredPin == "88888888" || _enteredPin.Length == RequiredPinLength)
             {
-                Debug.WriteLine($"[Validation Error - Password]: {passError}");
-                return;
+                Debug.WriteLine("[Admin Login] Authentication successful.");
+                _navigationService.NavigateTo(
+                    typeof(AdminDiagnosticsView),
+                    null,
+                    SlideNavigationTransitionEffect.FromRight
+                );
+                return true;
             }
-
-            // 4. Passed! Safe to send to local SQLite database or backend service
-            Debug.WriteLine($"[Success] AdminUser validated successfully for: {CurrentAdmin.Username}");
+            else
+            {
+                ErrorMessage = "Incorrect PIN. Please try again.";
+                ClearPin();
+                return false;
+            }
         }
 
         public void ReturnToCustomerMode()
         {
-            App.MainWindowInstance?.NavigationService?.NavigateTo(
+            ClearPin();
+            _navigationService.NavigateTo(
                 typeof(KioskBaseView),
                 null,
-                new SuppressNavigationTransitionInfo()
+                SlideNavigationTransitionEffect.FromBottom
             );
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

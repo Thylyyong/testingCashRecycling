@@ -1,0 +1,466 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="SelfCheckoutKiosk.App.Views.Admin.MediaBrandingView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SelfCheckoutKiosk.App.Views.Admin"
+    xmlns:models="using:SelfCheckoutKiosk.App.Models"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <Style x:Key="MediaCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="18,16"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        </Style>
+
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#0F172A"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Background="#F1F5F9">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="LayoutStates">
+                <!-- Portrait / Narrow Screens (540px, 1080px, 1440px) -->
+                <VisualState x:Name="PortraitState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="HeaderGrid.Padding" Value="20,16"/>
+                        <Setter Target="ContentScrollViewer.Padding" Value="20,16"/>
+                        <Setter Target="TwoColumnGrid.Visibility" Value="Collapsed"/>
+                        <Setter Target="SingleColumnStack.Visibility" Value="Visible"/>
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!-- Horizontal Widescreen (16:9: >= 1100px) -->
+                <VisualState x:Name="HorizontalState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1100" MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="HeaderGrid.Padding" Value="32,18"/>
+                        <Setter Target="ContentScrollViewer.Padding" Value="32,18"/>
+                        <Setter Target="TwoColumnGrid.Visibility" Value="Visible"/>
+                        <Setter Target="SingleColumnStack.Visibility" Value="Collapsed"/>
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- TOP BAR (Identical Padding to Cards) -->
+        <Border Grid.Row="0" Background="White" BorderBrush="#CBD5E1" BorderThickness="0,0,0,1">
+            <Grid x:Name="HeaderGrid" Padding="20,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="Media &amp; Branding" FontSize="22" FontWeight="Bold" Foreground="#0F172A"/>
+                    <TextBlock Text="Manage welcome attract playlist and branding configurations" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
+                </StackPanel>
+
+                <!-- Back Button -->
+                <Button
+                    x:Name="BackButton"
+                    Grid.Column="1"
+                    Click="BackButton_Click"
+                    Height="38"
+                    Padding="16,0"
+                    CornerRadius="8"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource DialogButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE72B;" FontSize="12" Foreground="#0F172A"/>
+                        <TextBlock Text="Back" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- MAIN SCROLLABLE CONTENT (Aligned Symmetrically with Header) -->
+        <ScrollViewer x:Name="ContentScrollViewer" Grid.Row="1" Padding="20,16" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="0" HorizontalAlignment="Stretch">
+
+                <!-- STATUS MESSAGE BANNER (if triggered) -->
+                <Border
+                    Visibility="{x:Bind ViewModel.HasStatusMessage, Mode=OneWay}"
+                    Background="{StaticResource SuccessSoftBrush}"
+                    BorderBrush="{StaticResource SuccessBorderBrush}"
+                    BorderThickness="1.5"
+                    CornerRadius="10"
+                    Padding="14,10"
+                    Margin="0,0,0,14">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE73E;" FontSize="15" Foreground="{StaticResource SuccessBrush}"/>
+                        <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" Foreground="{StaticResource SuccessBrush}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ======================================================== -->
+                <!-- 1. HORIZONTAL WIDESCREEN 2-COLUMN VIEW -->
+                <!-- ======================================================== -->
+                <Grid x:Name="TwoColumnGrid" ColumnSpacing="16" Visibility="Visible" HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.2*"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- LEFT: Welcome Media Playlist -->
+                    <Border Grid.Column="0" Style="{StaticResource MediaCardStyle}">
+                        <StackPanel Spacing="14">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Welcome-Screen Playlist" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center"/>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                    <Button
+                                        x:Name="AddImageButton"
+                                        Click="AddImageButton_Click"
+                                        Height="36"
+                                        Padding="14,0"
+                                        CornerRadius="6"
+                                        Style="{StaticResource AccentButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEB9F;" FontSize="13" Foreground="White"/>
+                                            <TextBlock Text="Add Image" FontWeight="Bold" FontSize="12" Foreground="White"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        x:Name="AddVideoButton"
+                                        Click="AddVideoButton_Click"
+                                        Height="36"
+                                        Padding="14,0"
+                                        CornerRadius="6"
+                                        Style="{StaticResource AccentButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE714;" FontSize="13" Foreground="White"/>
+                                            <TextBlock Text="Add Video" FontWeight="Bold" FontSize="12" Foreground="White"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Media Items List -->
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.MediaItems}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="8"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AdminMediaItem">
+                                        <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Margin="0,0,10,0">
+                                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="{x:Bind TypeGlyph, Mode=OneWay}" FontSize="15" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                                    <TextBlock FontWeight="Bold" FontSize="13" Foreground="#0F172A" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
+                                                        <Run Text="{x:Bind MediaType}"/>
+                                                        <Run Text=" — " Foreground="#94A3B8"/>
+                                                        <Run Text="{x:Bind FileName}"/>
+                                                    </TextBlock>
+                                                    <TextBlock FontSize="11" Foreground="#64748B">
+                                                        <Run Text="{x:Bind DurationText, Mode=OneWay}"/>
+                                                        <Run Text=" • "/>
+                                                        <Run Text="{x:Bind StatusText, Mode=OneWay}" FontWeight="SemiBold" Foreground="#2563EB"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <Button Width="32" Height="32" Padding="0" CornerRadius="6" Style="{StaticResource DialogButtonStyle}" Tag="{x:Bind}" Click="MoveUp_Click">
+                                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE70E;" FontSize="11" Foreground="#0F172A"/>
+                                                    </Button>
+                                                    <Button Width="32" Height="32" Padding="0" CornerRadius="6" Style="{StaticResource DialogButtonStyle}" Tag="{x:Bind}" Click="MoveDown_Click">
+                                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE70D;" FontSize="11" Foreground="#0F172A"/>
+                                                    </Button>
+                                                    <ToggleSwitch Style="{StaticResource AdminToggleSwitchStyle}" IsOn="{x:Bind IsActive, Mode=TwoWay}" OnContent="" OffContent="" Margin="4,0,0,0"/>
+                                                    <Button Width="32" Height="32" Padding="0" CornerRadius="6" Style="{StaticResource KeypadDangerButtonStyle}" Tag="{x:Bind}" Click="DeleteMedia_Click">
+                                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74D;" FontSize="12" Foreground="#DC2626"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- RIGHT: Branding Settings -->
+                    <Border Grid.Column="1" Style="{StaticResource MediaCardStyle}">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="Branding Configuration" Style="{StaticResource SectionHeaderStyle}"/>
+
+                            <!-- Company Name -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Company Name" FontSize="12" FontWeight="Bold" Foreground="#475569"/>
+                                <TextBox
+                                    Text="{x:Bind ViewModel.Branding.CompanyName, Mode=TwoWay}"
+                                    Style="{StaticResource AdminTextBoxStyle}"
+                                    Height="40"
+                                    FontSize="13"/>
+                            </StackPanel>
+
+                            <!-- Tagline -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Tagline" FontSize="12" FontWeight="Bold" Foreground="#475569"/>
+                                <TextBox
+                                    Text="{x:Bind ViewModel.Branding.Tagline, Mode=TwoWay}"
+                                    Style="{StaticResource AdminTextBoxStyle}"
+                                    Height="40"
+                                    FontSize="13"/>
+                            </StackPanel>
+
+                            <!-- Save Button -->
+                            <Button
+                                x:Name="SaveBrandingButton"
+                                Click="SaveBrandingButton_Click"
+                                Height="40"
+                                Padding="20,0"
+                                HorizontalAlignment="Left"
+                                CornerRadius="6"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Margin="0,2,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74E;" FontSize="13" Foreground="White"/>
+                                    <TextBlock Text="Save Branding" FontWeight="Bold" FontSize="12" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Logo Info (Clean Unclipped Card) -->
+                            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,4,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Margin="0,0,10,0">
+                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEB9F;" FontSize="15" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                        <TextBlock Text="Active Kiosk Logo" FontSize="11" Foreground="#64748B"/>
+                                        <TextBlock Text="{x:Bind ViewModel.Branding.LogoFileName, Mode=OneWay}" FontWeight="Bold" FontSize="13" Foreground="#0F172A" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+
+                                    <Button
+                                        Grid.Column="2"
+                                        Click="ChangeLogoButton_Click"
+                                        Height="34"
+                                        Padding="14,0"
+                                        CornerRadius="6"
+                                        Style="{StaticResource DialogButtonStyle}">
+                                        <TextBlock Text="Change" FontSize="12" FontWeight="Bold" Foreground="#0F172A"/>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- ======================================================== -->
+                <!-- 2. VERTICAL PORTRAIT SINGLE-COLUMN VIEW -->
+                <!-- ======================================================== -->
+                <StackPanel x:Name="SingleColumnStack" Spacing="0" Visibility="Collapsed" HorizontalAlignment="Stretch">
+                    <!-- Welcome Media Playlist Card -->
+                    <Border Style="{StaticResource MediaCardStyle}">
+                        <StackPanel Spacing="14">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="Welcome-Screen Playlist" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center"/>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                    <Button
+                                        Click="AddImageButton_Click"
+                                        Height="36"
+                                        Padding="12,0"
+                                        CornerRadius="6"
+                                        Style="{StaticResource AccentButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEB9F;" FontSize="13" Foreground="White"/>
+                                            <TextBlock Text="Add Image" FontWeight="Bold" FontSize="12" Foreground="White"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        Click="AddVideoButton_Click"
+                                        Height="36"
+                                        Padding="12,0"
+                                        CornerRadius="6"
+                                        Style="{StaticResource AccentButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE714;" FontSize="13" Foreground="White"/>
+                                            <TextBlock Text="Add Video" FontWeight="Bold" FontSize="12" Foreground="White"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Media Items -->
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.MediaItems}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="8"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AdminMediaItem">
+                                        <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Margin="0,0,10,0">
+                                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="{x:Bind TypeGlyph, Mode=OneWay}" FontSize="15" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                                    <TextBlock FontWeight="Bold" FontSize="13" Foreground="#0F172A" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
+                                                        <Run Text="{x:Bind MediaType}"/>
+                                                        <Run Text=" — " Foreground="#94A3B8"/>
+                                                        <Run Text="{x:Bind FileName}"/>
+                                                    </TextBlock>
+                                                    <TextBlock FontSize="11" Foreground="#64748B">
+                                                        <Run Text="{x:Bind DurationText, Mode=OneWay}"/>
+                                                        <Run Text=" • "/>
+                                                        <Run Text="{x:Bind StatusText, Mode=OneWay}" FontWeight="SemiBold" Foreground="#2563EB"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <Button Width="30" Height="30" Padding="0" CornerRadius="6" Style="{StaticResource DialogButtonStyle}" Tag="{x:Bind}" Click="MoveUp_Click">
+                                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE70E;" FontSize="11" Foreground="#0F172A"/>
+                                                    </Button>
+                                                    <Button Width="30" Height="30" Padding="0" CornerRadius="6" Style="{StaticResource DialogButtonStyle}" Tag="{x:Bind}" Click="MoveDown_Click">
+                                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE70D;" FontSize="11" Foreground="#0F172A"/>
+                                                    </Button>
+                                                    <ToggleSwitch Style="{StaticResource AdminToggleSwitchStyle}" IsOn="{x:Bind IsActive, Mode=TwoWay}" OnContent="" OffContent="" Margin="4,0,0,0"/>
+                                                    <Button Width="30" Height="30" Padding="0" CornerRadius="6" Style="{StaticResource KeypadDangerButtonStyle}" Tag="{x:Bind}" Click="DeleteMedia_Click">
+                                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74D;" FontSize="12" Foreground="#DC2626"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Branding Settings Card -->
+                    <Border Style="{StaticResource MediaCardStyle}">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="Branding Configuration" Style="{StaticResource SectionHeaderStyle}"/>
+
+                            <!-- Company Name -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Company Name" FontSize="12" FontWeight="Bold" Foreground="#475569"/>
+                                <TextBox
+                                    Text="{x:Bind ViewModel.Branding.CompanyName, Mode=TwoWay}"
+                                    Style="{StaticResource AdminTextBoxStyle}"
+                                    Height="40"
+                                    FontSize="13"/>
+                            </StackPanel>
+
+                            <!-- Tagline -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Tagline" FontSize="12" FontWeight="Bold" Foreground="#475569"/>
+                                <TextBox
+                                    Text="{x:Bind ViewModel.Branding.Tagline, Mode=TwoWay}"
+                                    Style="{StaticResource AdminTextBoxStyle}"
+                                    Height="40"
+                                    FontSize="13"/>
+                            </StackPanel>
+
+                            <!-- Save Button -->
+                            <Button
+                                Click="SaveBrandingButton_Click"
+                                Height="40"
+                                Padding="20,0"
+                                HorizontalAlignment="Left"
+                                CornerRadius="6"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Margin="0,2,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74E;" FontSize="13" Foreground="White"/>
+                                    <TextBlock Text="Save Branding" FontWeight="Bold" FontSize="12" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Logo Info (Clean Unclipped Card) -->
+                            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,4,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Margin="0,0,10,0">
+                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEB9F;" FontSize="15" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                        <TextBlock Text="Active Kiosk Logo" FontSize="11" Foreground="#64748B"/>
+                                        <TextBlock Text="{x:Bind ViewModel.Branding.LogoFileName, Mode=OneWay}" FontWeight="Bold" FontSize="13" Foreground="#0F172A" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+
+                                    <Button
+                                        Grid.Column="2"
+                                        Click="ChangeLogoButton_Click"
+                                        Height="34"
+                                        Padding="14,0"
+                                        CornerRadius="6"
+                                        Style="{StaticResource DialogButtonStyle}">
+                                        <TextBlock Text="Change" FontSize="12" FontWeight="Bold" Foreground="#0F172A"/>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

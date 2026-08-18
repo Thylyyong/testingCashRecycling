@@ -1,22 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.ViewModels.Admin;
-using SelfCheckoutKiosk.App.Helpers;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+using Windows.System;
 
 namespace SelfCheckoutKiosk.App.Views.Admin
 {
@@ -28,28 +14,95 @@ namespace SelfCheckoutKiosk.App.Views.Admin
         {
             InitializeComponent();
             ViewModel = new AdminLoginViewModel();
+
+            this.IsTabStop = true;
+            this.Loaded += AdminLoginView_Loaded;
+            this.Unloaded += AdminLoginView_Unloaded;
         }
 
-        // Live validation during typing (Blocks symbols/emojis instantly)
-        private void UsernameTextBox_BeforeTextChanging(TextBox sender, TextBoxBeforeTextChangingEventArgs args)
+        private void AdminLoginView_Loaded(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrEmpty(args.NewText))
+            this.Focus(FocusState.Programmatic);
+
+            if (App.MainWindowInstance?.Content is FrameworkElement root)
             {
-                if (InputValidator.ContainsEmoji(args.NewText) || !System.Text.RegularExpressions.Regex.IsMatch(args.NewText, "^[a-zA-Z0-9]*$"))
-                {
-                    args.Cancel = true; // Reject bad input on the fly
-                }
+                root.KeyDown -= Page_KeyDown;
+                root.KeyDown += Page_KeyDown;
+            }
+            else
+            {
+                this.KeyDown -= Page_KeyDown;
+                this.KeyDown += Page_KeyDown;
             }
         }
 
-        private void SignInButton_Click(object sender, RoutedEventArgs e)
+        private void AdminLoginView_Unloaded(object sender, RoutedEventArgs e)
         {
-            // Map UI control inputs directly into the Model properties inside the ViewModel
-            ViewModel.CurrentAdmin.Username = UsernameTextBox.Text;
-            ViewModel.CurrentAdmin.Password = PasswordBox.Password;
+            if (App.MainWindowInstance?.Content is FrameworkElement root)
+            {
+                root.KeyDown -= Page_KeyDown;
+            }
+            else
+            {
+                this.KeyDown -= Page_KeyDown;
+            }
+        }
 
-            // Trigger validation and login logic
-            ViewModel.SignIn();
+        private void Page_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key >= VirtualKey.Number0 && e.Key <= VirtualKey.Number9)
+            {
+                string digit = ((int)(e.Key - VirtualKey.Number0)).ToString();
+                ViewModel.AppendDigit(digit);
+                e.Handled = true;
+            }
+            else if (e.Key >= VirtualKey.NumberPad0 && e.Key <= VirtualKey.NumberPad9)
+            {
+                string digit = ((int)(e.Key - VirtualKey.NumberPad0)).ToString();
+                ViewModel.AppendDigit(digit);
+                e.Handled = true;
+            }
+            else if (e.Key == VirtualKey.Back)
+            {
+                ViewModel.DeleteLast();
+                e.Handled = true;
+            }
+            else if (e.Key == VirtualKey.Escape)
+            {
+                ViewModel.ClearPin();
+                e.Handled = true;
+            }
+            else if (e.Key == VirtualKey.Enter)
+            {
+                if (ViewModel.CanSubmit)
+                {
+                    ViewModel.TryAuthenticate();
+                }
+                e.Handled = true;
+            }
+        }
+
+        private void KeypadDigit_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is string digit)
+            {
+                ViewModel.AppendDigit(digit);
+            }
+        }
+
+        private void KeypadClear_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.ClearPin();
+        }
+
+        private void KeypadDelete_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.DeleteLast();
+        }
+
+        private void UnlockButton_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.TryAuthenticate();
         }
 
         private void ReturnButton_Click(object sender, RoutedEventArgs e)

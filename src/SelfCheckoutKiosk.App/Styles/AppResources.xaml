@@ -41,11 +41,54 @@
     <Style x:Key="DialogButtonStyle" TargetType="Button">
         <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
         <Setter Property="Background" Value="#F1F5F9"/>
-        <Setter Property="Foreground" Value="#1E293B"/>
+        <Setter Property="Foreground" Value="#0F172A"/>
         <Setter Property="BorderBrush" Value="#CBD5E1"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="10"/>
         <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <ContentPresenter
+                        x:Name="ContentPresenter"
+                        Background="{TemplateBinding Background}"
+                        Foreground="{TemplateBinding Foreground}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}"
+                        HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="#E2E8F0"/>
+                                        <Setter Target="ContentPresenter.Foreground" Value="#0F172A"/>
+                                        <Setter Target="ContentPresenter.BorderBrush" Value="#94A3B8"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="#CBD5E1"/>
+                                        <Setter Target="ContentPresenter.Foreground" Value="#0F172A"/>
+                                        <Setter Target="ContentPresenter.BorderBrush" Value="#64748B"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="#F8FAFC"/>
+                                        <Setter Target="ContentPresenter.Foreground" Value="#94A3B8"/>
+                                        <Setter Target="ContentPresenter.BorderBrush" Value="#E2E8F0"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </ContentPresenter>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="AccentButtonStyle" TargetType="Button">
@@ -56,6 +99,147 @@
         <Setter Property="CornerRadius" Value="10"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <ContentPresenter
+                        x:Name="ContentPresenter"
+                        Background="{TemplateBinding Background}"
+                        Foreground="{TemplateBinding Foreground}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}"
+                        HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="#1D4ED8"/>
+                                        <Setter Target="ContentPresenter.Foreground" Value="White"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="#1E40AF"/>
+                                        <Setter Target="ContentPresenter.Foreground" Value="White"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="#E2E8F0"/>
+                                        <Setter Target="ContentPresenter.Foreground" Value="#94A3B8"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </ContentPresenter>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Keypad Styles with guaranteed dark contrast on hover -->
+    <Style x:Key="KeypadDigitButtonStyle" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+        <Setter Property="Background" Value="#F1F5F9"/>
+        <Setter Property="Foreground" Value="#0F172A"/>
+        <Setter Property="BorderBrush" Value="#CBD5E1"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="Margin" Value="3"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <ContentPresenter
+                        x:Name="ContentPresenter"
+                        Background="{TemplateBinding Background}"
+                        Foreground="{TemplateBinding Foreground}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}"
+                        HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="#E2E8F0"/>
+                                        <Setter Target="ContentPresenter.Foreground" Value="#0F172A"/>
+                                        <Setter Target="ContentPresenter.BorderBrush" Value="#94A3B8"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="#CBD5E1"/>
+                                        <Setter Target="ContentPresenter.Foreground" Value="#0F172A"/>
+                                        <Setter Target="ContentPresenter.BorderBrush" Value="#64748B"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </ContentPresenter>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="KeypadDangerButtonStyle" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+        <Setter Property="Background" Value="#FEE2E2"/>
+        <Setter Property="Foreground" Value="#DC2626"/>
+        <Setter Property="BorderBrush" Value="#FECACA"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="Margin" Value="3"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <ContentPresenter
+                        x:Name="ContentPresenter"
+                        Background="{TemplateBinding Background}"
+                        Foreground="{TemplateBinding Foreground}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}"
+                        HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="#FCA5A5"/>
+                                        <Setter Target="ContentPresenter.Foreground" Value="#991B1B"/>
+                                        <Setter Target="ContentPresenter.BorderBrush" Value="#F87171"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="ContentPresenter.Background" Value="#EF4444"/>
+                                        <Setter Target="ContentPresenter.Foreground" Value="White"/>
+                                        <Setter Target="ContentPresenter.BorderBrush" Value="#DC2626"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                    </ContentPresenter>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="KioskContentDialogStyle" TargetType="ContentDialog">
@@ -65,6 +249,59 @@
         <Setter Property="BorderBrush" Value="#E2E8F0"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="RequestedTheme" Value="Light"/>
+    </Style>
+
+    <!-- Theme Overrides for TextBoxes & Controls in Light Mode -->
+    <SolidColorBrush x:Key="TextControlBackground" Color="White"/>
+    <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="White"/>
+    <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="White"/>
+    <SolidColorBrush x:Key="TextControlForeground" Color="#0F172A"/>
+    <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#0F172A"/>
+    <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#0F172A"/>
+    <SolidColorBrush x:Key="TextControlBorderBrush" Color="#CBD5E1"/>
+    <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#94A3B8"/>
+    <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#2563EB"/>
+    <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#94A3B8"/>
+    <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#94A3B8"/>
+    <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#94A3B8"/>
+
+    <!-- Theme Overrides for ToggleSwitch in Light Mode -->
+    <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#2563EB"/>
+    <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#1D4ED8"/>
+    <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#1E40AF"/>
+    <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#E2E8F0"/>
+    <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#CBD5E1"/>
+    <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="#94A3B8"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#94A3B8"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#64748B"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="#475569"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#2563EB"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#1D4ED8"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#1E40AF"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="White"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="White"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="White"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#64748B"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#475569"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="#334155"/>
+
+    <!-- Custom Admin Input Field Style -->
+    <Style x:Key="AdminTextBoxStyle" TargetType="TextBox">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="Foreground" Value="#0F172A"/>
+        <Setter Property="BorderBrush" Value="#CBD5E1"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="SelectionHighlightColor" Value="#2563EB"/>
+    </Style>
+
+    <!-- Custom Admin Toggle Switch Style -->
+    <Style x:Key="AdminToggleSwitchStyle" TargetType="ToggleSwitch">
+        <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}"/>
+        <Setter Property="Foreground" Value="#0F172A"/>
     </Style>
     
     <!-- Font Sizes -->

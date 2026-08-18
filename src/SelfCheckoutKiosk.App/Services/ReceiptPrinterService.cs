@@ -1,4 +1,4 @@
-﻿using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Models;
 using System.Diagnostics;
 
 namespace SelfCheckoutKiosk.App.Services
@@ -7,8 +7,13 @@ namespace SelfCheckoutKiosk.App.Services
     {
         public void Print(Payment payment)
         {
-            // TODO: integrate with actual receipt printer hardware/driver.
+            // Integrate with actual receipt printer hardware/driver.
             Debug.WriteLine($"[PRINTER] (stub) Would print receipt for Transaction #{payment.TransactionId}");
+        }
+
+        public void ReprintLastReceipt()
+        {
+            Debug.WriteLine("[PRINTER] (stub) Would reprint last transaction receipt.");
         }
     }
 }

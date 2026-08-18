@@ -8,123 +8,183 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Background="White">
+    <!-- Dimmed Backdrop -->
+    <Grid Background="#400F172A">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="LayoutStates">
+                <!-- Narrow / Mobile Window -->
+                <VisualState x:Name="SmallState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="LoginCard.Width" Value="360"/>
+                        <Setter Target="LoginCard.Padding" Value="20,18"/>
+                        <Setter Target="KeypadGrid.Width" Value="320"/>
+                    </VisualState.Setters>
+                </VisualState>
 
-        <!-- Login Card -->
+                <!-- Normal / Portrait Kiosk (21.5" & 27.5") -->
+                <VisualState x:Name="VerticalKioskState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" MinWindowHeight="1000"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="LoginCard.Width" Value="420"/>
+                        <Setter Target="LoginCard.Padding" Value="28,24"/>
+                        <Setter Target="KeypadGrid.Width" Value="350"/>
+                    </VisualState.Setters>
+                </VisualState>
+
+                <!-- Horizontal Widescreen -->
+                <VisualState x:Name="HorizontalState">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1100" MinWindowHeight="0"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="LoginCard.Width" Value="420"/>
+                        <Setter Target="LoginCard.Padding" Value="28,24"/>
+                        <Setter Target="KeypadGrid.Width" Value="350"/>
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <!-- Centered Admin Login Card -->
         <Border
+            x:Name="LoginCard"
             Width="420"
-            Padding="40"
+            Padding="28,24"
             CornerRadius="16"
-            Background="#F3F3F3"
-            BorderBrush="#E0E0E0"
-            BorderThickness="1"
+            Background="White"
+            BorderBrush="#CBD5E1"
+            BorderThickness="1.5"
             HorizontalAlignment="Center"
             VerticalAlignment="Center">
 
-            <StackPanel Spacing="20">
+            <StackPanel Spacing="0" HorizontalAlignment="Stretch">
 
-                <!-- Title -->
-                <TextBlock
-                    Text="Administrator Login"
-                    FontSize="32"
-                    FontWeight="SemiBold"
-                    Foreground="Black"
-                    HorizontalAlignment="Center"/>
-
-                <TextBlock
-                    Text="Self Checkout Kiosk"
-                    FontSize="14"
-                    Opacity="0.7"
-                    Foreground="Black"
-                    HorizontalAlignment="Center"/>
-
-
-                <!-- Username -->
-                <StackPanel Spacing="8">
+                <!-- Header: Icon & Typography -->
+                <StackPanel Spacing="4" HorizontalAlignment="Center" Margin="0,0,0,16">
+                    <Border Width="46" Height="46" CornerRadius="12" Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,8">
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7EE;" FontSize="22" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
 
                     <TextBlock
-                        Text="Username"
-                        FontWeight="SemiBold"
-                        Foreground="Black"/>
-
-                    <TextBox
-                        x:Name="UsernameTextBox"
-                        PlaceholderText="Enter username"
-                        Height="42"
-                        Background="White"
-                        Foreground="Black"
-                        BorderBrush="#CCCCCC"
-                        BeforeTextChanging="UsernameTextBox_BeforeTextChanging">
-                        <TextBox.Resources>
-                            <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="White"/>
-                            <SolidColorBrush x:Key="TextControlForegroundFocused" Color="Black"/>
-                            <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="White"/>
-                        </TextBox.Resources>
-                    </TextBox>
-
-                </StackPanel>
-
-
-                <!-- Password -->
-                <StackPanel Spacing="8">
+                        Text="Administrator Login"
+                        FontFamily="{StaticResource GlobalAppFont}"
+                        FontSize="22"
+                        FontWeight="Bold"
+                        Foreground="#0F172A"
+                        HorizontalAlignment="Center"/>
 
                     <TextBlock
-                        Text="Password"
-                        FontWeight="SemiBold"
-                        Foreground="Black"/>
-
-                    <PasswordBox
-                        x:Name="PasswordBox"
-                        PlaceholderText="Enter password"
-                        Height="42"
-                        Background="White"
-                        Foreground="Black"
-                        BorderBrush="#CCCCCC">
-                        <PasswordBox.Resources>
-                            <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="White"/>
-                            <SolidColorBrush x:Key="TextControlForegroundFocused" Color="Black"/>
-                            <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="White"/>
-                        </PasswordBox.Resources>
-                    </PasswordBox>
-
+                        Text="Enter 8-digit attendant PIN"
+                        FontFamily="{StaticResource GlobalAppFont}"
+                        FontSize="13"
+                        FontWeight="Medium"
+                        Foreground="#64748B"
+                        HorizontalAlignment="Center"/>
                 </StackPanel>
 
-
-                <!-- Sign In Button -->
-                <Button
-                    Content="Sign In"
-                    Height="45"
-                    HorizontalAlignment="Stretch"
+                <!-- Error Message Banner (if any) -->
+                <Border
+                    Visibility="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                    Background="{StaticResource DangerLightBrush}"
+                    BorderBrush="{StaticResource DangerBorderBrush}"
+                    BorderThickness="1"
                     CornerRadius="8"
-                    Background="#0067C0"
-                    Foreground="White"
-                    Click="SignInButton_Click">
-                    <Button.Resources>
-                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#005A9E"/>
-                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#004578"/>
-                    </Button.Resources>
-                </Button>
+                    Padding="12,8"
+                    Margin="0,0,0,12">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE783;" FontSize="14" Foreground="{StaticResource DangerBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" Foreground="{StaticResource DangerBrush}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
 
+                <!-- Masked PIN Box -->
+                <TextBox
+                    x:Name="PinEntryBox"
+                    Text="{x:Bind ViewModel.DisplayPin, Mode=OneWay}"
+                    PlaceholderText="••••••••"
+                    FontSize="22"
+                    FontWeight="Bold"
+                    TextAlignment="Center"
+                    Height="48"
+                    CharacterSpacing="140"
+                    IsReadOnly="True"
+                    IsTabStop="False"
+                    Margin="0,0,0,10"
+                    CornerRadius="8"
+                    Background="#F8FAFC"
+                    BorderBrush="#CBD5E1"
+                    BorderThickness="1.5"
+                    HorizontalAlignment="Stretch"
+                    FontFamily="{StaticResource GlobalAppFont}"/>
 
-                <!-- Return Button -->
-                <Button
-                    Content="Return to Customer Mode"
-                    HorizontalAlignment="Center"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    Foreground="#0066CC"
-                    Click="ReturnButton_Click">
-                    <Button.Resources>
-                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="Transparent"/>
-                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="Transparent"/>
-                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#004080"/>
-                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#002B55"/>
-                    </Button.Resources>
-                </Button>
+                <!-- 3x4 Touch Keypad Grid -->
+                <Grid x:Name="KeypadGrid" Margin="0,2,0,18" Width="350" HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="52"/>
+                        <RowDefinition Height="52"/>
+                        <RowDefinition Height="52"/>
+                        <RowDefinition Height="52"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Row 1 -->
+                    <Button Grid.Row="0" Grid.Column="0" Content="1" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDigit_Click" Tag="1"/>
+                    <Button Grid.Row="0" Grid.Column="1" Content="2" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDigit_Click" Tag="2"/>
+                    <Button Grid.Row="0" Grid.Column="2" Content="3" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDigit_Click" Tag="3"/>
+
+                    <!-- Row 2 -->
+                    <Button Grid.Row="1" Grid.Column="0" Content="4" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDigit_Click" Tag="4"/>
+                    <Button Grid.Row="1" Grid.Column="1" Content="5" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDigit_Click" Tag="5"/>
+                    <Button Grid.Row="1" Grid.Column="2" Content="6" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDigit_Click" Tag="6"/>
+
+                    <!-- Row 3 -->
+                    <Button Grid.Row="2" Grid.Column="0" Content="7" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDigit_Click" Tag="7"/>
+                    <Button Grid.Row="2" Grid.Column="1" Content="8" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDigit_Click" Tag="8"/>
+                    <Button Grid.Row="2" Grid.Column="2" Content="9" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDigit_Click" Tag="9"/>
+
+                    <!-- Row 4 -->
+                    <Button Grid.Row="3" Grid.Column="0" Content="Clear" Style="{StaticResource KeypadDangerButtonStyle}" Click="KeypadClear_Click"/>
+                    <Button Grid.Row="3" Grid.Column="1" Content="0" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDigit_Click" Tag="0"/>
+                    <Button Grid.Row="3" Grid.Column="2" Style="{StaticResource KeypadDigitButtonStyle}" Click="KeypadDelete_Click">
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE925;" FontSize="20" Foreground="#0F172A"/>
+                    </Button>
+                </Grid>
+
+                <!-- Action Buttons: Cancel & Sign In -->
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button
+                        Grid.Column="0"
+                        Content="Cancel"
+                        Style="{StaticResource DialogButtonStyle}"
+                        Height="44"
+                        HorizontalAlignment="Stretch"
+                        Click="ReturnButton_Click"/>
+
+                    <Button
+                        Grid.Column="1"
+                        Content="Sign In"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Height="44"
+                        HorizontalAlignment="Stretch"
+                        IsEnabled="{x:Bind ViewModel.CanSubmit, Mode=OneWay}"
+                        Click="UnlockButton_Click"/>
+                </Grid>
 
             </StackPanel>
-
         </Border>
-
     </Grid>
 </Page>

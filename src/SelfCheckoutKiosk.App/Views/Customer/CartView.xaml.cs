@@ -1049,19 +1049,16 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             for (int i = 0; i < 3; i++) keypadGrid.ColumnDefinitions.Add(new ColumnDefinition());
             for (int i = 0; i < 4; i++) keypadGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(56) });
 
-            Button MakeKeyButton(object content, Action onClick, SolidColorBrush? bg = null, SolidColorBrush? fg = null, double? fontSize = null)
+            Button MakeKeyButton(object content, Action onClick, bool isDanger = false)
             {
+                var style = (Style)(isDanger
+                    ? Application.Current.Resources["KeypadDangerButtonStyle"]
+                    : Application.Current.Resources["KeypadDigitButtonStyle"]);
+
                 var btn = new Button
                 {
                     Content = content,
-                    FontSize = fontSize ?? 22,
-                    FontWeight = FontWeights.SemiBold,
-                    Margin = new Thickness(3),
-                    CornerRadius = new CornerRadius(8),
-                    Background = bg ?? new SolidColorBrush(Windows.UI.Color.FromArgb(255, 241, 245, 249)),
-                    Foreground = fg ?? new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 41, 59)),
-                    HorizontalAlignment = HorizontalAlignment.Stretch,
-                    VerticalAlignment = VerticalAlignment.Stretch,
+                    Style = style,
                     FontFamily = globalFont
                 };
                 btn.Click += (s, args) =>
@@ -1084,21 +1081,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 }
             }
 
-            var clearBtn = MakeKeyButton("Clear", ClearAll,
-                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 254, 226, 226)),
-                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 220, 38, 38)),
-                16);
+            var clearBtn = MakeKeyButton("Clear", ClearAll, isDanger: true);
             Grid.SetRow(clearBtn, 3); Grid.SetColumn(clearBtn, 0); keypadGrid.Children.Add(clearBtn);
 
             var zeroBtn = MakeKeyButton("0", () => AppendDigit("0"));
             Grid.SetRow(zeroBtn, 3); Grid.SetColumn(zeroBtn, 1); keypadGrid.Children.Add(zeroBtn);
 
             var deleteBtn = MakeKeyButton(
-                new FontIcon { Glyph = "\uE925", FontSize = 24 },
-                DeleteLast,
-                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 241, 245, 249)),
-                new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 41, 59))
-            );
+                new FontIcon { Glyph = "\uE925", FontSize = 22, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)) },
+                DeleteLast);
 
             Grid.SetRow(deleteBtn, 3);
             Grid.SetColumn(deleteBtn, 2);
