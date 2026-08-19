@@ -760,8 +760,9 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
     private void EnsurePaymentSelectionState()
     {
         if (
-            CurrentState !=
-            KioskState.Scanning
+            CurrentState != KioskState.Scanning &&
+            CurrentState != KioskState.Idle &&
+            CurrentState != KioskState.AwaitingPayment
         )
         {
             throw new InvalidOperationException(
@@ -917,6 +918,12 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
                 true,
 
             (
+                KioskState.Idle,
+                KioskState.AwaitingPayment
+            ) =>
+                true,
+
+            (
                 KioskState.Scanning,
                 KioskState.AwaitingPayment
             ) =>
@@ -936,6 +943,12 @@ public sealed class LLCoreLogicEngine : ILLCoreLogicEngine
 
             (
                 KioskState.AwaitingPayment,
+                KioskState.Idle
+            ) =>
+                true,
+
+            (
+                KioskState.ProcessingCash,
                 KioskState.Idle
             ) =>
                 true,

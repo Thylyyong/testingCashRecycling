@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
@@ -92,6 +92,18 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         public void ReturnHome()
         {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (App.Services?.Engine != null)
+                    {
+                        await App.Services.Engine.ResetToIdleAsync();
+                    }
+                }
+                catch { }
+            });
+
             NavigationService.NavigateTo(typeof(KioskBaseView), null, SlideNavigationTransitionEffect.FromRight);
         }
 

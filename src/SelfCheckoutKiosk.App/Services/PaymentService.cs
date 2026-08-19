@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.Core.Abstractions;
+using SelfCheckoutKiosk.Core.Engine;
 using SelfCheckoutKiosk.Domain.Enums;
 using SelfCheckoutKiosk.Domain.ValueObjects;
 using PaymentMethod = SelfCheckoutKiosk.App.Models.PaymentMethod;
@@ -93,27 +94,34 @@ namespace SelfCheckoutKiosk.App.Services
         public void ArmCashHardware()
         {
             if (_isHardwareArmed) return;
+            _isHardwareArmed = true;
 
-            if (App.Services?.CashRecycler != null)
+            AttachEngineEvents();
+
+            _ = Task.Run(async () =>
             {
-                _isHardwareArmed = true;
-                App.Services.CashRecycler.OnNoteInEscrow -= OnHardwareNoteInEscrow;
-                App.Services.CashRecycler.OnNoteInEscrow += OnHardwareNoteInEscrow;
-
-                _ = Task.Run(async () =>
+                try
                 {
-                    try
+                    if (App.Services?.Engine != null)
+                    {
+                        await App.Services.Engine.BeginCashPaymentAsync(
+                            Money.Usd(_totalDueUsd),
+                            _exchangeRate);
+
+                        Debug.WriteLine($"[CASH] Core engine armed and ready in state {App.Services.Engine.CurrentState}.");
+                    }
+                    else if (App.Services?.CashRecycler != null)
                     {
                         await App.Services.CashRecycler.ConnectAsync();
                         await App.Services.CashRecycler.ArmAcceptanceAsync();
-                        Debug.WriteLine("[CASH] Cash recycler armed and ready for physical notes on COM8.");
+                        Debug.WriteLine("[CASH] Cash recycler armed directly on COM8.");
                     }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[CASH ERROR] Could not arm cash recycler: {ex.Message}");
-                    }
-                });
-            }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CASH ERROR] Could not arm cash hardware: {ex.Message}");
+                }
+            });
         }
 
         public void DisarmCashHardware()
@@ -121,62 +129,92 @@ namespace SelfCheckoutKiosk.App.Services
             if (!_isHardwareArmed) return;
             _isHardwareArmed = false;
 
-            if (App.Services?.CashRecycler != null)
+            _ = Task.Run(async () =>
             {
-                App.Services.CashRecycler.OnNoteInEscrow -= OnHardwareNoteInEscrow;
-
-                _ = Task.Run(async () =>
+                try
                 {
-                    try
+                    if (App.Services?.Engine != null)
+                    {
+                        if (App.Services.Engine.CurrentState != KioskState.Idle)
+                        {
+                            await App.Services.Engine.ResetToIdleAsync();
+                        }
+                    }
+                    else if (App.Services?.CashRecycler != null)
                     {
                         await App.Services.CashRecycler.DisarmAcceptanceAsync();
-                        Debug.WriteLine("[CASH] Cash recycler disarmed (Intake shutter closed & LED off).");
                     }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[CASH ERROR] Could not disarm cash recycler: {ex.Message}");
-                    }
-                });
-            }
+                    Debug.WriteLine("[CASH] Cash hardware disarmed.");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[CASH ERROR] Could not disarm cash hardware: {ex.Message}");
+                }
+            });
         }
 
-        private void OnHardwareNoteInEscrow(object? sender, NoteInEscrowEventArgs e)
+        private void AttachEngineEvents()
         {
-            bool isUsd = e.Note.Currency == CurrencyCode.Usd;
-            decimal noteAmt = e.Note.Amount;
-            decimal noteAmtUsd = isUsd ? noteAmt : noteAmt / ExchangeRate;
-            decimal maxOverpayUsd = MaxOverpayKhr / ExchangeRate;
-            decimal projectedTotal = TotalPaidUsd + noteAmtUsd;
+            if (App.Services?.Engine == null) return;
 
-            if (projectedTotal > TotalDueUsd + maxOverpayUsd)
+            App.Services.Engine.OnBalanceChanged -= OnEngineBalanceChanged;
+            App.Services.Engine.OnBalanceChanged += OnEngineBalanceChanged;
+
+            App.Services.Engine.OnCashNoteRejected -= OnEngineCashNoteRejected;
+            App.Services.Engine.OnCashNoteRejected += OnEngineCashNoteRejected;
+
+            App.Services.Engine.OnStateChanged -= OnEngineStateChanged;
+            App.Services.Engine.OnStateChanged += OnEngineStateChanged;
+        }
+
+        private void OnEngineBalanceChanged(object? sender, BalanceChangedEventArgs e)
+        {
+            RunOnUIThread(() =>
             {
-                // Physically reject the banknote back to the customer
-                _ = App.Services?.CashRecycler?.RejectEscrowedNoteAsync();
+                TotalPaidUsd = e.TenderedUsd;
+                HasAcceptedAnyPayment = TotalPaidUsd > 0;
+                OnPropertyChanged(nameof(HasAcceptedAnyPayment));
+                OnPropertyChanged(nameof(TotalPaidUsd));
+                OnPropertyChanged(nameof(RemainingDueUsd));
+                OnPropertyChanged(nameof(IsFullyPaid));
 
+                string reason = Localizer.GetString("Accepted") ?? "Accepted";
+                RecordAttempt(PaymentAttemptResult.Accepted, reason, e.TenderedUsd, true);
+
+                if (IsFullyPaid)
+                {
+                    DisarmCashHardware();
+                    var payment = ConfirmPayment(PaymentMethod.Cash);
+                    if (payment != null)
+                    {
+                        PaymentConfirmed?.Invoke(this, payment);
+                    }
+                }
+            });
+        }
+
+        private void OnEngineCashNoteRejected(object? sender, CashNoteRejectedEventArgs e)
+        {
+            RunOnUIThread(() =>
+            {
+                bool isUsd = e.Note.Currency == CurrencyCode.Usd;
+                decimal noteAmt = e.Note.Amount;
                 string reason = isUsd
                     ? $"Note ${noteAmt:0.00} exceeds overpayment limit (max +500 KHR). Please insert a smaller note."
                     : $"Note ៛{noteAmt:N0} exceeds overpayment limit (max +500 KHR). Please insert a smaller note.";
 
-                RunOnUIThread(() =>
-                {
-                    RecordAttempt(PaymentAttemptResult.Rejected, reason, noteAmt, isUsd);
-                });
-            }
-            else
+                RecordAttempt(PaymentAttemptResult.Rejected, reason, noteAmt, isUsd);
+            });
+        }
+
+        private void OnEngineStateChanged(object? sender, KioskStateChangedEventArgs e)
+        {
+            if (e.Current == KioskState.TransactionComplete)
             {
-                // Banknote is accepted and vaulted
                 RunOnUIThread(() =>
                 {
-                    TotalPaidUsd = projectedTotal;
-                    HasAcceptedAnyPayment = true;
-                    OnPropertyChanged(nameof(HasAcceptedAnyPayment));
-
-                    string reason = Localizer.GetString("Accepted") ?? "Accepted";
-                    RecordAttempt(PaymentAttemptResult.Accepted, reason, noteAmt, isUsd);
-
                     if (IsFullyPaid)
                     {
-                        DisarmCashHardware();
                         var payment = ConfirmPayment(PaymentMethod.Cash);
                         if (payment != null)
                         {
@@ -185,6 +223,11 @@ namespace SelfCheckoutKiosk.App.Services
                     }
                 });
             }
+        }
+
+        private void OnHardwareNoteInEscrow(object? sender, NoteInEscrowEventArgs e)
+        {
+            // Handled via LLCoreLogicEngine.OnBalanceChanged / OnCashNoteRejected
         }
 
         private void RunOnUIThread(Action action)
