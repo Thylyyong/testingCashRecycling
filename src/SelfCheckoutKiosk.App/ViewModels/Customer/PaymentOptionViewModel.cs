@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
 
@@ -12,10 +12,27 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         {
             NavigationService = navigationService;
         }
+
+        public void ProceedToCash()
+        {
+            NavigationService.NavigateTo(
+                typeof(IngestionProgressView),
+                null,
+                SlideNavigationTransitionEffect.FromRight);
+        }
+
+        public void ProceedToKhqr()
+        {
+            NavigationService.NavigateTo(
+                typeof(QRPaymentView),
+                null,
+                SlideNavigationTransitionEffect.FromRight);
+        }
+
         public void ProceedToKioskBaseView()
         {
             NavigationService.NavigateTo(
-                typeof(KioskBaseView2),
+                typeof(KioskBaseView),
                 null,
                 SlideNavigationTransitionEffect.FromLeft);
         }
@@ -23,7 +40,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public void GoBack()
         {
             NavigationService.NavigateTo(
-                typeof(HomeView),
+                typeof(CartView),
                 null,
                 SlideNavigationTransitionEffect.FromLeft
             );

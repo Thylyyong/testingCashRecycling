@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
@@ -44,12 +44,17 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
 
             _paymentService.PropertyChanged += OnPaymentServicePropertyChanged;
+            _paymentService.PaymentConfirmed += (s, p) =>
+            {
+                _cartService.ClearCart();
+                NavigationService.NavigateTo(typeof(SuccessView), p, SlideNavigationTransitionEffect.FromRight);
+            };
         }
 
-        // Called from OnNavigatedTo — snapshots the cart total into the payment service
+        // Called from OnNavigatedTo — snapshots the cart total into the payment service and arms hardware
         public void InitializeTransaction()
         {
-            _paymentService.BeginTransaction(_cartService.TotalUsd, _cartService.ExchangeRate);
+            _paymentService.BeginTransaction(_cartService.TotalUsd, _cartService.ExchangeRate, armCashHardware: true);
             RaiseAllChanged();
         }
 
@@ -70,6 +75,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public void NavigateBackToPaymentSelection()
         {
             if (!CanNavigateBack) return;
+            _paymentService.DisarmCashHardware();
             NavigationService.NavigateTo(typeof(PaymentSelectionView), null, SlideNavigationTransitionEffect.FromLeft);
         }
 

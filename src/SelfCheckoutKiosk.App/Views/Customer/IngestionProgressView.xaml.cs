@@ -29,18 +29,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             BackButton.Click += BackButton_Click;
             ConfirmPaymentButton.Click += ConfirmPaymentButton_Click;
-
-            foreach (var child in UsdNotesPanel.Children)
-            {
-                if (child is Button usdBtn && usdBtn.Tag is string usdTag && decimal.TryParse(usdTag, out var usdVal))
-                    usdBtn.Click += (s, e) => SubmitCash(usdVal, isUsd: true);
-            }
-
-            foreach (var child in KhrNotesPanel.Children)
-            {
-                if (child is Button khrBtn && khrBtn.Tag is string khrTag && decimal.TryParse(khrTag, out var khrVal))
-                    khrBtn.Click += (s, e) => SubmitCash(khrVal, isUsd: false);
-            }
+            ViewModel.PropertyChanged += (_, _) => RefreshUI();
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)

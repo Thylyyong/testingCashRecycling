@@ -185,7 +185,38 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
         sb.AppendLine("----------------------------------------");
         sb.AppendLine($"Due    : ${totalUsd:F2} USD  ({(totalUsd * 4100m):N0} KHR)");
         sb.AppendLine($"Paid   : ${tenderedUsd:F2} USD");
+       
+        sb.AppendLine("----------------------------------------");
+        sb.AppendLine("      THANK YOU FOR SHOPPING!");
+        sb.AppendLine("========================================");
 
+        byte[] payload = Encoding.UTF8.GetBytes(sb.ToString());
+        byte[] full = EscPosInit.Concat(EscPosAlignLeft).Concat(payload);
+        await PrintRawAsync(full, cancellationToken);
+    }
+
+    public async Task PrintCartReceiptAsync(
+        IEnumerable<(string Name, decimal Price)> items,
+        decimal totalUsd,
+        decimal tenderedUsd,
+        decimal changeKhr,
+        CancellationToken cancellationToken = default)
+    {
+        var sb = new StringBuilder();
+        sb.Append("\x1B\x21\x30").AppendLine("SELF-CHECKOUT KIOSK").Append("\x1B\x21\x00");
+        sb.AppendLine("Phnom Penh, Cambodia").AppendLine("========================================");
+        sb.AppendLine($"Date   : {DateTime.Now:yyyy-MM-dd  HH:mm:ss}");
+        sb.AppendLine($"Receipt: {Guid.NewGuid().ToString()[..8].ToUpper()}");
+        sb.AppendLine("----------------------------------------");
+        foreach (var (name, price) in items)
+        {
+            string lineName = name.Length > 26 ? name[..26] : name;
+            sb.AppendLine($"{lineName,-28} ${price,7:F2}");
+        }
+        sb.AppendLine("----------------------------------------");
+        sb.AppendLine($"Total Due : ${totalUsd:F2} USD  ({(totalUsd * 4100m):N0} KHR)");
+        sb.AppendLine($"Cash Paid : ${tenderedUsd:F2} USD");
+      
         sb.AppendLine("----------------------------------------");
         sb.AppendLine("      THANK YOU FOR SHOPPING!");
         sb.AppendLine("========================================");
@@ -208,10 +239,7 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
         sb.AppendLine("----------------------------------------");
         sb.AppendLine($"Due    : ${totalUsd:F2} USD  ({(totalUsd * 4100m):N0} KHR)");
         sb.AppendLine($"Paid   : ${tenderedUsd:F2} USD");
-        if (overpaymentKhr > 0)
-        {
-            sb.AppendLine($"Change : {overpaymentKhr:N0} KHR");
-        }
+
         sb.AppendLine("----------------------------------------");
         sb.AppendLine("      THANK YOU FOR SHOPPING!");
         sb.AppendLine("========================================");

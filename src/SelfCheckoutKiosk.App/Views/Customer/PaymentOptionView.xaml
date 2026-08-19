@@ -162,7 +162,7 @@
 
             <!-- ===== CASH CARD ===== -->
             <Viewbox x:Name="CashViewbox" Grid.Row="0" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <Button x:Name="CashCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}">
+                <Button x:Name="CashCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}" Click="CashCard_Click">
                     <Button.Resources>
                         <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="SurfaceHoverBrush"/>
                         <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="SurfaceLightBrush"/>
@@ -179,7 +179,7 @@
 
             <!-- ===== KHQR CARD ===== -->
             <Viewbox x:Name="KhqrViewbox" Grid.Row="0" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <Button x:Name="KhqrCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}">
+                <Button x:Name="KhqrCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}" Click="KhqrCard_Click">
                     <Button.Resources>
                         <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="SurfaceHoverBrush"/>
                         <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="SurfaceLightBrush"/>

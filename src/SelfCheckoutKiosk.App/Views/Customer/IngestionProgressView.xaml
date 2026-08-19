@@ -283,42 +283,27 @@
                 </Grid>
             </StackPanel>
 
-            <!-- NOTE SELECTION -->
-            <StackPanel Grid.Row="1" Spacing="10">
-                <TextBlock x:Name="InsertCashLabel" Text="Insert Cash" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource TextItemNameBrush}"/>
+            <!-- CASH HARDWARE INGESTION GUIDE CARD -->
+            <Border Grid.Row="1" Background="{StaticResource CardBackgroundBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="20,16">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                <StackPanel Spacing="6">
-                    <TextBlock x:Name="UsdNotesLabel" Text="USD NOTES" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
-                    <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" HorizontalScrollMode="Enabled">
-                        <StackPanel x:Name="UsdNotesPanel" Orientation="Horizontal" Spacing="8">
-                            <Button Content="$1"    Tag="1"    Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="$5"    Tag="5"    Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="$10"   Tag="10"   Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="$20"   Tag="20"   Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="$50"   Tag="50"   Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="$100"  Tag="100"  Style="{StaticResource NoteButtonStyle}"/>
-                        </StackPanel>
-                    </ScrollViewer>
-                </StackPanel>
+                    <!-- Slot Icon Indicator -->
+                    <Border Grid.Column="0" Width="64" Height="64" CornerRadius="16" Background="{StaticResource SoftBackgroundBrush}">
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8C7;" FontSize="32" Foreground="{StaticResource AccentBlueBrush}"/>
+                    </Border>
 
-                <StackPanel Spacing="6">
-                    <TextBlock x:Name="KhrNotesLabel" Text="KHR NOTES" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}"/>
-                    <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollMode="Disabled" HorizontalScrollMode="Enabled">
-                        <StackPanel x:Name="KhrNotesPanel" Orientation="Horizontal" Spacing="8">
-                            <Button Content="៛100"     Tag="100"    Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="៛500"     Tag="500"    Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="៛1,000"   Tag="1000"   Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="៛2,000"   Tag="2000"   Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="៛5,000"   Tag="5000"   Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="៛10,000"  Tag="10000"  Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="៛20,000"  Tag="20000"  Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="៛50,000"  Tag="50000"  Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="៛100,000" Tag="100000" Style="{StaticResource NoteButtonStyle}"/>
-                            <Button Content="៛200,000" Tag="200000" Style="{StaticResource NoteButtonStyle}"/>
-                        </StackPanel>
-                    </ScrollViewer>
-                </StackPanel>
-            </StackPanel>
+                    <!-- Instruction Text -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                        <TextBlock x:Name="InsertCashPrompt" Text="{x:Bind Localizer.GetString('InsertCashPrompt'), Mode=OneWay}" FontSize="{StaticResource FontSizeTitleSmall}" FontWeight="Bold" Foreground="{StaticResource TextItemNameBrush}"/>
+                        <TextBlock x:Name="InsertCashInstruction" Text="{x:Bind Localizer.GetString('InsertCashInstruction'), Mode=OneWay}" FontSize="{StaticResource FontSizeBody}" Foreground="{StaticResource TextSubLabelBrush}" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="OverpaymentRuleNote" Text="{x:Bind Localizer.GetString('OverpaymentRuleNote'), Mode=OneWay}" FontSize="{StaticResource FontSizeSubLabel}" FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
 
             <!-- ACTIVITY -->
             <Grid Grid.Row="2">

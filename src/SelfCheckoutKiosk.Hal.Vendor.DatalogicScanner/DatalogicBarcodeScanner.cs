@@ -38,13 +38,15 @@ public sealed class DatalogicBarcodeScanner : IBarcodeScanner, IAsyncDisposable
         if (TryOpenPort(_comPort))
             return Task.CompletedTask;
 
-        // If configured port fails, probe all active system COM ports
+        // If configured port fails, probe available serial ports (skipping COM3 which is the Cash Recycler)
         try
         {
             var activePorts = SerialPort.GetPortNames().Distinct();
             foreach (var p in activePorts)
             {
                 if (p.Equals(_comPort, StringComparison.OrdinalIgnoreCase)) continue;
+                if (p.Equals("COM3", StringComparison.OrdinalIgnoreCase)) continue; // Reserved for Cash Recycler REST API
+
                 if (TryOpenPort(p))
                 {
                     _comPort = p;

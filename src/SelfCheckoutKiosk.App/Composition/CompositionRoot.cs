@@ -108,8 +108,17 @@ public static class CompositionRoot
                 signatureVerifier,
                 hardwareIdProvider));
 
-        // 3. Concrete HAL adapters — the ONLY vendor-assembly references anywhere.
-        ICashRecycler cashRecycler = new VendorXCashRecycler("http://localhost:5000", apiKey: null, useRealApi: true);
+        string cashComPort = Environment.GetEnvironmentVariable("SELFCHECKOUT_CASH_RECYCLER_COM_PORT") ?? "COM8";
+        string? apiKey = Environment.GetEnvironmentVariable("SELFCHECKOUT_CASH_RECYCLER_API_KEY");
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            string[] candidatePaths = { "api_key.secret", Path.Combine(AppContext.BaseDirectory, "api_key.secret") };
+            foreach (var p in candidatePaths)
+            {
+                if (File.Exists(p)) { try { apiKey = File.ReadAllText(p).Trim(); break; } catch { } }
+            }
+        }
+        ICashRecycler cashRecycler = new VendorXCashRecycler("http://localhost:5000", apiKey: apiKey, useRealApi: true, comPort: cashComPort);
         IBarcodeScanner barcodeScanner = new DatalogicBarcodeScanner();
         IReceiptPrinter receiptPrinter = new EpsonReceiptPrinter("EPSON EU-m30");
 

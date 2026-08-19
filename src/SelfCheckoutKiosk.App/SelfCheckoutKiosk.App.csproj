@@ -5,9 +5,8 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>SelfCheckoutKiosk.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Platforms>x86;x64;ARM64</Platforms>
-    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
-    <PublishProfile>win-$(Platform).pubxml</PublishProfile>
+    <PublishProfile Condition="'$(Platform)' != 'AnyCPU' and '$(Platform)' != ''">win-$(Platform).pubxml</PublishProfile>
+    <PublishProfile Condition="'$(Platform)' == 'AnyCPU' or '$(Platform)' == ''">win-x64.pubxml</PublishProfile>
     <UseWinUI>true</UseWinUI>
     <WinUISDKReferences>false</WinUISDKReferences>
     <EnableMsixTooling>true</EnableMsixTooling>
@@ -27,8 +26,9 @@
     -->
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
 
-    <!-- Disable trimming & ReadyToRun to ensure JSON localization files load reliably -->
-    <PublishTrimmed>false</PublishTrimmed>
+    <!-- Disable ReadyToRun to ensure JSON localization files load reliably -->
+    <!-- PublishTrimmed is only disabled for non-AOT builds; AOT publish always implies trimming -->
+    <PublishTrimmed Condition="'$(PublishAot)' != 'true'">false</PublishTrimmed>
     <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
 

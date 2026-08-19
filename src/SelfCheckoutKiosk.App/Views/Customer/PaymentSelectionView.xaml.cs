@@ -1,22 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace SelfCheckoutKiosk.App.Views.Customer
 {
@@ -27,6 +13,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
     {
         public PaymentSelectionViewModel ViewModel { get; }
         public LocalizationService Localizer => LocalizationService.Instance;
+
         public PaymentSelectionView()
         {
             InitializeComponent();
@@ -37,43 +24,52 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             ViewModel = new PaymentSelectionViewModel(navigationService);
         }
 
+        // Navigate using the root window frame so it replaces the whole page, not a sub-frame
+        private Frame GetRootFrame()
+            => App.MainWindowInstance?.MainRootFrame ?? this.Frame;
+
         private void CashCard_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.SelectPaymentMethod("Cash");
-            // TODO: Navigate to cash payment flow
+            GetRootFrame().Navigate(
+                typeof(IngestionProgressView),
+                null,
+                new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromRight });
         }
 
         private void KhqrCard_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.SelectPaymentMethod("KHQR");
-            // TODO: Navigate to KHQR payment flow
+            GetRootFrame().Navigate(
+                typeof(QRPaymentView),
+                null,
+                new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromRight });
         }
 
         private void CardCard_Click(object sender, RoutedEventArgs e)
         {
-            // Disabled by default - not reachable until enabled
-            ViewModel.SelectPaymentMethod("Card");
+            // Disabled – not reachable until payment terminal integration is ready
         }
 
         private void IntlQrCard_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.SelectPaymentMethod("InternationalQR");
+            // Not yet implemented
         }
 
         private void MembershipCard_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.SelectPaymentMethod("MembershipCard");
+            // Not yet implemented
         }
 
         private void CouponCard_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.SelectPaymentMethod("Coupon");
+            // Not yet implemented
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.Cancel();
-            ViewModel.ProceedToCart();
+            GetRootFrame().Navigate(
+                typeof(CartView),
+                null,
+                new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromLeft });
         }
     }
 }

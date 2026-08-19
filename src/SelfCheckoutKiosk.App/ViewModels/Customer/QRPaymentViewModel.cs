@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -68,10 +68,10 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             _paymentService.PropertyChanged += OnPaymentServicePropertyChanged;
         }
 
-        // Called from OnNavigatedTo — snapshots the cart total into the payment service
+        // Called from OnNavigatedTo — snapshots the cart total into the payment service (Cash hardware stays OFF)
         public void InitializeTransaction()
         {
-            _paymentService.BeginTransaction(_cartService.TotalUsd, _cartService.ExchangeRate);
+            _paymentService.BeginTransaction(_cartService.TotalUsd, _cartService.ExchangeRate, armCashHardware: false);
             GenerateQrCodePayload();
             RaiseAllChanged();
         }

@@ -1,22 +1,10 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace SelfCheckoutKiosk.App.Views.Customer
 {
@@ -46,35 +34,21 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             _inactivityTimer.Tick += InactivityTimer_Tick;
 
-            AddHandler(
-                PointerPressedEvent,
-                new PointerEventHandler(UserInteraction),
-                true);
-
-            AddHandler(
-                KeyDownEvent,
-                new KeyEventHandler(UserInteraction),
-                true);
+            AddHandler(PointerPressedEvent, new PointerEventHandler(UserInteraction), true);
+            AddHandler(KeyDownEvent, new KeyEventHandler(UserInteraction), true);
 
             Loaded += PaymentOptionView_Loaded;
             Unloaded += PaymentOptionView_Unloaded;
         }
 
+        private Frame GetRootFrame()
+            => App.MainWindowInstance?.MainRootFrame ?? this.Frame;
+
         private void PaymentOptionView_Loaded(object sender, RoutedEventArgs e)
-        {
-            StartInactivityTimer();
-        }
+            => _inactivityTimer.Start();
 
         private void PaymentOptionView_Unloaded(object sender, RoutedEventArgs e)
-        {
-            StopInactivityTimer();
-        }
-
-        private void StartInactivityTimer()
-        {
-            _inactivityTimer.Stop();
-            _inactivityTimer.Start();
-        }
+            => _inactivityTimer.Stop();
 
         private void ResetInactivityTimer()
         {
@@ -82,28 +56,40 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             _inactivityTimer.Start();
         }
 
-        private void StopInactivityTimer()
-        {
-            _inactivityTimer.Stop();
-        }
-
         private void UserInteraction(object sender, RoutedEventArgs e)
-        {
-            ResetInactivityTimer();
-        }
+            => ResetInactivityTimer();
 
         private void InactivityTimer_Tick(object? sender, object e)
         {
             _inactivityTimer.Stop();
-
             ViewModel.ProceedToKioskBaseView();
         }
 
         private void BackButton_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
+            GetRootFrame().Navigate(
+                typeof(CartView),
+                null,
+                new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromLeft });
+        }
 
-            ViewModel.GoBack();
+        private void CashCard_Click(object sender, RoutedEventArgs e)
+        {
+            ResetInactivityTimer();
+            GetRootFrame().Navigate(
+                typeof(IngestionProgressView),
+                null,
+                new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromRight });
+        }
+
+        private void KhqrCard_Click(object sender, RoutedEventArgs e)
+        {
+            ResetInactivityTimer();
+            GetRootFrame().Navigate(
+                typeof(QRPaymentView),
+                null,
+                new SlideNavigationTransitionInfo { Effect = SlideNavigationTransitionEffect.FromRight });
         }
     }
 }
