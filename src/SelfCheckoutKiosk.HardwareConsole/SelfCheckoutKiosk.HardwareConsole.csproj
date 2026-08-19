@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>SelfCheckoutKiosk.HardwareConsole</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!--
+      Plain console EXE — no WinUI, no MSIX, no packaging.
+      Run directly from PowerShell: dotnet run -a x64
+      Used to test cash recycler, printer, and barcode scanner
+      in terminal mode before testing the full WinUI app.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Domain\SelfCheckoutKiosk.Domain.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Infrastructure\SelfCheckoutKiosk.Infrastructure.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.EpsonM30\SelfCheckoutKiosk.Hal.Vendor.EpsonM30.csproj" />
+    <ProjectReference Include="..\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner\SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner.csproj" />
+  </ItemGroup>
+</Project>
+
