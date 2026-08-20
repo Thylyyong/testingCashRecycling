@@ -242,23 +242,17 @@
                                     FontSize="13"/>
                             </StackPanel>
 
-                            <!-- Save Button -->
-                            <Button
-                                x:Name="SaveBrandingButton"
-                                Click="SaveBrandingButton_Click"
-                                Height="40"
-                                Padding="20,0"
-                                HorizontalAlignment="Left"
-                                CornerRadius="6"
-                                Style="{StaticResource AccentButtonStyle}"
-                                Margin="0,2,0,0">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74E;" FontSize="13" Foreground="White"/>
-                                    <TextBlock Text="Save Branding" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                                </StackPanel>
-                            </Button>
+                            <!-- Store Hours -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Store Hours" FontSize="12" FontWeight="Bold" Foreground="#475569"/>
+                                <TextBox
+                                    Text="{x:Bind ViewModel.Branding.StoreHours, Mode=TwoWay}"
+                                    Style="{StaticResource AdminTextBoxStyle}"
+                                    Height="40"
+                                    FontSize="13"/>
+                            </StackPanel>
 
-                            <!-- Logo Info (Clean Unclipped Card) -->
+                            <!-- Logo Info (Clean Unclipped Card with Image Preview) -->
                             <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,4,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -268,7 +262,7 @@
                                     </Grid.ColumnDefinitions>
 
                                     <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Margin="0,0,10,0">
-                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEB9F;" FontSize="15" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Source="{x:Bind ViewModel.Branding.LogoUri, Mode=OneWay}" Stretch="Uniform" Margin="2"/>
                                     </Border>
 
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
@@ -287,6 +281,22 @@
                                     </Button>
                                 </Grid>
                             </Border>
+
+                            <!-- Save Button -->
+                            <Button
+                                x:Name="SaveBrandingButton"
+                                Click="SaveBrandingButton_Click"
+                                Height="40"
+                                Padding="20,0"
+                                HorizontalAlignment="Left"
+                                CornerRadius="6"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Margin="0,4,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74E;" FontSize="13" Foreground="White"/>
+                                    <TextBlock Text="Save Branding" FontWeight="Bold" FontSize="12" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -412,22 +422,17 @@
                                     FontSize="13"/>
                             </StackPanel>
 
-                            <!-- Save Button -->
-                            <Button
-                                Click="SaveBrandingButton_Click"
-                                Height="40"
-                                Padding="20,0"
-                                HorizontalAlignment="Left"
-                                CornerRadius="6"
-                                Style="{StaticResource AccentButtonStyle}"
-                                Margin="0,2,0,0">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74E;" FontSize="13" Foreground="White"/>
-                                    <TextBlock Text="Save Branding" FontWeight="Bold" FontSize="12" Foreground="White"/>
-                                </StackPanel>
-                            </Button>
+                            <!-- Store Hours -->
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Store Hours" FontSize="12" FontWeight="Bold" Foreground="#475569"/>
+                                <TextBox
+                                    Text="{x:Bind ViewModel.Branding.StoreHours, Mode=TwoWay}"
+                                    Style="{StaticResource AdminTextBoxStyle}"
+                                    Height="40"
+                                    FontSize="13"/>
+                            </StackPanel>
 
-                            <!-- Logo Info (Clean Unclipped Card) -->
+                            <!-- Logo Info (Clean Unclipped Card with Image Preview) -->
                             <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,4,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -437,7 +442,7 @@
                                     </Grid.ColumnDefinitions>
 
                                     <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Margin="0,0,10,0">
-                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEB9F;" FontSize="15" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Image Source="{x:Bind ViewModel.Branding.LogoUri, Mode=OneWay}" Stretch="Uniform" Margin="2"/>
                                     </Border>
 
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
@@ -446,7 +451,6 @@
                                     </StackPanel>
 
                                     <Button
-                                        Grid.Column="2"
                                         Click="ChangeLogoButton_Click"
                                         Height="34"
                                         Padding="14,0"
@@ -456,6 +460,21 @@
                                     </Button>
                                 </Grid>
                             </Border>
+
+                            <!-- Save Button -->
+                            <Button
+                                Click="SaveBrandingButton_Click"
+                                Height="40"
+                                Padding="20,0"
+                                HorizontalAlignment="Left"
+                                CornerRadius="6"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Margin="0,4,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74E;" FontSize="13" Foreground="White"/>
+                                    <TextBlock Text="Save Branding" FontWeight="Bold" FontSize="12" Foreground="White"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Border>
                 </StackPanel>

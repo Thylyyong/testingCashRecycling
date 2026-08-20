@@ -77,6 +77,7 @@ public sealed class AgeRestrictedApprovalManager : INotifyPropertyChanged
 
     /// <summary>
     /// Attendant approves the pending age-restricted item.
+    /// Directly adds the approved product to the cart service once and completes the task.
     /// </summary>
     public void Approve()
     {
@@ -84,6 +85,10 @@ public sealed class AgeRestrictedApprovalManager : INotifyPropertyChanged
         {
             var req = _pendingRequest;
             PendingRequest = null;
+
+            // Add the approved item directly to the centralized CartService instance exactly once
+            App.CartServiceInstance.AddItem(req.Product.Name, req.Product.Sku, req.Product.Price, 1);
+
             req.CompletionSource.TrySetResult(true);
             OnProductApproved?.Invoke(req.Product);
         }

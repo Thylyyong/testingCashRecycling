@@ -27,7 +27,7 @@ public interface IPaymentService : INotifyPropertyChanged
     event EventHandler<CashRecyclerJamEventArgs>? CashJamReported;
     event EventHandler<HardwareFaultEventArgs>? CashFaultReported;
 
-    void BeginTransaction(decimal totalDueUsd, decimal exchangeRate);
+    void BeginTransaction(decimal totalDueUsd, decimal exchangeRate, bool isCash = true);
     bool TrySubmitCash(decimal amount, bool isUsd, out string reason);
 
     Payment? ConfirmPayment(PaymentMethod method = PaymentMethod.Cash);

@@ -158,7 +158,7 @@ public class PaymentService : IPaymentService
         }
     }
 
-    public void BeginTransaction(decimal totalDueUsd, decimal exchangeRate)
+    public void BeginTransaction(decimal totalDueUsd, decimal exchangeRate, bool isCash = true)
     {
         ExchangeRate = exchangeRate;
         TotalDueUsd = totalDueUsd;
@@ -168,24 +168,28 @@ public class PaymentService : IPaymentService
         Attempts.Clear();
         OnPropertyChanged(nameof(HasAcceptedAnyPayment));
 
-        RecordAttempt(PaymentAttemptResult.Info, "Cash payment ready — please insert USD ($) or KHR (៛) banknotes.", 0, isUsd: true);
-
-        // Hardware Inhibit Rule: Arm acceptor only when entering cash session
-        if (_cashRecycler != null)
+        if (isCash)
         {
-            Task.Run(async () =>
+            RecordAttempt(PaymentAttemptResult.Info, "Cash payment ready — please insert USD ($) or KHR (៛) banknotes.", 0, isUsd: true);
+
+            // Hardware Inhibit Rule: Arm acceptor only when entering cash session and cash recycler is available
+            var recycler = _cashRecycler;
+            if (recycler != null && HardwareStatusManager.Instance.IsCashAvailable)
             {
-                try
+                Task.Run(async () =>
                 {
-                    DiagnosticLogger.Log("[PaymentService] Arming cash acceptor (Enabling slot LED)...");
-                    await _cashRecycler.ArmAcceptanceAsync();
-                    DiagnosticLogger.Log("[PaymentService] Cash acceptor successfully armed (Slot Ready).");
-                }
-                catch (Exception ex)
-                {
-                    DiagnosticLogger.LogError($"[PaymentService] ArmAcceptanceAsync error: {ex.Message}", ex);
-                }
-            });
+                    try
+                    {
+                        DiagnosticLogger.Log("[PaymentService] Arming cash acceptor (Enabling slot LED)...");
+                        await recycler.ArmAcceptanceAsync();
+                        DiagnosticLogger.Log("[PaymentService] Cash acceptor successfully armed (Slot Ready).");
+                    }
+                    catch (Exception ex)
+                    {
+                        DiagnosticLogger.LogError($"[PaymentService] ArmAcceptanceAsync error: {ex.Message}", ex);
+                    }
+                });
+            }
         }
     }
 

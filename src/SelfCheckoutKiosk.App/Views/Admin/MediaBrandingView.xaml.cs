@@ -144,14 +144,14 @@ namespace SelfCheckoutKiosk.App.Views.Admin
                 var file = await picker.PickSingleFileAsync();
                 if (file != null)
                 {
-                    ViewModel.Branding.LogoFileName = file.Name;
-                    ViewModel.StatusMessage = $"Logo updated to '{file.Name}'.";
+                    ViewModel.Branding.LogoFileName = !string.IsNullOrEmpty(file.Path) ? file.Path : file.Name;
+                    ViewModel.StatusMessage = $"Logo updated to '{file.Name}'. Click 'Save Branding' to persist.";
                 }
             }
             catch
             {
                 ViewModel.Branding.LogoFileName = "ca.ico";
-                ViewModel.StatusMessage = "Logo updated to 'ca.ico'.";
+                ViewModel.StatusMessage = "Logo reset to default 'ca.ico'.";
             }
         }
     }

@@ -78,7 +78,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         {
             if (!_paymentService.HasAcceptedAnyPayment && _paymentService.TotalDueUsd <= 0)
             {
-                _paymentService.BeginTransaction(_cartService.TotalUsd, _cartService.ExchangeRate);
+                _paymentService.BeginTransaction(_cartService.TotalUsd, _cartService.ExchangeRate, isCash: false);
             }
             GenerateQrCodePayload();
             RaiseAllChanged();

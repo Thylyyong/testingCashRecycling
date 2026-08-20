@@ -344,7 +344,7 @@
                             <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
                         </Button.Resources>
                         <StackPanel Orientation="Horizontal" Spacing="5">
-                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE897;" FontSize="14" Foreground="{StaticResource TextOnAccentBrush}"/>
+                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE9CE;" FontSize="14" Foreground="{StaticResource TextOnAccentBrush}"/>
                             <TextBlock Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="12" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>

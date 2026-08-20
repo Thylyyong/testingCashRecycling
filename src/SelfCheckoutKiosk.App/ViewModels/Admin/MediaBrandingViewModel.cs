@@ -1,7 +1,6 @@
 using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
-using SelfCheckoutKiosk.App.Views;
 using SelfCheckoutKiosk.App.Views.Admin;
 using SelfCheckoutKiosk.App.Views.Customer;
 using System;
@@ -16,17 +15,12 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
     {
         private readonly INavigationService _navigationService;
 
-        private BrandingConfig _branding = new();
         private string _statusMessage = string.Empty;
         private bool _hasStatusMessage = false;
 
         public ObservableCollection<AdminMediaItem> MediaItems => MediaBrandingService.Instance.MediaItems;
 
-        public BrandingConfig Branding
-        {
-            get => MediaBrandingService.Instance.Branding;
-            set { OnPropertyChanged(); }
-        }
+        public BrandingConfig Branding => MediaBrandingService.Instance.Branding;
 
         public string StatusMessage
         {
@@ -47,6 +41,11 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
             _navigationService = navigationService
                 ?? App.MainWindowInstance?.NavigationService
                 ?? new NavigationService(null!);
+
+            MediaBrandingService.Instance.BrandingChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(Branding));
+            };
         }
 
         public void MoveUp(AdminMediaItem item)
@@ -93,16 +92,9 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
 
         public void SaveBranding()
         {
+            MediaBrandingService.Instance.SaveConfiguration();
             StatusMessage = "Branding settings and media playlist saved successfully!";
-            Debug.WriteLine($"[Branding Saved] Company: {Branding.CompanyName}, Tagline: {Branding.Tagline}");
-        }
-
-        private void ReindexSortOrders()
-        {
-            for (int i = 0; i < MediaItems.Count; i++)
-            {
-                MediaItems[i].SortOrder = i;
-            }
+            Debug.WriteLine($"[Branding Saved] Company: {Branding.CompanyName}, Tagline: {Branding.Tagline}, Logo: {Branding.LogoFileName}");
         }
 
         public void NavigateBackToDiagnostics()

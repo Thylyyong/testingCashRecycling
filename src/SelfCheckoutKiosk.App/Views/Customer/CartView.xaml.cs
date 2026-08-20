@@ -60,10 +60,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             this.Loaded += CartView_Loaded;
             this.Unloaded += CartView_Unloaded;
 
-            // Subscribe permanently (not in Loaded/Unloaded) so the event fires
-            // even while CartView is off-screen during admin navigation.
-            AgeRestrictedApprovalManager.Instance.OnProductApproved += HandleAgeProductApproved;
-
             HardwareStatusManager.Instance.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(HardwareStatusManager.IsServerOnline))
@@ -110,15 +106,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             {
                 App.BarcodeScannerInstance.OnBarcodeScanned -= Scanner_OnBarcodeScanned;
             }
-        }
-
-        private void HandleAgeProductApproved(Product product)
-        {
-            DispatcherQueue?.TryEnqueue(() =>
-            {
-                ViewModel.AddItem(product.Name, product.Sku, product.Price, 1);
-                UpdateCartStateUI();
-            });
         }
 
         private void Scanner_OnBarcodeScanned(object? sender, SelfCheckoutKiosk.Core.Abstractions.BarcodeScannedEventArgs e)
@@ -212,10 +199,28 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async Task ProcessScannedBarcodeAsync(string sku)
         {
-            var product = ViewModel.FindProductBySku(sku);
+            if (string.IsNullOrWhiteSpace(sku)) return;
+
+            string cleanedSku = sku.Trim();
+
+            // Ignore any corrupted binary serial traffic, control characters, or non-barcode noise
+            if (cleanedSku.Length < 3 || cleanedSku.Length > 64 || cleanedSku.Any(char.IsControl))
+            {
+                Debug.WriteLine($"[CartView] Discarded invalid / non-barcode scan: '{cleanedSku}'");
+                return;
+            }
+
+            int questionMarks = cleanedSku.Count(c => c == '?');
+            if (questionMarks > 0 && (double)questionMarks / cleanedSku.Length > 0.15)
+            {
+                Debug.WriteLine($"[CartView] Discarded corrupted binary scan data: '{cleanedSku}'");
+                return;
+            }
+
+            var product = ViewModel.FindProductBySku(cleanedSku);
             if (product == null)
             {
-                var notFoundDialog = CreateBaseDialog("Item Not Found", $"No product found for barcode: {sku}");
+                var notFoundDialog = CreateBaseDialog("Item Not Found", $"No product found for barcode: {cleanedSku}");
                 notFoundDialog.CloseButtonText = "OK";
                 await ShowDialogBlockingScansAsync(notFoundDialog);
                 return;
@@ -234,6 +239,12 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async Task<bool> ShowStaffAssistanceApprovalModalAsync(Product product)
         {
+            var localizer = LocalizationService.Instance;
+            var isKhmer = localizer.CurrentLanguage == "km";
+            var font = isKhmer
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
             var dialog = new ContentDialog
             {
                 XamlRoot = this.XamlRoot ?? App.MainWindowInstance?.Content?.XamlRoot,
@@ -272,29 +283,38 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             var titleText = new TextBlock
             {
-                Text = "One moment — staff assistance needed",
+                Text = localizer.GetString("StaffAssistanceTitle"),
                 FontSize = 20,
                 FontWeight = FontWeights.Bold,
                 Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)),
                 HorizontalTextAlignment = TextAlignment.Center,
-                TextWrapping = TextWrapping.Wrap
+                TextWrapping = TextWrapping.Wrap,
+                FontFamily = font
             };
             container.Children.Add(titleText);
 
             var subtitleText = new TextBlock
             {
-                Text = "A staff member needs to approve one of your items. Please wait — someone will be with you shortly.",
+                Text = localizer.GetString("StaffAssistanceMessage"),
                 FontSize = 14,
                 Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
                 HorizontalTextAlignment = TextAlignment.Center,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 0, 0, 12)
+                Margin = new Thickness(0, 0, 0, 12),
+                FontFamily = font
             };
             container.Children.Add(subtitleText);
 
             var adminBtn = new Button
             {
-                Content = new TextBlock { Text = "Admin", FontWeight = FontWeights.SemiBold, FontSize = 14, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)) },
+                Content = new TextBlock
+                {
+                    Text = localizer.GetString("StaffAssistanceAdminButton"),
+                    FontWeight = FontWeights.SemiBold,
+                    FontSize = 14,
+                    Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)),
+                    FontFamily = font
+                },
                 Height = 40,
                 Padding = new Thickness(24, 0, 24, 0),
                 CornerRadius = new CornerRadius(8),

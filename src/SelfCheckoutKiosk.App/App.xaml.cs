@@ -322,15 +322,24 @@ public partial class App : Application
             HardwareStatusManager.Instance.SetServerOnline(isServerReachable, isServerReachable ? "Online (Central Server)" : "Offline (Local DB Only)");
             HardwareStatusManager.Instance.SetQrAvailability(true, "Online");
 
-            // Initialize scanner
-            BarcodeScannerInstance = new DatalogicBarcodeScanner("COM4", 9600);
-            try
+            // Initialize scanner (check if COM port actually exists before opening)
+            string scannerComPort = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_SCANNER_COM_PORT") ?? "COM4";
+            var availablePorts = System.IO.Ports.SerialPort.GetPortNames();
+            if (availablePorts.Contains(scannerComPort, StringComparer.OrdinalIgnoreCase))
             {
-                await BarcodeScannerInstance.ConnectAsync();
-                BarcodeScannerInstance.OnBarcodeScanned += HandleBarcodeScanned;
-                HardwareStatusManager.Instance.SetScannerAvailability(BarcodeScannerInstance.IsConnected);
+                BarcodeScannerInstance = new DatalogicBarcodeScanner(scannerComPort, 9600);
+                try
+                {
+                    await BarcodeScannerInstance.ConnectAsync();
+                    BarcodeScannerInstance.OnBarcodeScanned += HandleBarcodeScanned;
+                    HardwareStatusManager.Instance.SetScannerAvailability(BarcodeScannerInstance.IsConnected);
+                }
+                catch
+                {
+                    HardwareStatusManager.Instance.SetScannerAvailability(false);
+                }
             }
-            catch
+            else
             {
                 HardwareStatusManager.Instance.SetScannerAvailability(false);
             }
@@ -508,6 +517,14 @@ public partial class App : Application
     private void HandleBarcodeScanned(object? sender, BarcodeScannedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(e.RawBarcode)) return;
+        string barcode = e.RawBarcode.Trim();
+
+        if (barcode.Length < 3 || barcode.Length > 64 || barcode.Any(char.IsControl))
+            return;
+
+        int questionMarks = barcode.Count(c => c == '?');
+        if (questionMarks > 0 && (double)questionMarks / barcode.Length > 0.15)
+            return;
 
         MainWindowInstance?.DispatcherQueue.TryEnqueue(() =>
         {
@@ -517,7 +534,7 @@ public partial class App : Application
                 return;
             }
 
-            var product = ProductServiceInstance.GetProductBySku(e.RawBarcode.Trim());
+            var product = ProductServiceInstance.GetProductBySku(barcode);
             if (product != null)
             {
                 CartServiceInstance.AddItem(product.Name, product.Sku, product.Price, 1);
@@ -531,7 +548,7 @@ public partial class App : Application
             }
             else
             {
-                Debug.WriteLine($"[SCANNER] No product found for barcode: {e.RawBarcode}");
+                Debug.WriteLine($"[SCANNER] No product found for barcode: {barcode}");
             }
         });
     }
@@ -678,7 +695,7 @@ public partial class App : Application
     /// <summary>
     /// Displays a standardized modal alert dialog requesting staff assistance (matching design system specs).
     /// </summary>
-    public static async Task<bool> ShowStaffAssistanceAlertAsync(string title = "One moment — staff assistance needed", string message = "A staff member needs to approve one of your items. Please wait — someone will be with you shortly.")
+    public static async Task<bool> ShowStaffAssistanceAlertAsync(string? title = null, string? message = null)
     {
         if (MainWindowInstance == null) return false;
 
@@ -688,6 +705,15 @@ public partial class App : Application
         {
             try
             {
+                var localizer = LocalizationService.Instance;
+                var isKhmer = localizer.CurrentLanguage == "km";
+                var font = isKhmer
+                    ? (Microsoft.UI.Xaml.Media.FontFamily)Microsoft.UI.Xaml.Application.Current.Resources["KhmerFont"]
+                    : (Microsoft.UI.Xaml.Media.FontFamily)(Microsoft.UI.Xaml.Application.Current.Resources["GlobalAppFont"] ?? new Microsoft.UI.Xaml.Media.FontFamily("Segoe UI"));
+
+                title ??= localizer.GetString("StaffAssistanceTitle");
+                message ??= localizer.GetString("StaffAssistanceMessage");
+
                 var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
                 {
                     XamlRoot = MainWindowInstance.Content.XamlRoot,
@@ -731,7 +757,8 @@ public partial class App : Application
                     FontWeight = Microsoft.UI.Text.FontWeights.Bold,
                     Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)),
                     HorizontalTextAlignment = Microsoft.UI.Xaml.TextAlignment.Center,
-                    TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap
+                    TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                    FontFamily = font
                 };
                 container.Children.Add(titleBlock);
 
@@ -742,13 +769,21 @@ public partial class App : Application
                     Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
                     HorizontalTextAlignment = Microsoft.UI.Xaml.TextAlignment.Center,
                     TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
-                    Margin = new Microsoft.UI.Xaml.Thickness(0, 0, 0, 12)
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 0, 0, 12),
+                    FontFamily = font
                 };
                 container.Children.Add(msgBlock);
 
                 var adminBtn = new Microsoft.UI.Xaml.Controls.Button
                 {
-                    Content = new Microsoft.UI.Xaml.Controls.TextBlock { Text = "Admin", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 14, Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)) },
+                    Content = new Microsoft.UI.Xaml.Controls.TextBlock
+                    {
+                        Text = localizer.GetString("StaffAssistanceAdminButton"),
+                        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                        FontSize = 14,
+                        Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)),
+                        FontFamily = font
+                    },
                     Height = 40,
                     Padding = new Microsoft.UI.Xaml.Thickness(24, 0, 24, 0),
                     CornerRadius = new Microsoft.UI.Xaml.CornerRadius(8),
@@ -760,6 +795,7 @@ public partial class App : Application
                 adminBtn.Click += (s, e) =>
                 {
                     dialog.Hide();
+                    tcs.TrySetResult(true);
                     MainWindowInstance.NavigationService.NavigateTo(
                         typeof(Views.Admin.AdminLoginView),
                         null,
@@ -770,11 +806,9 @@ public partial class App : Application
 
                 dialog.Content = container;
                 await dialog.ShowAsync();
-                tcs.TrySetResult(true);
             }
-            catch (Exception ex)
+            catch
             {
-                DiagnosticLogger.LogError($"[StaffAssistanceModal] Error: {ex.Message}", ex);
                 tcs.TrySetResult(false);
             }
         });

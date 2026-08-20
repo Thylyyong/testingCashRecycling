@@ -1,18 +1,37 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Animation;
+using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
+using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace SelfCheckoutKiosk.App.ViewModels.Customer
 {
-    public class HomeViewModel
+    public class HomeViewModel : INotifyPropertyChanged
     {
         public INavigationService NavigationService { get; }
 
-        public string StoreHoursText { get; set; } = "Open until 9:00 PM";
+        public BrandingConfig Branding => MediaBrandingService.Instance.Branding;
+
+        public string CompanyName => Branding.CompanyName;
+        public string Tagline => Branding.Tagline;
+        public string LogoUri => Branding.LogoUri;
+        public string StoreHours => Branding.StoreHours;
 
         public HomeViewModel(INavigationService navigationService)
         {
             NavigationService = navigationService;
+            MediaBrandingService.Instance.BrandingChanged += MediaBrandingService_BrandingChanged;
+        }
+
+        private void MediaBrandingService_BrandingChanged(object? sender, EventArgs e)
+        {
+            OnPropertyChanged(nameof(Branding));
+            OnPropertyChanged(nameof(CompanyName));
+            OnPropertyChanged(nameof(Tagline));
+            OnPropertyChanged(nameof(LogoUri));
+            OnPropertyChanged(nameof(StoreHours));
         }
 
         public void ProceedToCart()
@@ -41,7 +60,13 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         public void RequestHelp()
         {
-            // TODO: Call attendant / show help overlay
+            // Handled via ShowStaffAssistanceAlertAsync / Help dialog
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

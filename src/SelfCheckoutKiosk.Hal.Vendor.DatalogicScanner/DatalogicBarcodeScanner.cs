@@ -1,5 +1,6 @@
 using System;
 using System.IO.Ports;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SelfCheckoutKiosk.Core.Abstractions;
@@ -108,7 +109,13 @@ public sealed class DatalogicBarcodeScanner : IBarcodeScanner, IAsyncDisposable
                 // ReadLine blocks until \r (or \r\n) arrives from the scanner
                 string raw = _port!.ReadLine();
                 if (!string.IsNullOrWhiteSpace(raw))
-                    OnBarcodeScanned?.Invoke(this, new BarcodeScannedEventArgs(raw.Trim()));
+                {
+                    string cleaned = raw.Trim();
+                    if (IsValidBarcodeString(cleaned))
+                    {
+                        OnBarcodeScanned?.Invoke(this, new BarcodeScannedEventArgs(cleaned));
+                    }
+                }
             }
             catch (TimeoutException)
             {
@@ -129,6 +136,39 @@ public sealed class DatalogicBarcodeScanner : IBarcodeScanner, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Validates that incoming serial text is a plausible barcode/SKU string and not binary packet noise.
+    /// </summary>
+    public static bool IsValidBarcodeString(string? barcode)
+    {
+        if (string.IsNullOrWhiteSpace(barcode))
+            return false;
+
+        string trimmed = barcode.Trim();
+
+        // Standard barcodes/SKUs/vouchers are between 3 and 64 characters
+        if (trimmed.Length < 3 || trimmed.Length > 64)
+            return false;
+
+        // Reject if it contains control characters, newlines, or tabs
+        if (trimmed.Any(char.IsControl))
+            return false;
+
+        // Reject binary noise / encoding replacements (e.g. repeated '?' or non-printable bytes)
+        int questionMarkCount = trimmed.Count(c => c == '?');
+        if (questionMarkCount > 0 && (double)questionMarkCount / trimmed.Length > 0.15)
+            return false;
+
+        // Must consist only of valid barcode/SKU characters
+        foreach (char c in trimmed)
+        {
+            if (!char.IsLetterOrDigit(c) && c != '-' && c != '_' && c != '.' && c != ':' && c != '/')
+                return false;
+        }
+
+        return true;
+    }
+
     // -----------------------------------------------------------------------
     // Test / verification helper — lets the hardware harness inject a scan
     // without physical hardware present.
@@ -141,7 +181,13 @@ public sealed class DatalogicBarcodeScanner : IBarcodeScanner, IAsyncDisposable
     public void SimulateBarcodeScanned(string barcode)
     {
         if (!string.IsNullOrWhiteSpace(barcode))
-            OnBarcodeScanned?.Invoke(this, new BarcodeScannedEventArgs(barcode.Trim()));
+        {
+            string cleaned = barcode.Trim();
+            if (IsValidBarcodeString(cleaned))
+            {
+                OnBarcodeScanned?.Invoke(this, new BarcodeScannedEventArgs(cleaned));
+            }
+        }
     }
 
     public async ValueTask DisposeAsync() => await DisconnectAsync();

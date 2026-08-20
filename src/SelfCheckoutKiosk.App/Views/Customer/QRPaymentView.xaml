@@ -201,7 +201,7 @@
                         <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
                     </Button.Resources>
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE897;" FontFamily="Segoe Fluent Icons" FontSize="18"/>
+                        <FontIcon Glyph="&#xE9CE;" FontFamily="Segoe Fluent Icons" FontSize="18"/>
                         <TextBlock Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>

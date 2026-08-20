@@ -76,6 +76,7 @@
                         <Setter Target="HeaderSubTitle.FontSize" Value="20" />
                         <Setter Target="CancelButton.Height" Value="96" />
                         <Setter Target="CancelButtonText.FontSize" Value="28" />
+                        <Setter Target="HelpButton.Padding" Value="28,14" />
                     </VisualState.Setters>
                 </VisualState>
 
@@ -92,6 +93,7 @@
                         <Setter Target="HeaderSubTitle.FontSize" Value="14" />
                         <Setter Target="CancelButton.Height" Value="64" />
                         <Setter Target="CancelButtonText.FontSize" Value="20" />
+                        <Setter Target="HelpButton.Padding" Value="18,10" />
                         <!-- Switch Cards to 3 Columns x 2 Rows for Horizontal Display -->
                         <Setter Target="CardsGrid.ColumnDefinitions[0].Width" Value="*" />
                         <Setter Target="CardsGrid.ColumnDefinitions[1].Width" Value="20" />
@@ -139,12 +141,12 @@
                     <TextBlock x:Name="HeaderSubTitle" Text="{x:Bind Localizer.GetString('CHECKOUT'), Mode=OneWay}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="100"/>
                     <TextBlock x:Name="HeaderTitle" Text="{x:Bind Localizer.GetString('PaymentOptionTitle'), Mode=OneWay}" FontSize="36" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
                 </StackPanel>
-                <Button x:Name="HelpButton" Grid.Column="1" Height="48" Padding="18,0" CornerRadius="12"
-                        Background="{StaticResource SurfaceHoverBrush}" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1.5"
-                        Click="HelpButton_Click" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                        <FontIcon Glyph="&#xE897;" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="{StaticResource AccentBlueBrush}"/>
-                        <TextBlock Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                <Button x:Name="HelpButton" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Background="Transparent" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1.5" CornerRadius="24" Padding="20,10"
+                        Click="HelpButton_Click">
+                    <StackPanel x:Name="HelpButtonStack" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon x:Name="HelpButtonIcon" Glyph="&#xE9CE;" FontFamily="Segoe Fluent Icons" FontSize="16" Foreground="{StaticResource TextDarkSlateBrush}"/>
+                        <TextBlock x:Name="HelpButtonText" Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </Grid>

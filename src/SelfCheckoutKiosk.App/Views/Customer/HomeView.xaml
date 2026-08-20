@@ -61,10 +61,14 @@
                         <Setter Target="KhmerMenuIcon.Width" Value="24"/>
                         <Setter Target="KhmerMenuIcon.Height" Value="16"/>
 
-                        <!-- Welcome Heading Sizing -->
+                        <!-- Welcome & Branding Heading Sizing -->
                         <Setter Target="WelcomeStackPanel.Spacing" Value="6"/>
-                        <Setter Target="WelcomeSubheadingText.FontSize" Value="16"/>
-                        <Setter Target="WelcomeTitleText.FontSize" Value="38"/>
+                        <Setter Target="BrandLogoBorder.Width" Value="42"/>
+                        <Setter Target="BrandLogoBorder.Height" Value="42"/>
+                        <Setter Target="BrandNameText.FontSize" Value="20"/>
+                        <Setter Target="BrandTaglineText.FontSize" Value="12"/>
+                        <Setter Target="WelcomeSubheadingText.FontSize" Value="15"/>
+                        <Setter Target="WelcomeTitleText.FontSize" Value="15"/>
 
                         <!-- Action Cards Grid Padding & Spacing -->
                         <Setter Target="ActionCardsGrid.Padding" Value="36,0"/>
@@ -123,10 +127,14 @@
                         <Setter Target="KhmerMenuIcon.Width" Value="36"/>
                         <Setter Target="KhmerMenuIcon.Height" Value="24"/>
 
-                        <!-- Welcome Heading Sizing -->
+                        <!-- Welcome & Branding Heading Sizing -->
                         <Setter Target="WelcomeStackPanel.Spacing" Value="10"/>
-                        <Setter Target="WelcomeSubheadingText.FontSize" Value="22"/>
-                        <Setter Target="WelcomeTitleText.FontSize" Value="58"/>
+                        <Setter Target="BrandLogoBorder.Width" Value="60"/>
+                        <Setter Target="BrandLogoBorder.Height" Value="60"/>
+                        <Setter Target="BrandNameText.FontSize" Value="30"/>
+                        <Setter Target="BrandTaglineText.FontSize" Value="16"/>
+                        <Setter Target="WelcomeSubheadingText.FontSize" Value="20"/>
+                        <Setter Target="WelcomeTitleText.FontSize" Value="20"/>
 
                         <!-- Action Cards Grid Padding & Spacing -->
                         <Setter Target="ActionCardsGrid.Padding" Value="48,0"/>
@@ -168,7 +176,7 @@
         <Grid.RowDefinitions>
             <!-- 0: Language bar -->
             <RowDefinition Height="8*"/>
-            <!-- 1: Welcome heading -->
+            <!-- 1: Welcome heading & Branding -->
             <RowDefinition Height="14*"/>
             <!-- 2: Cards -->
             <RowDefinition Height="58*"/>
@@ -205,11 +213,26 @@
         </Grid>
 
         <!-- ========================================================= -->
-        <!-- 1. WELCOME HEADING -->
+        <!-- 1. WELCOME HEADING & STORE BRANDING -->
         <!-- ========================================================= -->
         <StackPanel x:Name="WelcomeStackPanel" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
-            <TextBlock x:Name="WelcomeSubheadingText" Text="{x:Bind Localizer.GetString('WelcomeTo'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="100" HorizontalAlignment="Center"/>
-            <TextBlock x:Name="WelcomeTitleText" Text="{x:Bind Localizer.GetString('SelfCheckout'), Mode=OneWay}" FontSize="38" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+            <!-- Brand Badge (Logo + Name + Tagline) -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                <Border x:Name="BrandLogoBorder" Width="42" Height="42" CornerRadius="10" Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1.5" VerticalAlignment="Center">
+                    <Image x:Name="BrandLogoImage" Source="{x:Bind ViewModel.LogoUri, Mode=OneWay}" Stretch="Uniform" Margin="4"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center" Spacing="1">
+                    <TextBlock x:Name="BrandNameText" Text="{x:Bind ViewModel.CompanyName, Mode=OneWay}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock x:Name="BrandTaglineText" Text="{x:Bind ViewModel.Tagline, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Self-Checkout Subheading Title -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6" Margin="0,2,0,0">
+                <TextBlock x:Name="WelcomeSubheadingText" Text="{x:Bind Localizer.GetString('WelcomeTo'), Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="50"/>
+                <TextBlock Text="•" FontSize="14" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
+                <TextBlock x:Name="WelcomeTitleText" Text="{x:Bind Localizer.GetString('SelfCheckout'), Mode=OneWay}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource PrimaryBrandBrush}"/>
+            </StackPanel>
         </StackPanel>
 
         <!-- ========================================================= -->
@@ -235,9 +258,9 @@
                             <DoubleAnimation Storyboard.TargetName="IconTransform"
                                              Storyboard.TargetProperty="Y"
                                              From="-1" To="1.5" Duration="0:0:1.2">
-                                <DoubleAnimation.EasingFunction>
-                                    <SineEase EasingMode="EaseInOut"/>
-                                </DoubleAnimation.EasingFunction>
+                                 <DoubleAnimation.EasingFunction>
+                                     <SineEase EasingMode="EaseInOut"/>
+                                 </DoubleAnimation.EasingFunction>
                             </DoubleAnimation>
                         </Storyboard>
                     </Button.Resources>
@@ -281,9 +304,9 @@
                             <DoubleAnimation Storyboard.TargetName="PaymentIconTransform"
                                              Storyboard.TargetProperty="Y"
                                              From="-1" To="1.5" Duration="0:0:1.2">
-                                <DoubleAnimation.EasingFunction>
-                                    <SineEase EasingMode="EaseInOut"/>
-                                </DoubleAnimation.EasingFunction>
+                                 <DoubleAnimation.EasingFunction>
+                                     <SineEase EasingMode="EaseInOut"/>
+                                 </DoubleAnimation.EasingFunction>
                             </DoubleAnimation>
                         </Storyboard>
                     </Button.Resources>
@@ -326,7 +349,7 @@
             <!-- STORE HOURS -->
             <StackPanel x:Name="StoreHoursStack" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                 <FontIcon x:Name="StoreHoursIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE823;" FontSize="16" Foreground="{StaticResource TextMutedBrush}"/>
-                <TextBlock x:Name="StoreHoursText" Text="{x:Bind Localizer.GetString('OpenUntil'), Mode=OneWay}" FontSize="14" Foreground="{StaticResource TextMutedBrush}"/>
+                <TextBlock x:Name="StoreHoursText" Text="{x:Bind ViewModel.StoreHours, Mode=OneWay}" FontSize="14" Foreground="{StaticResource TextMutedBrush}"/>
             </StackPanel>
 
             <!-- HELP BUTTON -->

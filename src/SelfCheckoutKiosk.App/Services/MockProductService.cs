@@ -34,8 +34,8 @@ namespace SelfCheckoutKiosk.App.Services
 
             // Alcohol & Tobacco (Age Restricted)
             new Product { Sku = "1449711595198", Name = "Heineken Beer 330ml", Category = "Alcohol", Price = 2.20m, IsAgeRestricted = true },
-            new Product { Sku = "8850001100072", Name = "Cigarettes (Pack of 20)", Category = "Tobacco", Price = 2.50m, IsAgeRestricted = true },
-            new Product { Sku = "8850001100081", Name = "Beer 330ml Can", Category = "Alcohol", Price = 1.25m, IsAgeRestricted = true }
+            new Product { Sku = "8850001100078", Name = "Cigarettes (Pack of 20)", Category = "Tobacco", Price = 2.50m, IsAgeRestricted = true },
+            new Product { Sku = "8850001100085", Name = "Beer 330ml Can", Category = "Alcohol", Price = 1.25m, IsAgeRestricted = true }
         };
 
         public IEnumerable<Product> GetAllProducts() => _products;

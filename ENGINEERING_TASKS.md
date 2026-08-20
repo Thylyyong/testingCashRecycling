@@ -17,7 +17,7 @@
 | **WP-04** | [Generic Bill Acceptor & ITL Hardware Stabilization](#wp-04-generic-bill-acceptor--itl-hardware-stabilization) | `P0` | 🟡 `IN PROGRESS` | ITL NV200/NV11, simulator & validator |
 | **WP-05** | [Architecture Interaction Flow & Component Remarks](#wp-05-architecture-interaction-flow--component-remarks) | `P1` | 🔴 `TODO` | In-depth code remarks & lifecycle mapping |
 | **WP-06** | [Project Structure Optimization & Dead Code Removal](#wp-06-project-structure-optimization--dead-code-removal) | `P1` | 🟢 `COMPLETED` | Safe cleanup, unused tools & structure pruning |
-| **WP-07** | [Admin Diagnostics & Age-Restricted Approval Workflow](#wp-07-admin-diagnostics--age-restricted-approval-workflow) | `P0` | 🟢 `COMPLETED` | Dynamic vault breakdown, reset dialog, receipt reprint, staff approval modal |
+| **WP-07** | [Admin Diagnostics & Age-Restricted Approval Workflow](#wp-07-admin-diagnostics--age-restricted-approval-workflow) | `P0` | 🟢 `COMPLETED` | Vault breakdown, receipt reprint, age approval modal, store branding & persistence |
 
 ---
 
@@ -114,16 +114,26 @@
   - `HardwareStatusManager` and `AdminDiagnosticsViewModel` strictly report genuine external serial / USB port availability for scanner and printer, showing red/green status indicators.
 - [x] **7.4 Age-Restricted Customer Alert & Admin Approval:**
   - Created `AgeRestrictedApprovalManager` to manage pending approvals across customer and admin views.
-  - In `CartView.xaml.cs`, scanning age-restricted products triggers the modal dialog ("One moment — staff assistance needed") with blue circular badge and Admin shortcut.
+  - In `CartView.xaml.cs` and `App.xaml.cs`, scanning age-restricted products triggers the modal dialog ("One moment — staff assistance needed" / "សូមរង់ចាំមួយភ្លែត — ត្រូវការជំនួយពីបុគ្គលិក") with blue circular badge, Admin shortcut, and full Khmer (`km`) / English (`en`) dictionary localization and font switching.
   - In `AdminDiagnosticsView.xaml`, renders the top approval card (bold product name, gray SKU, vibrant blue `[Approve]` button, outlined red `[Reject]` button with full hover/pressed states) matching reference design.
-  - **Bugfix:** `OnProductApproved` event subscribed permanently in the `CartView` constructor (not in `Loaded`/`Unloaded`) so the cart-add handler fires even when `CartView` is off-screen during admin navigation. This was the root cause of approved items not being added to cart.
-  - Approved items are immediately added to `CartViewModel.Items` via `DispatcherQueue.TryEnqueue`; all pre-existing cart items are preserved intact.
+  - **Quantity Stacking Fix:** `AgeRestrictedApprovalManager.Approve()` directly invokes `App.CartServiceInstance.AddItem(...)` exactly once upon attendant approval. Removed leaky view-level event subscriptions in `CartView` that caused duplicate/multiplied quantities when scanning and approving subsequent items.
+  - Approved items are immediately added to the cart, pre-existing cart items are preserved intact, and repeated scans increment by exactly +1 per approved scan.
 - [x] **7.5 Admin Diagnostics Design & Navigation:**
   - Restored `AdminDiagnosticsView.xaml` to match `MediaBrandingView.xaml` design language (`#F1F5F9` background, white top bar, `CornerRadius="12"` cards with `#CBD5E1` borders, responsive 2-column ↔ portrait layout, section header style).
   - Preserved original header: "Admin Diagnostics" bold title, `System Operational` green pill badge, subtitle, text-only `Close` button.
   - Retained prominent "Media & Branding Management" card with blue icon badge and `Open` accent button.
   - Reset Vault Counts button uses red danger styling (`#FEF2F2` background, `#FECACA` border, `#DC2626` text) with dedicated hover/pressed visual states and a destructive `ContentDialog` confirmation.
   - Implemented `INavigationService.NavigateBackToCustomer()` which prunes admin stack entries and returns to whichever customer screen opened Admin.
+- [x] **7.6 Dynamic Store Branding & Cross-Session Persistence:**
+  - Updated `BrandingConfig` model to track `CompanyName`, `Tagline`, `LogoFileName` (with fallback to `ca.ico`), `StoreHours`, and `KioskId`.
+  - Added JSON serialization & local disk persistence (`branding_config.json`) in `MediaBrandingService`, automatically loading saved branding and playlist on application boot.
+  - Wired `MediaBrandingService.BrandingChanged` event to notify listeners dynamically.
+  - Updated `HomeViewModel` and `HomeView.xaml` to dynamically render the store logo, brand name, tagline, and store hours in the header and footer across both 16:9 Landscape and 9:16 Portrait kiosk aspect ratios.
+  - Enhanced `MediaBrandingView.xaml` with live logo image preview, store hours configuration, and save action.
+- [x] **7.7 Peripheral Robustness & UI Consistency Fixes:**
+  - **Scanner Binary Noise Filtering:** Added strict validation in `DatalogicBarcodeScanner.IsValidBarcodeString` and `CartView.ProcessScannedBarcodeAsync` to filter out non-barcode binary serial traffic (e.g. bluetooth frames / heartbeat pulses), eliminating spurious "Item Not Found" dialogs with corrupted characters.
+  - **Payment Decoupling:** Added `isCash` parameter to `IPaymentService.BeginTransaction(...)` and configured `QRPaymentViewModel` with `isCash: false`. Cash hardware arming (`ArmAcceptanceAsync`) is now strictly constrained to cash transactions with verified online hardware, preventing spurious exceptions during KHQR flows.
+  - **Universal Help Button Consistency:** Unified Help button icon across all customer views (`HomeView`, `CartView`, `PaymentSelectionView`, `IngestionProgressView`, `QRPaymentView`) to Segoe Fluent glyph `&#xE9CE;` and aligned the header pill chip in `PaymentSelectionView`.
 
 ---
 
@@ -136,4 +146,6 @@ graph TD
     C --> D["WP-04: Generic Bill Acceptor Stabilization"]
     D --> E["WP-05: Architecture Remarks & Docs"]
     E --> F["WP-06: Project Optimization & Safe Cleanup"]
+    F --> G["WP-07: Admin Diagnostics, Age Approval & Branding"]
+    G --> H["WP-07.7: Peripheral Robustness & UI Consistency"]
 ```
