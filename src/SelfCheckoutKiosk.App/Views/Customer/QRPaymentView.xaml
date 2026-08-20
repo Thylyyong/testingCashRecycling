@@ -203,7 +203,7 @@
 
                     <!-- INTEGRATED TOTAL DISPLAY (USD) -->
                     <StackPanel Spacing="2" HorizontalAlignment="Center" Margin="0,4,0,4">
-                        <TextBlock x:Name="TotalDueLabel" Text="Total Amount" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="TotalDueLabel" Text="{x:Bind ViewModel.TotalDueLabelText, Mode=OneWay}" FontSize="{StaticResource FontSizeBody}" FontWeight="SemiBold" Foreground="{StaticResource TextSubLabelBrush}" HorizontalAlignment="Center"/>
                         <TextBlock x:Name="TotalDueText" Text="{x:Bind ViewModel.FormattedTotalDue, Mode=OneWay}" FontSize="{StaticResource FontSizeHeroLarge}" FontWeight="Bold" Foreground="{StaticResource AccentBlueBrush}" HorizontalAlignment="Center"/>
                     </StackPanel>
 

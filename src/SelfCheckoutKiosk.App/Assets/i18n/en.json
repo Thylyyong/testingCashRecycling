@@ -14,10 +14,8 @@
   "Second": "seconds",
   "Done": "Done",
   "Finish": "Done",
-
   "_comment_2_attract": "=================== 2. KIOSK BASE VIEW (ATTRACT SCREEN) ===================",
   "TapToStart": "Tap anywhere to start",
-
   "_comment_3_home": "=================== 3. HOME VIEW (CUSTOMER LANDING PAGE) ===================",
   "WelcomeTo": "WELCOME TO",
   "SelfCheckout": "Self-Checkout",
@@ -29,7 +27,8 @@
   "NeedHelp": "Help",
   "HelpIsOnTheWay": "Help Is On the Way",
   "HelpMessage": "A staff member has been notified and will assist you shortly.",
-
+  "ServiceUnavailableTitle": "Service Temporarily Unavailable",
+  "ServiceUnavailableMessage": "No payment methods are currently connected. Self-checkout cannot process transactions at this time. Please proceed to a staffed cashier.",
   "_comment_4_cart": "=================== 4. CART VIEW (SCANNING & CART ITEMS) ===================",
   "YourCart": "Your Cart",
   "Items": "Items",
@@ -53,6 +52,9 @@
   "RecallCartInstruction": "Enter the 6-digit PIN code you received when saving your cart:",
   "RestoreCart": "Restore Cart",
   "ErrorInvalidPin": "Please enter a valid 6-digit recall PIN.",
+  "ErrorCartNotFound": "No saved cart found for this PIN. Please check and try again.",
+  "ErrorCartExpired": "This saved cart has expired (2-hour limit).",
+  "ErrorRecallGeneric": "An error occurred while recalling your cart.",
   "AddItemManuallyTitle": "Add Item Manually",
   "EnterBarcodeInstruction": "Enter barcode number.",
   "ErrorProductNotFoundForBarcode": "No product found for barcode:",
@@ -67,7 +69,6 @@
   "CancelOrderMessage": "Going back will cancel your order.",
   "KeepScanning": "Keep scanning",
   "CancelOrder": "Cancel Order",
-
   "_comment_5_payment_options": "=================== 5. PAYMENT OPTION & SELECTION VIEWS ===================",
   "CHECKOUT": "CHECKOUT",
   "PaymentOptionSubTitle": "OPTION",
@@ -81,7 +82,6 @@
   "MembershipTitle": "Membership Card",
   "CouponTitle": "Coupon",
   "ReturnToCart": "Return to Cart",
-
   "_comment_6_cash_payment": "=================== 6. INGESTION PROGRESS VIEW (CASH FLOW) ===================",
   "CashPayment": "Cash Payment",
   "AmountRemaining": "Amount Remaining",
@@ -97,7 +97,6 @@
   "PaymentAlreadyComplete": "Payment already complete.",
   "InvalidAmount": "Invalid amount.",
   "NoteTooLarge": "Note too large — try a smaller note.",
-
   "_comment_7_qr_payment": "=================== 7. QR PAYMENT VIEW (KHQR FLOW) ===================",
   "QRPaymentTitle": "QR Payment",
   "ScanInstructions": "Scan with ABA Mobile or any KHQR App",
@@ -105,11 +104,10 @@
   "WaitingForPayment": "Waiting for payment...",
   "SimulateCancel": "Cancel / Fail (Test)",
   "SimulateSuccess": "Simulate Success",
-  "CancelPaymentTitle": "Cancel Payment?",
-  "CancelPaymentMessage": "Going back will cancel this payment.",
+  "ChangePaymentMethodTitle": "Change Payment Method?",
+  "ChangePaymentMethodMessage": "Going back will return to the payment selection screen.",
   "ContinuePayment": "Continue Payment",
-  "CancelPayment": "Cancel Payment",
-
+  "BackToPaymentSelection": "Change Payment",
   "_comment_8_success": "=================== 8. SUCCESS VIEW (RECEIPT & COMPLETION) ===================",
   "PaymentComplete": "Payment Complete",
   "TotalPaid": "Total Paid",

@@ -1,7 +1,6 @@
 using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
-using SelfCheckoutKiosk.App.Views;
 using SelfCheckoutKiosk.App.Views.Admin;
 using SelfCheckoutKiosk.App.Views.Customer;
 using System;
@@ -11,196 +10,220 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
-namespace SelfCheckoutKiosk.App.ViewModels.Admin
+namespace SelfCheckoutKiosk.App.ViewModels.Admin;
+
+public class AdminDiagnosticsViewModel : INotifyPropertyChanged
 {
-    public class AdminDiagnosticsViewModel : INotifyPropertyChanged
+    private readonly INavigationService _navigationService;
+
+    private bool _isSyncing = false;
+    private string _lastSyncTime = "Today at 08:00 PM";
+    private int _unresolvedLogCount = 0;
+    private string _licenseTier = "Enterprise";
+    private string _licenseExpiry = "Not available";
+    private string _statusMessage = string.Empty;
+    private bool _isStatusSuccess = true;
+    private bool _hasStatusMessage = false;
+
+    public ObservableCollection<HardwareDeviceStatus> HardwareDevices { get; } = new();
+    public ObservableCollection<CassetteCountItem> KhrCassettes { get; } = new();
+    public ObservableCollection<CassetteCountItem> UsdCassettes { get; } = new();
+
+    public AdminDiagnosticsViewModel(INavigationService? navigationService = null)
     {
-        private readonly INavigationService _navigationService;
+        _navigationService = navigationService
+            ?? App.MainWindowInstance?.NavigationService
+            ?? new NavigationService(null!);
 
-        private bool _isSyncing = false;
-        private string _lastSyncTime = "Today at 08:00 PM";
-        private int _unresolvedLogCount = 0;
-        private string _licenseTier = "Enterprise";
-        private string _licenseExpiry = "Not available";
-        private string _statusMessage = string.Empty;
-        private bool _isStatusSuccess = true;
-        private bool _hasStatusMessage = false;
+        RefreshDiagnostics();
+        InitializeCassettes();
 
-        public ObservableCollection<HardwareDeviceStatus> HardwareDevices { get; } = new();
-        public ObservableCollection<CassetteCountItem> KhrCassettes { get; } = new();
-        public ObservableCollection<CassetteCountItem> UsdCassettes { get; } = new();
-
-        public AdminDiagnosticsViewModel(INavigationService? navigationService = null)
+        HardwareStatusManager.Instance.PropertyChanged += (s, e) =>
         {
-            _navigationService = navigationService
-                ?? App.MainWindowInstance?.NavigationService
-                ?? new NavigationService(null!);
+            App.MainWindowInstance?.DispatcherQueue.TryEnqueue(RefreshDiagnostics);
+        };
+    }
 
-            InitializeMockHardware();
-            InitializeCassettes();
-        }
+    public bool IsSyncing
+    {
+        get => _isSyncing;
+        set { _isSyncing = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsNotSyncing)); }
+    }
 
-        public bool IsSyncing
+    public bool IsNotSyncing => !_isSyncing;
+
+    public string LastSyncTime
+    {
+        get => _lastSyncTime;
+        set { _lastSyncTime = value; OnPropertyChanged(); }
+    }
+
+    public int UnresolvedLogCount
+    {
+        get => _unresolvedLogCount;
+        set { _unresolvedLogCount = value; OnPropertyChanged(); }
+    }
+
+    public string LicenseTier
+    {
+        get => _licenseTier;
+        set { _licenseTier = value; OnPropertyChanged(); }
+    }
+
+    public string LicenseExpiry
+    {
+        get => _licenseExpiry;
+        set { _licenseExpiry = value; OnPropertyChanged(); }
+    }
+
+    public string StatusMessage
+    {
+        get => _statusMessage;
+        set
         {
-            get => _isSyncing;
-            set { _isSyncing = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsNotSyncing)); }
+            _statusMessage = value;
+            _hasStatusMessage = !string.IsNullOrEmpty(value);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasStatusMessage));
         }
+    }
 
-        public bool IsNotSyncing => !_isSyncing;
+    public bool IsStatusSuccess
+    {
+        get => _isStatusSuccess;
+        set { _isStatusSuccess = value; OnPropertyChanged(); }
+    }
 
-        public string LastSyncTime
+    public bool HasStatusMessage => _hasStatusMessage;
+
+    public void RefreshDiagnostics()
+    {
+        var hw = HardwareStatusManager.Instance;
+        LicenseTier = hw.LicenseTier;
+        LicenseExpiry = hw.LicenseExpiryText;
+
+        HardwareDevices.Clear();
+
+        string activePort = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_COM_PORT") ?? "COM5";
+        HardwareDevices.Add(new HardwareDeviceStatus
         {
-            get => _lastSyncTime;
-            set { _lastSyncTime = value; OnPropertyChanged(); }
-        }
+            Name = "Cash Recycler",
+            DeviceType = "Cash & Note Validator",
+            IsConnected = hw.IsCashAvailable,
+            PortOrInterface = hw.IsCashAvailable ? $"REST API • Port 5000 / {activePort}" : hw.CashStatusReason,
+            FirmwareVersion = "v1.6.1-RC.4",
+            Glyph = "\uE825"
+        });
 
-        public int UnresolvedLogCount
+        HardwareDevices.Add(new HardwareDeviceStatus
         {
-            get => _unresolvedLogCount;
-            set { _unresolvedLogCount = value; OnPropertyChanged(); }
-        }
+            Name = "Barcode Scanner",
+            DeviceType = "Datalogic 2D Imager & EAN-13",
+            IsConnected = hw.IsScannerAvailable,
+            PortOrInterface = hw.IsScannerAvailable ? "USB-COM Serial (COM4) • 9600 Baud" : "Disconnected (COM4)",
+            FirmwareVersion = "v1.8.0",
+            Glyph = "\uEC5A"
+        });
 
-        public string LicenseTier
+        HardwareDevices.Add(new HardwareDeviceStatus
         {
-            get => _licenseTier;
-            set { _licenseTier = value; OnPropertyChanged(); }
-        }
+            Name = "Receipt Printer",
+            DeviceType = "Epson TM-m30 Thermal 80mm",
+            IsConnected = hw.IsPrinterAvailable,
+            PortOrInterface = "USB001 / Raw ESC-POS",
+            FirmwareVersion = "Epson M30-II",
+            Glyph = "\uE749"
+        });
 
-        public string LicenseExpiry
+        HardwareDevices.Add(new HardwareDeviceStatus
         {
-            get => _licenseExpiry;
-            set { _licenseExpiry = value; OnPropertyChanged(); }
-        }
+            Name = "Payment Gateway",
+            DeviceType = "KHQR & Digital Settlement",
+            IsConnected = hw.IsQrAvailable,
+            PortOrInterface = hw.IsQrAvailable ? "HTTPS / Webhook Gateway (Online)" : hw.QrStatusReason,
+            FirmwareVersion = "KHQR-API-v2",
+            Glyph = "\uED14"
+        });
+    }
 
-        public string StatusMessage
+    private void InitializeCassettes()
+    {
+        KhrCassettes.Clear();
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "100 ៛", Currency = "KHR", UnitValue = 100, Count = 45 });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "500 ៛", Currency = "KHR", UnitValue = 500, Count = 50 });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "1,000 ៛", Currency = "KHR", UnitValue = 1000, Count = 60 });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "5,000 ៛", Currency = "KHR", UnitValue = 5000, Count = 30 });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "10,000 ៛", Currency = "KHR", UnitValue = 10000, Count = 40 });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "20,000 ៛", Currency = "KHR", UnitValue = 20000, Count = 25 });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "50,000 ៛", Currency = "KHR", UnitValue = 50000, Count = 20 });
+
+        UsdCassettes.Clear();
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$1.00", Currency = "USD", UnitValue = 1, Count = 40 });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$5.00", Currency = "USD", UnitValue = 5, Count = 30 });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$10.00", Currency = "USD", UnitValue = 10, Count = 25 });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$20.00", Currency = "USD", UnitValue = 20, Count = 20 });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$50.00", Currency = "USD", UnitValue = 50, Count = 15 });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$100.00", Currency = "USD", UnitValue = 100, Count = 10 });
+    }
+
+    public async Task ReprintLastReceiptAsync()
+    {
+        IsStatusSuccess = true;
+        StatusMessage = "Sending reprint command to thermal printer...";
+
+        await Task.Delay(500);
+
+        try
         {
-            get => _statusMessage;
-            set
-            {
-                _statusMessage = value;
-                _hasStatusMessage = !string.IsNullOrEmpty(value);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(HasStatusMessage));
-            }
+            App.ReceiptPrinterServiceInstance.ReprintLastReceipt();
+            StatusMessage = "Receipt reprinted successfully!";
         }
-
-        public bool IsStatusSuccess
+        catch (Exception ex)
         {
-            get => _isStatusSuccess;
-            set { _isStatusSuccess = value; OnPropertyChanged(); }
+            Debug.WriteLine($"[Reprint Error] {ex.Message}");
+            StatusMessage = "Reprint signal sent (Simulated hardware dispatch).";
         }
+    }
 
-        public bool HasStatusMessage => _hasStatusMessage;
+    public async Task SyncCloudAsync()
+    {
+        IsSyncing = true;
+        StatusMessage = "Synchronizing configuration with central hub...";
 
-        private void InitializeMockHardware()
-        {
-            HardwareDevices.Clear();
+        await Task.Delay(1200);
 
-            HardwareDevices.Add(new HardwareDeviceStatus
-            {
-                Name = "Cash Recycler",
-                DeviceType = "Cash & Note Validator",
-                IsConnected = false,
-                PortOrInterface = "COM3 • 9600 Baud",
-                FirmwareVersion = "v2.1.4-std",
-                Glyph = "\uE825"
-            });
+        LastSyncTime = $"Today at {DateTime.Now:hh:mm tt}";
+        IsSyncing = false;
+        IsStatusSuccess = true;
+        StatusMessage = "Kiosk data successfully synchronized!";
+    }
 
-            HardwareDevices.Add(new HardwareDeviceStatus
-            {
-                Name = "Barcode Scanner",
-                DeviceType = "2D Imager & EAN-13",
-                IsConnected = false,
-                PortOrInterface = "USB HID POS",
-                FirmwareVersion = "v1.8.0",
-                Glyph = "\uEC5A"
-            });
+    public void ExitToCustomerMode()
+    {
+        NavigateBackToCustomer();
+    }
 
-            HardwareDevices.Add(new HardwareDeviceStatus
-            {
-                Name = "Receipt Printer",
-                DeviceType = "Thermal 80mm ESC/POS",
-                IsConnected = false,
-                PortOrInterface = "USB Serial Interface",
-                FirmwareVersion = "Epson M30-II",
-                Glyph = "\uE749"
-            });
-        }
+    public void NavigateBackToCustomer()
+    {
+        _navigationService.NavigateTo(
+            typeof(KioskBaseView),
+            null,
+            SlideNavigationTransitionEffect.FromLeft
+        );
+    }
 
-        private void InitializeCassettes()
-        {
-            KhrCassettes.Clear();
-            KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "100 ៛", Currency = "KHR", UnitValue = 100, Count = 0 });
-            KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "500 ៛", Currency = "KHR", UnitValue = 500, Count = 0 });
-            KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "1,000 ៛", Currency = "KHR", UnitValue = 1000, Count = 0 });
-            KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "5,000 ៛", Currency = "KHR", UnitValue = 5000, Count = 0 });
-            KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "10,000 ៛", Currency = "KHR", UnitValue = 10000, Count = 0 });
-            KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "20,000 ៛", Currency = "KHR", UnitValue = 20000, Count = 0 });
-            KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "50,000 ៛", Currency = "KHR", UnitValue = 50000, Count = 0 });
+    public void NavigateToMediaBranding()
+    {
+        _navigationService.NavigateTo(
+            typeof(MediaBrandingView),
+            null,
+            SlideNavigationTransitionEffect.FromRight
+        );
+    }
 
-            UsdCassettes.Clear();
-            UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$1.00", Currency = "USD", UnitValue = 1, Count = 0 });
-            UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$5.00", Currency = "USD", UnitValue = 5, Count = 0 });
-            UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$10.00", Currency = "USD", UnitValue = 10, Count = 0 });
-            UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$20.00", Currency = "USD", UnitValue = 20, Count = 0 });
-            UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$50.00", Currency = "USD", UnitValue = 50, Count = 0 });
-            UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$100.00", Currency = "USD", UnitValue = 100, Count = 0 });
-        }
-
-        public async Task ReprintLastReceiptAsync()
-        {
-            IsStatusSuccess = true;
-            StatusMessage = "Sending reprint command to thermal printer...";
-
-            await Task.Delay(500);
-
-            try
-            {
-                App.ReceiptPrinterServiceInstance.ReprintLastReceipt();
-                StatusMessage = "Receipt reprinted successfully!";
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[Reprint Error] {ex.Message}");
-                StatusMessage = "Reprint signal sent (Simulated hardware dispatch).";
-            }
-        }
-
-        public async Task SyncCloudAsync()
-        {
-            IsSyncing = true;
-            StatusMessage = "Synchronizing configuration with central hub...";
-
-            await Task.Delay(1200);
-
-            LastSyncTime = $"Today at {DateTime.Now:hh:mm tt}";
-            IsSyncing = false;
-            IsStatusSuccess = true;
-            StatusMessage = "Kiosk data successfully synchronized!";
-        }
-
-        public void NavigateToMediaBranding()
-        {
-            _navigationService.NavigateTo(
-                typeof(MediaBrandingView),
-                null,
-                new SuppressNavigationTransitionInfo()
-            );
-        }
-
-        public void ExitToCustomerMode()
-        {
-            _navigationService.NavigateTo(
-                typeof(KioskBaseView),
-                null,
-                new SuppressNavigationTransitionInfo()
-            );
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

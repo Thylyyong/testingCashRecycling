@@ -35,13 +35,34 @@ namespace SelfCheckoutKiosk.App.Models
 
         public string TypeGlyph => IsVideo ? "\uE714" : "\uEB9F"; // Video icon vs Image icon
 
+        public string UriPath
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(FileName))
+                    return "ms-appx:///Assets/Images/Banner/banner1.jpg";
+
+                if (FileName.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase) ||
+                    FileName.StartsWith("file://", StringComparison.OrdinalIgnoreCase) ||
+                    FileName.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    FileName.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    return FileName;
+                }
+
+                return IsVideo
+                    ? $"ms-appx:///Assets/Videos/{FileName}"
+                    : $"ms-appx:///Assets/Images/Banner/{FileName}";
+            }
+        }
+
         public int DurationSeconds
         {
             get => _durationSeconds;
             set { _durationSeconds = value; OnPropertyChanged(); OnPropertyChanged(nameof(DurationText)); }
         }
 
-        public string DurationText => $"{DurationSeconds}s";
+        public string DurationText => IsVideo ? "Full Video Length" : $"{DurationSeconds}s";
 
         public bool IsActive
         {

@@ -12,6 +12,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         {
             NavigationService = navigationService;
         }
+
         public void ProceedToKioskBaseView()
         {
             NavigationService.NavigateTo(
@@ -19,7 +20,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
                 null,
                 SlideNavigationTransitionEffect.FromLeft);
         }
-
+        
         public void GoBack()
         {
             NavigationService.NavigateTo(

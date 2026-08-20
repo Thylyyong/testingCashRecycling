@@ -39,27 +39,13 @@
             </DoubleAnimation>
         </Storyboard>
 
-        <!-- CART ITEM TEMPLATE -->
+        <!-- CART ITEM TEMPLATE: Clean list rows with outline divider between each -->
         <DataTemplate x:Key="CartItemTemplate" x:DataType="models:CartItem">
             <Border x:Name="RowBorder" 
-                    Loaded="CartItemRow_Loaded" 
-                    Background="White"
+                    Background="{StaticResource CardBackgroundBrush}"
                     BorderBrush="{StaticResource CardBorderBrush}" 
-                    BorderThickness="1" 
-                    CornerRadius="{StaticResource KioskCardCornerRadius}"
-                    Margin="0,0,0,8"
-                    Padding="16,12">
-
-                <Border.Resources>
-                    <Storyboard x:Key="FlashAnimation">
-                        <ColorAnimation
-                            Storyboard.TargetName="RowBackground"
-                            Storyboard.TargetProperty="Color"
-                            From="#4010B981" 
-                            To="Transparent"
-                            Duration="0:0:0.8" />
-                    </Storyboard>
-                </Border.Resources>
+                    BorderThickness="0,0,0,1" 
+                    Padding="20,16">
 
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -71,12 +57,10 @@
                         <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="18" Foreground="{StaticResource TextItemNameBrush}" TextTrimming="CharacterEllipsis"/>
 
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Border Background="{StaticResource SurfaceHoverBrush}" CornerRadius="4" Padding="6,2">
-                                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold">
-                                    <Run Text="SKU:"/>
-                                    <Run Text="{x:Bind Sku}"/>
-                                </TextBlock>
-                            </Border>
+                            <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontWeight="SemiBold">
+                                <Run Text="SKU:"/>
+                                <Run Text="{x:Bind Sku}"/>
+                            </TextBlock>
 
                             <TextBlock FontSize="13" Foreground="{StaticResource TextQuantityBrush}" VerticalAlignment="Center">
                                 <Run Text="Qty:"/>
@@ -481,7 +465,7 @@
         </Border>
 
         <!-- POPULATED CART STATE -->
-        <Border x:Name="ItemsListArea" Grid.Row="2" Background="{StaticResource PageBackgroundBrush}" Padding="16,8" Visibility="Collapsed">
+        <Border x:Name="ItemsListArea" Grid.Row="2" Background="{StaticResource CardBackgroundBrush}" Padding="0" Visibility="Collapsed">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl x:Name="CartItemsControl" ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}" ItemTemplate="{StaticResource CartItemTemplate}">
                     <ItemsControl.ItemsPanel>

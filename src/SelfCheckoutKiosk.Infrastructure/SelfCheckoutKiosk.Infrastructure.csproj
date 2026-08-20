@@ -1,13 +1,53 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- INFRASTRUCTURE LAYER. References Core (implements its ports).
        Owner: Back-End Developer.
-       TODO(Back-End): add EF Core + SQLCipher package refs in Sprint 0 proper;
-       the AOT spike validates them here first. -->
+
+       AOT: IsAotCompatible is back to true (Directory.Build.props default) as
+       of the compiled-model + UnsafeAccessors codegen in Data/CompiledModels/
+       (generated via the "dotnet ef dbcontext optimize" nativeaot flag, see
+       the TODO comment on KioskDbContext.OnConfiguring for the exact command). Schema
+       creation also no longer calls EF's EnsureCreated()/Migrate() — both stay
+       RequiresDynamicCode-annotated regardless of a compiled model — in favor
+       of SchemaInitializer replaying a design-time-generated SQL script over
+       plain ADO.NET. Regenerate CompiledModels whenever an entity shape
+       changes; there is no automatic drift detection. -->
   <PropertyGroup>
     <RootNamespace>SelfCheckoutKiosk.Infrastructure</RootNamespace>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Design-time-generated schema script (see SchemaInitializer.cs) —
+         replayed via plain ADO.NET at startup instead of EnsureCreated(). -->
+    <EmbeddedResource Include="Data\Schema\*.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- .Core variants deliberately: the non-Core packages drag in
+         SQLitePCLRaw.bundle_e_sqlite3 (plain, unencrypted SQLite) as their
+         default native provider, which both (a) defeats the point of
+         SQLCipher and (b) transitively pulls a SQLitePCLRaw.lib.e_sqlite3
+         version with a known high-severity CVE (GHSA-2m69-gcr7-jv3q). Taking
+         the .Core packages plus bundle_e_sqlcipher explicitly means the ONLY
+         native SQLite binary in the graph is the SQLCipher one. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="9.0.0" />
+    <PackageReference Include="Microsoft.NET.Workloads.10.0.100" Version="10.110.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlcipher" Version="2.1.11" />
+    <!-- IHostedService/BackgroundService for TailscaleSyncWorker. A small,
+         AOT-friendly abstractions-only package (no reflection-heavy generic
+         host required to implement the interface). -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
+    <!-- Design-time only — powers `dotnet ef dbcontext optimize` (compiled
+         model generation). PrivateAssets="all" keeps it out of the published
+         app entirely; it never ships, so it can't itself be an AOT concern. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <!-- Microsoft.Win32.Registry ships in the shared framework on modern TFMs
+         (net10.0) — no explicit package needed; HardwareIdProvider uses the
+         built-in Microsoft.Win32.Registry namespace directly. -->
   </ItemGroup>
 </Project>

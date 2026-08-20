@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SelfCheckoutKiosk Test Result",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["test_id", "component", "action", "expected", "actual", "status", "timestamp", "severity"],
+    "properties": {
+      "test_id": { "type": "string", "description": "e.g. BS-01, CA-04, TB-06" },
+      "component": { "type": "string", "description": "e.g. BarcodeScanner, CashAcceptor, TopBar, CardReader, Printer, Network" },
+      "action": { "type": "string" },
+      "expected": { "type": "string" },
+      "actual": { "type": "string" },
+      "status": { "type": "string", "enum": ["PASS", "FAIL"] },
+      "timestamp": { "type": "string", "format": "date-time" },
+      "screenshot_ref": { "type": "string" },
+      "log": { "type": "string" },
+      "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] }
+    }
+  },
+  "examples": [
+    [
+      {
+        "test_id": "BS-01",
+        "component": "BarcodeScanner",
+        "action": "Scan known-good UPC 012345678905",
+        "expected": "Item resolved and added to cart within 500ms with beep/flash confirmation",
+        "actual": "Item added in 210ms, beep and flash observed",
+        "status": "PASS",
+        "timestamp": "2026-07-30T14:02:11Z",
+        "screenshot_ref": "artifacts/BS-01_20260730.png",
+        "log": "logs/scanner_20260730.log#L118-L124",
+        "severity": "critical"
+      },
+      {
+        "test_id": "CA-04",
+        "component": "CashAcceptor",
+        "action": "Attempt $7.35 cash payment when recycler float is below change threshold",
+        "expected": "Cash option disabled or 'exact change only' shown before note insertion",
+        "actual": "Cash option remained enabled; note accepted, then error surfaced only after insertion with no change dispensed",
+        "status": "FAIL",
+        "timestamp": "2026-07-30T14:15:47Z",
+        "screenshot_ref": "artifacts/CA-04_20260730.png",
+        "log": "logs/lowfloatmonitor_20260730.log#L40-L58",
+        "severity": "critical"
+      }
+    ]
+  ]
+}

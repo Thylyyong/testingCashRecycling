@@ -14,10 +14,8 @@
   "Second": "វិនាទី",
   "Done": "រួចរាល់",
   "Finish": "រួចរាល់",
-
   "_comment_2_attract": "=================== 2. KIOSK BASE VIEW (ATTRACT SCREEN) ===================",
   "TapToStart": "ប៉ះអេក្រង់ដើម្បីចាប់ផ្តើម",
-
   "_comment_3_home": "=================== 3. HOME VIEW (CUSTOMER LANDING PAGE) ===================",
   "WelcomeTo": "សូមស្វាគមន៍",
   "SelfCheckout": "ទូទាត់ទំនិញដោយខ្លួនឯង",
@@ -29,7 +27,8 @@
   "NeedHelp": "ជំនួយ",
   "HelpIsOnTheWay": "ជំនួយកំពុងមក",
   "HelpMessage": "បុគ្គលិកត្រូវបានជូនដំណឹង ហើយនឹងមកជួយអ្នកក្នុងពេលឆាប់ៗនេះ។",
-
+  "ServiceUnavailableTitle": "សេវាកម្មមិនអាចប្រើបានបណ្តោះអាសន្ន",
+  "ServiceUnavailableMessage": "ប្រព័ន្ធទូទាត់ប្រាក់មិនទាន់ភ្ជាប់នៅឡើយទេ។ ទូស្វ័យទូទាត់មិនអាចដំណើរការបានទេនៅពេលនេះ សូមអញ្ជើញទៅកាន់បញ្ជរបេឡាដើម្បីទូទាត់ប្រាក់។",
   "_comment_4_cart": "=================== 4. CART VIEW (SCANNING & CART ITEMS) ===================",
   "YourCart": "ទំនិញក្នុងកន្ត្រក",
   "Items": "ទំនិញ",
@@ -52,7 +51,10 @@
   "RecallCartTitle": "ស្តារកន្ត្រកដែលបានរក្សាទុក",
   "RecallCartInstruction": "សូមបញ្ចូលលេខកូដសម្ងាត់ ៦ ខ្ទង់ដែលអ្នកបានទទួលពេលរក្សាទុកកន្ត្រក៖",
   "RestoreCart": "ស្តារកន្ត្រក",
-  "ErrorInvalidPin": "សូមបញ្ចូលលេខកូដ ៦ ខ្ទង់ត្រឹមត្រូវ។",
+  "ErrorInvalidPin": "សូមបញ្ចូលលេខកូដសម្ងាត់ ៦ ខ្ទង់ត្រឹមត្រូវ។",
+  "ErrorCartNotFound": "រកមិនឃើញកន្ត្រកដែលបានរក្សាទុកសម្រាប់លេខសម្ងាត់នេះទេ។ សូមពិនិត្យមើលឡើងវិញ។",
+  "ErrorCartExpired": "កន្ត្រកដែលបានរក្សាទុកនេះបានផុតកំណត់ហើយ (កំណត់ត្រឹម ២ ម៉ោង)។",
+  "ErrorRecallGeneric": "មានបញ្ហាក្នុងការស្តារកន្ត្រករបស់អ្នក។",
   "AddItemManuallyTitle": "បន្ថែមទំនិញដោយដៃ",
   "EnterBarcodeInstruction": "សូមបញ្ចូលលេខបារកូដ។",
   "ErrorProductNotFoundForBarcode": "រកមិនឃើញផលិតផលសម្រាប់បារកូដទេ៖",
@@ -67,7 +69,6 @@
   "CancelOrderMessage": "ការត្រឡប់ទៅវិញនឹងបោះបង់ការទិញនេះ។",
   "KeepScanning": "បន្តស្កេនទំនិញ",
   "CancelOrder": "លុបចោលការទិញ",
-
   "_comment_5_payment_options": "=================== 5. PAYMENT OPTION & SELECTION VIEWS ===================",
   "CHECKOUT": "ការទូទាត់ប្រាក់",
   "PaymentOptionSubTitle": "ជម្រើស",
@@ -81,7 +82,6 @@
   "MembershipTitle": "ប័ណ្ណសមាជិក",
   "CouponTitle": "ប័ណ្ណបញ្ចុះតម្លៃ",
   "ReturnToCart": "ត្រឡប់ទៅកន្ត្រក",
-
   "_comment_6_cash_payment": "=================== 6. INGESTION PROGRESS VIEW (CASH FLOW) ===================",
   "CashPayment": "ការទូទាត់ជាសាច់ប្រាក់",
   "AmountRemaining": "ចំនួនទឹកប្រាក់នៅសល់",
@@ -97,7 +97,6 @@
   "PaymentAlreadyComplete": "ការទូទាត់បានរួចរាល់ហើយ។",
   "InvalidAmount": "ចំនួនទឹកប្រាក់មិនត្រឹមត្រូវ។",
   "NoteTooLarge": "ក្រដាសប្រាក់ធំពេក — សូមសាកល្បងក្រដាសប្រាក់តូចជាងនេះ។",
-
   "_comment_7_qr_payment": "=================== 7. QR PAYMENT VIEW (KHQR FLOW) ===================",
   "QRPaymentTitle": "ការទូទាត់តាម QR",
   "ScanInstructions": "ស្កែនជាមួយ ABA Mobile ឬកម្មវិធី KHQR ណាមួយ",
@@ -105,11 +104,10 @@
   "WaitingForPayment": "កំពុងរង់ចាំការស្កែនទូទាត់ប្រាក់...",
   "SimulateCancel": "បោះបង់ (សាកល្បង)",
   "SimulateSuccess": "ទូទាត់ជោគជ័យ (សាកល្បង)",
-  "CancelPaymentTitle": "បោះបង់ការទូទាត់?",
-  "CancelPaymentMessage": "ការត្រឡប់ទៅវិញនឹងបោះបង់ការទូទាត់នេះ។",
+  "ChangePaymentMethodTitle": "ប្តូរវិធីទូទាត់ប្រាក់?",
+  "ChangePaymentMethodMessage": "ការត្រឡប់ទៅវិញនឹងនាំអ្នកទៅកាន់ផ្ទាំងជ្រើសរើសវិធីសាស្រ្តទូទាត់ប្រាក់។",
   "ContinuePayment": "បន្តការទូទាត់",
-  "CancelPayment": "បោះបង់ការទូទាត់",
-
+  "BackToPaymentSelection": "ប្តូរវិធីទូទាត់",
   "_comment_8_success": "=================== 8. SUCCESS VIEW (RECEIPT & COMPLETION) ===================",
   "PaymentComplete": "ការទូទាត់ជោគជ័យ",
   "TotalPaid": "ទូទាត់សរុប",

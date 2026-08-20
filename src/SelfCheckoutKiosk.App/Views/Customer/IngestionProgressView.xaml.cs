@@ -6,6 +6,8 @@ using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
+using SelfCheckoutKiosk.Core.Abstractions;
+using System;
 using System.Diagnostics;
 
 namespace SelfCheckoutKiosk.App.Views.Customer
@@ -14,6 +16,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
     {
         public IngestionProgressViewModel ViewModel { get; }
         public LocalizationService Localizer => LocalizationService.Instance;
+
         public IngestionProgressView()
         {
             InitializeComponent();
@@ -30,16 +33,142 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             BackButton.Click += BackButton_Click;
             ConfirmPaymentButton.Click += ConfirmPaymentButton_Click;
 
-            foreach (var child in UsdNotesPanel.Children)
-            {
-                if (child is Button usdBtn && usdBtn.Tag is string usdTag && decimal.TryParse(usdTag, out var usdVal))
-                    usdBtn.Click += (s, e) => SubmitCash(usdVal, isUsd: true);
-            }
+            Loaded += IngestionProgressView_Loaded;
+            Unloaded += IngestionProgressView_Unloaded;
+        }
 
-            foreach (var child in KhrNotesPanel.Children)
+        private void IngestionProgressView_Loaded(object sender, RoutedEventArgs e)
+        {
+            HardwareStatusManager.Instance.PropertyChanged += HardwareStatusManager_PropertyChanged;
+            App.PaymentServiceInstance.CashJamReported += PaymentService_CashJamReported;
+            App.PaymentServiceInstance.CashFaultReported += PaymentService_CashFaultReported;
+        }
+
+        private void IngestionProgressView_Unloaded(object sender, RoutedEventArgs e)
+        {
+            HardwareStatusManager.Instance.PropertyChanged -= HardwareStatusManager_PropertyChanged;
+            App.PaymentServiceInstance.CashJamReported -= PaymentService_CashJamReported;
+            App.PaymentServiceInstance.CashFaultReported -= PaymentService_CashFaultReported;
+        }
+
+        private async void PaymentService_CashJamReported(object? sender, CashRecyclerJamEventArgs e)
+        {
+            DispatcherQueue.TryEnqueue(async () =>
             {
-                if (child is Button khrBtn && khrBtn.Tag is string khrTag && decimal.TryParse(khrTag, out var khrVal))
-                    khrBtn.Click += (s, e) => SubmitCash(khrVal, isUsd: false);
+                var dialog = new ContentDialog
+                {
+                    Title = "Cash Machine Warning",
+                    Content = $"Banknote mechanism warning: {e.Message}\nPlease check the banknote slot or ask store staff for assistance.",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                try { await dialog.ShowAsync(); } catch { }
+            });
+        }
+
+        private async void PaymentService_CashFaultReported(object? sender, HardwareFaultEventArgs e)
+        {
+            DispatcherQueue.TryEnqueue(async () =>
+            {
+                Debug.WriteLine($"[Cash Fault] {e.Device}: {e.Message}");
+            });
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            // If navigating to KHQR payment (e.g. after disconnect or split payment), preserve the accepted cash & remaining balance!
+            if (!ViewModel.IsFullyPaid && e.SourcePageType != typeof(QRPaymentView))
+            {
+                App.PaymentServiceInstance.ResetTransaction();
+            }
+        }
+
+        private bool _isHandlingDisconnect = false;
+
+        private void HardwareStatusManager_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(HardwareStatusManager.IsCashAvailable) && !HardwareStatusManager.Instance.IsCashAvailable)
+            {
+                DispatcherQueue.TryEnqueue(async () =>
+                {
+                    if (!ViewModel.IsFullyPaid && !_isHandlingDisconnect)
+                    {
+                        _isHandlingDisconnect = true;
+
+                        var font = LocalizationService.Instance.CurrentLanguage == "km"
+                            ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                            : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
+                        var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
+                        var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
+                        primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
+
+                        decimal paidUsd = ViewModel.TotalPaidUsd;
+                        decimal remainingUsd = ViewModel.TotalDueUsd - paidUsd;
+
+                        string messageText = paidUsd > 0
+                            ? $"The cash acceptor connection was interrupted. ${paidUsd:0.00} has been recorded for this order. Please complete the remaining balance of ${remainingUsd:0.00} using KHQR Digital Payment."
+                            : "The cash acceptor was disconnected. Please complete your transaction using KHQR Digital Payment.";
+
+                        var dialog = new ContentDialog
+                        {
+                            Content = new StackPanel
+                            {
+                                Spacing = 16,
+                                HorizontalAlignment = HorizontalAlignment.Center,
+                                Children =
+                                {
+                                    new FontIcon
+                                    {
+                                        Glyph = "\uE7BA", // Warning / Plug icon
+                                        FontFamily = new FontFamily("Segoe Fluent Icons"),
+                                        FontSize = 44,
+                                        Foreground = (Brush)Application.Current.Resources["AccentBlueBrush"],
+                                        HorizontalAlignment = HorizontalAlignment.Center
+                                    },
+                                    new TextBlock
+                                    {
+                                        Text = "Cash Machine Disconnected",
+                                        FontSize = 20,
+                                        FontWeight = FontWeights.SemiBold,
+                                        TextAlignment = TextAlignment.Center,
+                                        HorizontalAlignment = HorizontalAlignment.Center,
+                                        FontFamily = font
+                                    },
+                                    new TextBlock
+                                    {
+                                        Text = messageText,
+                                        FontSize = 16,
+                                        TextWrapping = TextWrapping.Wrap,
+                                        TextAlignment = TextAlignment.Center,
+                                        HorizontalAlignment = HorizontalAlignment.Center,
+                                        MaxWidth = 450,
+                                        FontFamily = font
+                                    }
+                                }
+                            },
+                            Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                            PrimaryButtonText = "Continue to KHQR Payment",
+                            PrimaryButtonStyle = primaryButtonStyleWithFont,
+                            XamlRoot = this.Content?.XamlRoot ?? this.XamlRoot,
+                            RequestedTheme = ElementTheme.Light
+                        };
+
+                        try
+                        {
+                            await dialog.ShowAsync();
+                        }
+                        catch { }
+
+                        // Navigate to KHQR payment carrying the remaining balance
+                        ViewModel.NavigationService.NavigateTo(
+                            typeof(QRPaymentView),
+                            null,
+                            Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromRight
+                        );
+                    }
+                });
             }
         }
 
@@ -48,6 +177,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+            _isHandlingDisconnect = false;
             ViewModel.InitializeTransaction();
         }
 
@@ -55,54 +185,85 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         {
             if (sender is Border border && border.DataContext is PaymentAttempt attempt)
             {
-                bool isAccepted = attempt.Result == PaymentAttemptResult.Accepted;
+                Windows.UI.Color bg;
+                Windows.UI.Color borderCol;
+                Windows.UI.Color accent;
+                string glyph;
 
-                border.Background = new SolidColorBrush(isAccepted
-                    ? Windows.UI.Color.FromArgb(255, 236, 253, 245)
-                    : Windows.UI.Color.FromArgb(255, 254, 242, 242));
+                switch (attempt.Result)
+                {
+                    case PaymentAttemptResult.Accepted:
+                        bg = Windows.UI.Color.FromArgb(255, 236, 253, 245);       // emerald-50
+                        borderCol = Windows.UI.Color.FromArgb(255, 167, 243, 208); // emerald-200
+                        accent = Windows.UI.Color.FromArgb(255, 5, 150, 105);     // emerald-600
+                        glyph = "\uE73E"; // CheckMark
+                        break;
+                    case PaymentAttemptResult.Rejected:
+                        bg = Windows.UI.Color.FromArgb(255, 254, 242, 242);       // red-50
+                        borderCol = Windows.UI.Color.FromArgb(255, 254, 202, 202); // red-200
+                        accent = Windows.UI.Color.FromArgb(255, 220, 38, 38);     // red-600
+                        glyph = "\uE711"; // ChromeClose
+                        break;
+                    case PaymentAttemptResult.Warning:
+                        bg = Windows.UI.Color.FromArgb(255, 255, 251, 235);       // amber-50
+                        borderCol = Windows.UI.Color.FromArgb(255, 253, 230, 138); // amber-200
+                        accent = Windows.UI.Color.FromArgb(255, 217, 119, 6);     // amber-600
+                        glyph = "\uE7BA"; // Warning
+                        break;
+                    case PaymentAttemptResult.Error:
+                        bg = Windows.UI.Color.FromArgb(255, 254, 242, 242);       // red-50
+                        borderCol = Windows.UI.Color.FromArgb(255, 248, 113, 113); // red-400
+                        accent = Windows.UI.Color.FromArgb(255, 185, 28, 28);     // red-700
+                        glyph = "\uEA39"; // Error
+                        break;
+                    case PaymentAttemptResult.Info:
+                    default:
+                        bg = Windows.UI.Color.FromArgb(255, 239, 246, 255);       // blue-50
+                        borderCol = Windows.UI.Color.FromArgb(255, 191, 219, 254); // blue-200
+                        accent = Windows.UI.Color.FromArgb(255, 37, 99, 235);     // blue-600
+                        glyph = "\uE946"; // Info
+                        break;
+                }
 
-                border.BorderBrush = new SolidColorBrush(isAccepted
-                    ? Windows.UI.Color.FromArgb(255, 167, 243, 208)
-                    : Windows.UI.Color.FromArgb(255, 254, 202, 202));
-
-                var accentColor = isAccepted
-                    ? Windows.UI.Color.FromArgb(255, 5, 150, 105)
-                    : Windows.UI.Color.FromArgb(255, 220, 38, 38);
+                border.Background = new SolidColorBrush(bg);
+                border.BorderBrush = new SolidColorBrush(borderCol);
 
                 if (border.FindName("StatusIcon") is FontIcon statusIcon)
                 {
-                    statusIcon.Glyph = isAccepted ? "\uE73E" : "\uE711"; // checkmark / cross
-                    statusIcon.Foreground = new SolidColorBrush(accentColor);
+                    statusIcon.Glyph = glyph;
+                    statusIcon.Foreground = new SolidColorBrush(accent);
                 }
 
                 if (border.FindName("AmountText") is TextBlock amountText)
                 {
-                    amountText.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 45, 55, 72));
+                    amountText.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 30, 41, 59));
+                    amountText.Visibility = attempt.HasAmount ? Visibility.Visible : Visibility.Collapsed;
+                }
+
+                if (border.FindName("StatusBadge") is TextBlock statusBadge)
+                {
+                    statusBadge.Foreground = new SolidColorBrush(accent);
                 }
             }
-        }
-
-        private void SubmitCash(decimal amount, bool isUsd)
-        {
-            bool accepted = ViewModel.SubmitCash(amount, isUsd, out string reason);
-            Debug.WriteLine($"[PAYMENT] {(accepted ? "Accepted" : "Rejected")} {amount} {(isUsd ? "USD" : "KHR")} — {reason}");
         }
 
         private async void BackButton_Click(object sender, RoutedEventArgs e)
         {
             if (!ViewModel.CanNavigateBack) return;
 
-            var globalFont = (FontFamily)Application.Current.Resources["GlobalAppFont"];
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
 
-            // Primary Button: AccentButtonStyle + GlobalAppFont
+            // Primary Button: AccentButtonStyle + font
             var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
             var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
-            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
-            // Secondary Button: DialogButtonStyle + GlobalAppFont
+            // Secondary Button: DialogButtonStyle + font
             var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
             var secondaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
-            secondaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            secondaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
             var dialog = new ContentDialog
             {
@@ -117,33 +278,33 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                             Glyph = "\uE814", // Warning / Alert icon
                             FontFamily = new FontFamily("Segoe Fluent Icons"),
                             FontSize = 42,
-                            Foreground = (Brush)Application.Current.Resources["DangerBrush"],
+                            Foreground = (Brush)Application.Current.Resources["AccentBlueBrush"],
                             HorizontalAlignment = HorizontalAlignment.Center
                         },
                         new TextBlock
                         {
-                            Text = Localizer.GetString("CancelPaymentTitle"),
+                            Text = Localizer.GetString("ChangePaymentMethodTitle"),
                             FontSize = 20,
                             FontWeight = FontWeights.SemiBold,
                             TextAlignment = TextAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            FontFamily = globalFont
+                            FontFamily = font
                         },
                         new TextBlock
                         {
-                            Text = Localizer.GetString("CancelPaymentMessage"),
+                            Text = Localizer.GetString("ChangePaymentMethodMessage"),
                             FontSize = 16,
                             TextWrapping = TextWrapping.Wrap,
                             TextAlignment = TextAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
                             MaxWidth = 450,
-                            FontFamily = globalFont
+                            FontFamily = font
                         }
                     }
                 },
                 Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
                 PrimaryButtonText = Localizer.GetString("ContinuePayment"),
-                SecondaryButtonText = Localizer.GetString("CancelPayment"),
+                SecondaryButtonText = Localizer.GetString("BackToPaymentSelection"),
                 PrimaryButtonStyle = primaryButtonStyleWithFont,
                 SecondaryButtonStyle = secondaryButtonStyleWithFont,
                 XamlRoot = this.XamlRoot,
@@ -154,6 +315,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             if (result == ContentDialogResult.Secondary)
             {
+                App.PaymentServiceInstance.ResetTransaction();
                 ViewModel.NavigateBackToPaymentSelection();
             }
         }

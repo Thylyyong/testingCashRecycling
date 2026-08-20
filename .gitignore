@@ -16,3 +16,4 @@ nuget.verify.config
 deploy/Provisioning/*.key
 deploy/Provisioning/*.pfx
 deploy/Provisioning/secrets.*
+*.secret

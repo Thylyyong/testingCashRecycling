@@ -69,7 +69,7 @@ namespace SelfCheckoutKiosk.App.Services
 
             if (string.IsNullOrWhiteSpace(pin) || pin.Trim().Length != 6)
             {
-                errorMessage = "Please enter a valid 6-digit PIN.";
+                errorMessage = "ErrorInvalidPin";
                 return false;
             }
 
@@ -77,14 +77,14 @@ namespace SelfCheckoutKiosk.App.Services
 
             if (!_savedCarts.TryGetValue(cleanPin, out var record))
             {
-                errorMessage = "No saved cart found for this PIN. Please check and try again.";
+                errorMessage = "ErrorCartNotFound";
                 return false;
             }
 
             if (DateTime.UtcNow > record.ExpiresAt)
             {
                 _savedCarts.TryRemove(cleanPin, out _);
-                errorMessage = "This saved cart has expired (2-hour limit).";
+                errorMessage = "ErrorCartExpired";
                 return false;
             }
 

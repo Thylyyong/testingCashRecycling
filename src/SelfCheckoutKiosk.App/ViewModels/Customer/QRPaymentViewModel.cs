@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -19,14 +19,19 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public INavigationService NavigationService { get; }
 
         // Dual-currency properties delegating to services (matching IngestionProgressViewModel)
-        public decimal TotalDueUsd => _paymentService.TotalDueUsd > 0 ? _paymentService.TotalDueUsd : _cartService.TotalUsd;
+        public decimal TotalDueUsd => _paymentService.HasAcceptedAnyPayment 
+            ? _paymentService.RemainingDueUsd 
+            : (_paymentService.TotalDueUsd > 0 ? _paymentService.TotalDueUsd : _cartService.TotalUsd);
+
         public decimal ExchangeRate => _paymentService.ExchangeRate > 0 ? _paymentService.ExchangeRate : _cartService.ExchangeRate;
         public decimal TotalDueKhr => TotalDueUsd * ExchangeRate;
 
         // Formatted display string matching kiosk dual-currency standard
         public string FormattedTotalDue => $"${TotalDueUsd:0.00}";
 
-        //(≈ ៛{TotalDueKhr:N0})
+        public string TotalDueLabelText => _paymentService.HasAcceptedAnyPayment
+            ? "Remaining Balance"
+            : "Total Amount";
 
         public BitmapImage? QrCodeImageSource
         {
@@ -68,10 +73,13 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             _paymentService.PropertyChanged += OnPaymentServicePropertyChanged;
         }
 
-        // Called from OnNavigatedTo — snapshots the cart total into the payment service
+        // Called from OnNavigatedTo — snapshots the cart total into the payment service if not already in an active transaction
         public void InitializeTransaction()
         {
-            _paymentService.BeginTransaction(_cartService.TotalUsd, _cartService.ExchangeRate);
+            if (!_paymentService.HasAcceptedAnyPayment && _paymentService.TotalDueUsd <= 0)
+            {
+                _paymentService.BeginTransaction(_cartService.TotalUsd, _cartService.ExchangeRate);
+            }
             GenerateQrCodePayload();
             RaiseAllChanged();
         }
@@ -99,8 +107,8 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         // Simulates completing payment, finalizing order, clearing cart, and navigating to PaymentSuccessView
         public void SimulatePaymentSuccessAndProceed()
         {
-            // Record QR payment matching full amount
-            _paymentService.TrySubmitCash(TotalDueUsd, true, out _);
+            decimal amountToPay = _paymentService.RemainingDueUsd > 0 ? _paymentService.RemainingDueUsd : TotalDueUsd;
+            _paymentService.TrySubmitCash(amountToPay, true, out _);
             var payment = _paymentService.ConfirmPayment(PaymentMethod.KHQR);
 
             _cartService.ClearCart();

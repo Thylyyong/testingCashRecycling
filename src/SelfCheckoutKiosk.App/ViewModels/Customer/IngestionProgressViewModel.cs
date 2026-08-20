@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
+using SelfCheckoutKiosk.Core.Abstractions;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -24,6 +25,10 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public decimal RemainingDueUsd => _paymentService.RemainingDueUsd;
         public decimal RemainingDueKhr => RemainingDueUsd * ExchangeRate;
         public decimal ExchangeRate => _paymentService.ExchangeRate;
+
+        public CashAcceptorState AcceptorState => _paymentService.CashAcceptorState;
+        public string? CurrentCashStatusMessage => _paymentService.CurrentCashStatusMessage;
+        public bool HasStatusMessage => !string.IsNullOrEmpty(CurrentCashStatusMessage);
 
         public bool IsFullyPaid => _paymentService.IsFullyPaid;
         public bool CanNavigateBack => !_paymentService.HasAcceptedAnyPayment;
@@ -90,6 +95,9 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             OnPropertyChanged(nameof(FormattedTotalDue));
             OnPropertyChanged(nameof(FormattedTotalPaid));
             OnPropertyChanged(nameof(FormattedRemaining));
+            OnPropertyChanged(nameof(AcceptorState));
+            OnPropertyChanged(nameof(CurrentCashStatusMessage));
+            OnPropertyChanged(nameof(HasStatusMessage));
         }
 
         protected void OnPropertyChanged(string name) =>

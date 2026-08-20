@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using SelfCheckoutKiosk.App.Models;
 
-namespace SelfCheckoutKiosk.App.Services
+namespace SelfCheckoutKiosk.App.Services;
+
+public interface IProductService
 {
-    public interface IProductService
-    {
-        IEnumerable<Product> GetAllProducts();
-    }
+    IEnumerable<Product> GetAllProducts();
+    Product? GetProductBySku(string sku);
 }

@@ -101,8 +101,38 @@ namespace SelfCheckoutKiosk.App
             // Initialize your navigation service with the root frame defined in XAML
             NavigationService = new NavigationService(RootFrame);
 
-            // Navigate to the initial page using the service
-            NavigationService.NavigateTo(typeof(KioskBaseView));
+            // Attach global key interceptor to prevent Enter / Space from accidentally activating hovered/focused buttons in kiosk mode
+            if (this.Content is UIElement rootElement)
+            {
+                rootElement.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler(Global_PreviewKeyDown), handledEventsToo: true);
+            }
+        }
+
+        private void Global_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            // 1. If user is focused on a text entry field (TextBox, PasswordBox, AutoSuggestBox), let keys pass through
+            if (this.Content?.XamlRoot != null)
+            {
+                var focused = FocusManager.GetFocusedElement(this.Content.XamlRoot);
+                if (focused is TextBox or PasswordBox or AutoSuggestBox)
+                {
+                    return;
+                }
+            }
+
+            // 2. Allow Admin keyboard shortcuts (Ctrl+Shift+A, Ctrl+Shift+Backspace)
+            var ctrl = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down);
+            var shift = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(CoreVirtualKeyStates.Down);
+            if (ctrl && shift && (e.Key == VirtualKey.A || e.Key == VirtualKey.Back))
+            {
+                return;
+            }
+
+            // 3. For buttons, cards, or non-text elements: PREVENT Enter or Space from clicking hovered/focused buttons!
+            if (e.Key is VirtualKey.Enter or VirtualKey.Space or VirtualKey.Accept or VirtualKey.Execute)
+            {
+                e.Handled = true;
+            }
         }
 
         private void EnforceInitialAspectRatio(int initialWidth, int initialHeight)
@@ -187,6 +217,33 @@ namespace SelfCheckoutKiosk.App
                     new SuppressNavigationTransitionInfo()
                 );
             }
+        }
+
+        public void ShowLicenseLockout(string? details = null)
+        {
+            var queue = this.DispatcherQueue;
+            if (queue != null && !queue.HasThreadAccess)
+            {
+                queue.TryEnqueue(() => ShowLicenseLockout(details));
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(details))
+                LicenseLockoutDetailText.Text = details;
+
+            LicenseLockoutOverlay.Visibility = Visibility.Visible;
+        }
+
+        public void HideLicenseLockout()
+        {
+            var queue = this.DispatcherQueue;
+            if (queue != null && !queue.HasThreadAccess)
+            {
+                queue.TryEnqueue(HideLicenseLockout);
+                return;
+            }
+
+            LicenseLockoutOverlay.Visibility = Visibility.Collapsed;
         }
     }
 }

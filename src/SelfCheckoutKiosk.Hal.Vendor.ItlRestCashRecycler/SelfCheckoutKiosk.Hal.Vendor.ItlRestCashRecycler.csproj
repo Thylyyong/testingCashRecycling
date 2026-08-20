@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- HARDWARE ADAPTER PLUG-IN. Implements ICashRecycler for the ITL bill
+       validator via the local "CashDevice-RestAPI" bridge (localhost REST,
+       no vendor SDK linked directly). References Core ONLY. Referenced by
+       the App composition root ONLY. Owner: Back-End / Systems. -->
+  <PropertyGroup>
+    <RootNamespace>SelfCheckoutKiosk.Hal.Vendor.ItlRestCashRecycler</RootNamespace>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Workloads.10.0.100" Version="10.110.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
+  </ItemGroup>
+</Project>

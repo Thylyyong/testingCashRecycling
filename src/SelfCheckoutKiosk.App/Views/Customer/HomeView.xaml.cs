@@ -114,17 +114,91 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             ViewModel.ProceedToKioskBaseView();
         }
 
-        private void ScanItemCard_Click(object sender, RoutedEventArgs e)
+        private async void ScanItemCard_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
+
+            if (!HardwareStatusManager.Instance.IsCashAvailable && !HardwareStatusManager.Instance.IsQrAvailable)
+            {
+                await ShowNoPaymentAvailableDialogAsync();
+                return;
+            }
 
             ViewModel.ProceedToCart();
         }
 
+        private async Task ShowNoPaymentAvailableDialogAsync()
+        {
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
+            var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
+            var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
+            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
+
+            var dialog = new ContentDialog
+            {
+                Content = new StackPanel
+                {
+                    Spacing = 16,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Children =
+                    {
+                        new FontIcon
+                        {
+                            Glyph = "\uE783",
+                            FontFamily = new FontFamily("Segoe Fluent Icons"),
+                            FontSize = 48,
+                            Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 239, 68, 68)),
+                            HorizontalAlignment = HorizontalAlignment.Center
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("ServiceUnavailableTitle"),
+                            FontSize = 22,
+                            FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = font
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("ServiceUnavailableMessage"),
+                            FontSize = 16,
+                            TextWrapping = TextWrapping.Wrap,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = font
+                        }
+                    }
+                },
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                CloseButtonText = Localizer.GetString("OK"),
+                CloseButtonStyle = closeButtonStyleWithFont,
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
+
+            _activeDialog = dialog;
+
+            try
+            {
+                await dialog.ShowAsync();
+            }
+            finally
+            {
+                _activeDialog = null;
+            }
+        }
+
+        // =========================================================================
+        // PaymentOptionView is for VIEWING ACCEPTED PAYMENT METHODS & LIVE STATUS ONLY.
+        // It does NOT start checkout or redirect; it allows customers to view what's online.
+        // =========================================================================
         private void PaymentOptionsCard_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
-
             ViewModel.ProceedToPaymentOptions();
         }
 
@@ -132,12 +206,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         {
             ResetInactivityTimer();
 
-            var globalFont = (FontFamily)Application.Current.Resources["GlobalAppFont"];
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
 
-            // Close Button: DialogButtonStyle + GlobalAppFont
+            // Close Button: DialogButtonStyle + font
             var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
             var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
-            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
             var dialog = new ContentDialog
             {
@@ -162,7 +238,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                             FontWeight = FontWeights.SemiBold,
                             TextAlignment = TextAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            FontFamily = globalFont
+                            FontFamily = font
                         },
                         new TextBlock
                         {
@@ -171,7 +247,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                             TextWrapping = TextWrapping.Wrap,
                             TextAlignment = TextAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            FontFamily = globalFont
+                            FontFamily = font
                         }
                     }
                 },

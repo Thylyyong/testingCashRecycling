@@ -22,3 +22,7 @@ public enum PaymentMethod { Cash = 0, KhqrDigital = 1 }
 
 /// <summary>Classification produced by the RegexRouter for every scan.</summary>
 public enum ScanCategory { Unknown = 0, Ean13Product = 1, KhqrProfile = 2, OfflineCoupon = 3 }
+
+/// <summary>Licensing tier bracket (Blueprint §3): Lite (max 2 kiosks, no AI),
+/// Pro (max 5 kiosks, with AI), Enterprise (unlimited).</summary>
+public enum LicenseTier { Lite = 0, Pro = 1, Enterprise = 2 }

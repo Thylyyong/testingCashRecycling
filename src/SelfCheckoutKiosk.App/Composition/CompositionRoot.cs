@@ -1,28 +1,42 @@
+using System;
+using System.IO;
+using System.Net.Http;
 using SelfCheckoutKiosk.Core.Abstractions;
 using SelfCheckoutKiosk.Core.Currency;
 using SelfCheckoutKiosk.Core.Engine;
 using SelfCheckoutKiosk.Core.Licensing;
-using SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX;
 using SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner;
 using SelfCheckoutKiosk.Hal.Vendor.EpsonM30;
+using SelfCheckoutKiosk.Hal.Vendor.ItlRestCashRecycler;
+using SelfCheckoutKiosk.Infrastructure.Data;
+using SelfCheckoutKiosk.Infrastructure.Security;
+using SelfCheckoutKiosk.Infrastructure.Sync;
 
 namespace SelfCheckoutKiosk.App.Composition;
 
-/// <summary>Resolved services handed to the presentation layer.</summary>
+/// <summary>
+/// Resolved services handed to the presentation layer.
+/// </summary>
 public sealed class KioskServices
 {
     public required ILLCoreLogicEngine Engine { get; init; }
+    public required HardwareAppendLog HardwareAppendLog { get; init; }
+    public required TailscaleSyncWorker SyncWorker { get; init; }
+    public required OfflineLicenseManager LicenseManager { get; init; }
+
+    /// <summary>
+    /// Exposed concretely (not just as <see cref="ICashRecycler"/>)
+    /// so the caller can dispose its background REST-status polling loop on
+    /// shutdown — <c>ICashRecycler</c> itself deliberately isn't
+    /// <see cref="IDisposable"/>, since not every vendor SKU needs it.
+    /// </summary>
+    public required ItlRestCashRecycler CashRecycler { get; init; }
 }
 
 /// <summary>
 /// THE CLEAN INTEGRATION PROTOCOL (Blueprint §6) — the single seam where
 /// Category 1 (Core), Category 2 (HAL), and Category 3 (UI) formally meet.
 /// This is the ONLY place vendor Hal.Vendor.* assemblies are referenced.
-///
-/// Manual composition is used deliberately: under a strict Native AOT mandate
-/// it is the cleanest option (no reflection-based container to fight the
-/// trimmer). The equivalent Microsoft.Extensions.DependencyInjection wiring is
-/// documented at the bottom of this file for teams that prefer container DI.
 /// </summary>
 public static class CompositionRoot
 {
@@ -31,29 +45,48 @@ public static class CompositionRoot
         // 1. Core, hardware-independent. None touch a device at construction.
         var calculator = new DualCurrencyCalculator();
         var lowFloatMonitor = new LowFloatMonitor();
-        var licenseManager = new OfflineLicenseManager();
+        var hardwareIdProvider = new HardwareIdProvider();
 
-        // 2. TODO(Lead): validate the license BEFORE any hardware is created.
-        //    await licenseManager.LoadAndValidateAsync();  // failure = hard stop.
+        var licenseManager = new OfflineLicenseManager(
+            publicKeySubjectPublicKeyInfo: DevLicenseKeys.PublicKeyOrNull,
+            hardwareIdProvider: hardwareIdProvider);
 
-        // 3. Concrete HAL adapters — the ONLY vendor-assembly references anywhere.
-        ICashRecycler cashRecycler = new VendorXCashRecycler();
+        string hardwareAuditLogPath = Path.Combine(AppContext.BaseDirectory, "hardware-audit.log");
+        var hardwareAppendLog = new HardwareAppendLog(hardwareAuditLogPath);
+
+        // 2. Concrete HAL adapters
+        var cashRecycler = new ItlRestCashRecycler(new HttpClient { BaseAddress = new Uri("http://localhost:5000/") });
         IBarcodeScanner barcodeScanner = new DatalogicBarcodeScanner();
         IReceiptPrinter receiptPrinter = new EpsonReceiptPrinter();
 
-        // 4. TODO(Back-End): construct KioskDbContext via a FACTORY delegate
-        //    (EF contexts are cheap; do not hold one open for process lifetime).
+        // 3. KioskDbContext via a FACTORY delegate
+        string databasePath = Path.Combine(AppContext.BaseDirectory, "kiosk.db");
+        Func<KioskDbContext> dbContextFactory = () => new KioskDbContext(databasePath, "dev-kiosk-passphrase");
+        IProductCatalog productCatalog = new EfProductCatalog(dbContextFactory);
 
-        // 5. Engine last — it receives interfaces, never concrete adapters, so it
-        //    never knows which vendor SKU it got.
+        using (KioskDbContext seedContext = dbContextFactory())
+        {
+            seedContext.EnsureSchemaCreated();
+            CatalogSeeder.SeedIfEmpty(seedContext);
+        }
+
+        // 4. Engine last
         ILLCoreLogicEngine engine = new LLCoreLogicEngine(
             cashRecycler, barcodeScanner, receiptPrinter,
-            calculator, lowFloatMonitor, licenseManager);
+            calculator, lowFloatMonitor, licenseManager, hardwareAppendLog, productCatalog);
 
-        // 6. TODO(UI): construct ViewModels + Tailscale sync worker, each
-        //    depending ONLY on the engine (+ db factory) — never on a HAL type.
+        // 5. TailscaleSyncWorker
+        var erpClient = new HttpErpSyncClient(new HttpClient { BaseAddress = new Uri("https://localhost/erp-placeholder/") });
+        var syncWorker = new TailscaleSyncWorker(dbContextFactory, erpClient, TimeSpan.FromMinutes(2));
 
-        return new KioskServices { Engine = engine };
+        return new KioskServices
+        {
+            Engine = engine,
+            HardwareAppendLog = hardwareAppendLog,
+            SyncWorker = syncWorker,
+            CashRecycler = cashRecycler,
+            LicenseManager = licenseManager,
+        };
     }
 }
 

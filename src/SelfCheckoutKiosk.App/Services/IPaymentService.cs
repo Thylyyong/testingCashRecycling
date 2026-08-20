@@ -1,27 +1,37 @@
-﻿using System.Collections.ObjectModel;
+using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.Core.Abstractions;
 
-namespace SelfCheckoutKiosk.App.Services
+namespace SelfCheckoutKiosk.App.Services;
+
+public interface IPaymentService : INotifyPropertyChanged
 {
-    public interface IPaymentService : INotifyPropertyChanged
-    {
-        ObservableCollection<PaymentAttempt> Attempts { get; }
+    ObservableCollection<PaymentAttempt> Attempts { get; }
 
-        decimal TotalDueUsd { get; }
-        decimal TotalPaidUsd { get; }
-        decimal RemainingDueUsd { get; }
-        decimal ExchangeRate { get; }
+    decimal TotalDueUsd { get; }
+    decimal TotalPaidUsd { get; }
+    decimal RemainingDueUsd { get; }
+    decimal ExchangeRate { get; }
 
-        bool IsFullyPaid { get; }
-        bool HasAcceptedAnyPayment { get; }
+    bool IsFullyPaid { get; }
+    bool HasAcceptedAnyPayment { get; }
 
-        void BeginTransaction(decimal totalDueUsd, decimal exchangeRate);
-        bool TrySubmitCash(decimal amount, bool isUsd, out string reason);
+    CashAcceptorState CashAcceptorState { get; }
+    string? CurrentCashStatusMessage { get; }
 
-        // Updated to accept an optional PaymentMethod parameter (defaults to Cash)
-        Payment? ConfirmPayment(PaymentMethod method = PaymentMethod.Cash);
+    event EventHandler<CashAcceptorStateChangedEventArgs>? CashAcceptorStateChanged;
+    event EventHandler<NoteInsertedEventArgs>? CashNoteInserted;
+    event EventHandler<CashEscrowResolvedEventArgs>? CashEscrowResolved;
+    event EventHandler<CashRecyclerJamEventArgs>? CashJamReported;
+    event EventHandler<HardwareFaultEventArgs>? CashFaultReported;
 
-        void ResetTransaction();
-    }
+    void BeginTransaction(decimal totalDueUsd, decimal exchangeRate);
+    bool TrySubmitCash(decimal amount, bool isUsd, out string reason);
+
+    Payment? ConfirmPayment(PaymentMethod method = PaymentMethod.Cash);
+
+    void ResetTransaction();
+    void AttachCashRecycler(ICashRecycler? cashRecycler);
 }

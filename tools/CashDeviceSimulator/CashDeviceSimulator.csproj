@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- DEV-ONLY tool, never shipped or referenced by SelfCheckoutKiosk.App.
+       Minimal local stand-in for the real "CashDevice-RestAPI" bridge that
+       SelfCheckoutKiosk.Hal.Vendor.ItlRestCashRecycler talks to over HTTP —
+       lets front-end/UI work (Cancel, Pay Now, etc.) be tested without the
+       real ITL bill validator + its serial/USB bridge process attached.
+       Implements exactly the endpoint surface ItlRestCashRecycler.cs calls,
+       per CashDeviceRestContracts.cs's wire shapes — see that file if this
+       drifts out of sync with the real contract. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SelfCheckoutKiosk.Tools.CashDeviceSimulator</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Nullable>enable</Nullable>
+    <!-- Directory.Build.props defaults every non-Tests project to
+         IsAotCompatible=true — this is a throwaway dev-machine CLI tool,
+         never published/trimmed/AOT-compiled. Same exemption as
+         DevLicenseTokenGenerator. -->
+    <IsAotCompatible>false</IsAotCompatible>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+</Project>

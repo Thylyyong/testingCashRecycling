@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SelfCheckoutKiosk.App.Models
@@ -17,7 +17,10 @@ namespace SelfCheckoutKiosk.App.Models
     public enum PaymentAttemptResult
     {
         Accepted,
-        Rejected
+        Rejected,
+        Info,
+        Warning,
+        Error
     }
 
     public class PaymentAttempt
@@ -28,7 +31,17 @@ namespace SelfCheckoutKiosk.App.Models
         public decimal Amount { get; set; }
         public bool IsUsd { get; set; }
 
-        public string DisplayAmount => IsUsd ? $"${Amount:0.00}" : $"៛{Amount:N0}";
+        public string DisplayTime => Timestamp.ToString("HH:mm:ss");
+        public bool HasAmount => Amount > 0;
+        public string DisplayAmount => HasAmount ? (IsUsd ? $"${Amount:0.00}" : $"៛{Amount:N0}") : string.Empty;
+        public string StatusText => Result switch
+        {
+            PaymentAttemptResult.Accepted => "ACCEPTED",
+            PaymentAttemptResult.Rejected => "REJECTED",
+            PaymentAttemptResult.Warning => "WARNING",
+            PaymentAttemptResult.Error => "ERROR",
+            _ => "INFO"
+        };
     }
 
     public class Payment

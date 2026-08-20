@@ -26,7 +26,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private readonly StringBuilder _barcodeBuffer = new();
         private DateTime _lastKeyTime = DateTime.MinValue;
 
-        private bool _isOnline = true;
         private bool _isUsd = true;
         private enum ScanBehavior { AddToCart, PriceCheck, Blocked }
         private ScanBehavior _scanBehavior = ScanBehavior.AddToCart;
@@ -42,7 +41,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         {
             InitializeComponent();
 
-            _dialogScanKeyHandler = new KeyEventHandler(Page_KeyDown);
+            _dialogScanKeyHandler = new KeyEventHandler(Page_PreviewKeyDown);
 
             INavigationService navigationService = App.MainWindowInstance?.NavigationService
                 ?? new NavigationService(Frame);
@@ -53,26 +52,38 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 App.CartServiceInstance
             );
 
-            this.IsTabStop = true;
+            this.IsTabStop = false;
 
             BackButton.Click += BackButton_Click;
             CheckoutButton.Click += CheckoutButton_Click;
 
             this.Loaded += CartView_Loaded;
             this.Unloaded += CartView_Unloaded;
+
+            HardwareStatusManager.Instance.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(HardwareStatusManager.IsServerOnline))
+                {
+                    DispatcherQueue?.TryEnqueue(RefreshNetworkStatusUI);
+                }
+            };
         }
 
         private void CartView_Loaded(object sender, RoutedEventArgs e)
         {
-            if (App.MainWindowInstance?.Content is FrameworkElement root)
+            if (App.MainWindowInstance?.Content is UIElement root)
             {
-                root.KeyDown -= Page_KeyDown;
-                root.KeyDown += Page_KeyDown;
+                root.AddHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler, true);
             }
             else
             {
-                this.KeyDown -= Page_KeyDown;
-                this.KeyDown += Page_KeyDown;
+                this.AddHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler, true);
+            }
+
+            if (App.BarcodeScannerInstance != null)
+            {
+                App.BarcodeScannerInstance.OnBarcodeScanned -= Scanner_OnBarcodeScanned;
+                App.BarcodeScannerInstance.OnBarcodeScanned += Scanner_OnBarcodeScanned;
             }
 
             RefreshNetworkStatusUI();
@@ -82,17 +93,39 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void CartView_Unloaded(object sender, RoutedEventArgs e)
         {
-            if (App.MainWindowInstance?.Content is FrameworkElement root)
+            if (App.MainWindowInstance?.Content is UIElement root)
             {
-                root.KeyDown -= Page_KeyDown;
+                root.RemoveHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler);
             }
             else
             {
-                this.KeyDown -= Page_KeyDown;
+                this.RemoveHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler);
+            }
+
+            if (App.BarcodeScannerInstance != null)
+            {
+                App.BarcodeScannerInstance.OnBarcodeScanned -= Scanner_OnBarcodeScanned;
             }
         }
 
-        private async void Page_KeyDown(object sender, KeyRoutedEventArgs e)
+        private void Scanner_OnBarcodeScanned(object? sender, SelfCheckoutKiosk.Core.Abstractions.BarcodeScannedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(e.RawBarcode)) return;
+
+            DispatcherQueue?.TryEnqueue(async () =>
+            {
+                if (_scanBehavior == ScanBehavior.AddToCart)
+                {
+                    await ProcessScannedBarcodeAsync(e.RawBarcode);
+                }
+                else if (_scanBehavior == ScanBehavior.PriceCheck && _activePriceResultPanel != null)
+                {
+                    RenderPriceCheckResult(_activePriceResultPanel, e.RawBarcode);
+                }
+            });
+        }
+
+        private async void Page_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
         {
             var now = DateTime.Now;
             var elapsed = (now - _lastKeyTime).TotalMilliseconds;
@@ -128,6 +161,13 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                             break;
                     }
                 }
+                else
+                {
+                    if (_activeDialog == null)
+                    {
+                        e.Handled = true;
+                    }
+                }
             }
             else
             {
@@ -135,7 +175,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 if (character != '\0')
                 {
                     _barcodeBuffer.Append(character);
-                    e.Handled = true;
+                    if (_activeDialog == null)
+                    {
+                        e.Handled = true;
+                    }
                 }
             }
         }
@@ -189,7 +232,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void RefreshNetworkStatusUI()
         {
-            if (_isOnline)
+            bool isOnline = HardwareStatusManager.Instance.IsServerOnline;
+            if (isOnline)
             {
                 NetworkIcon.Glyph = "\uE701";
                 NetworkIcon.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 124, 252, 154));
@@ -197,7 +241,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
             else
             {
-                NetworkIcon.Glyph = "\xEB5E";
+                NetworkIcon.Glyph = "\uEB5E";
                 NetworkIcon.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 138, 138));
                 NetworkStatusLabel.Text = Localizer.GetString("Offline");
             }
@@ -267,7 +311,11 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void CheckPriceButton_Click(object sender, RoutedEventArgs e)
         {
-            var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16) };
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
+            var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16), Width = 380, MaxWidth = 380 };
             ShowPriceCheckPlaceholder(resultPanel);
 
             var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
@@ -275,27 +323,28 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 onClear: () => ShowPriceCheckPlaceholder(resultPanel)
             );
 
-            var contentPanel = new StackPanel { Spacing = 0 };
+            var contentPanel = new StackPanel { Spacing = 0, Width = 380, MaxWidth = 380, HorizontalAlignment = HorizontalAlignment.Center };
             contentPanel.Children.Add(resultPanel);
             contentPanel.Children.Add(keypadPanel);
 
-            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
             var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
             var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
-            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
             var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
             var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
-            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
             var dialog = new ContentDialog
             {
                 Title = new TextBlock
                 {
                     Text = Localizer.GetString("CheckPriceTitle"),
-                    FontFamily = globalFont,
+                    FontFamily = font,
                     FontSize = 22,
-                    FontWeight = FontWeights.SemiBold
+                    FontWeight = FontWeights.SemiBold,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 380
                 },
                 Content = contentPanel,
                 Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
@@ -355,7 +404,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void SaveCartButton_Click(object sender, RoutedEventArgs e)
         {
-            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
 
             if (ViewModel.IsEmpty)
             {
@@ -365,6 +416,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     {
                         Spacing = 16,
                         HorizontalAlignment = HorizontalAlignment.Center,
+                        Width = 380,
+                        MaxWidth = 380,
                         Children =
                         {
                             new FontIcon
@@ -382,7 +435,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                                 FontWeight = FontWeights.SemiBold,
                                 TextAlignment = TextAlignment.Center,
                                 HorizontalAlignment = HorizontalAlignment.Center,
-                                FontFamily = globalFont
+                                TextWrapping = TextWrapping.Wrap,
+                                MaxWidth = 380,
+                                FontFamily = font
                             },
                             new TextBlock
                             {
@@ -391,7 +446,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                                 TextWrapping = TextWrapping.Wrap,
                                 TextAlignment = TextAlignment.Center,
                                 HorizontalAlignment = HorizontalAlignment.Center,
-                                FontFamily = globalFont
+                                MaxWidth = 380,
+                                FontFamily = font
                             }
                         }
                     },
@@ -415,11 +471,13 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 {
                     Spacing = 16,
                     HorizontalAlignment = HorizontalAlignment.Center,
+                    Width = 380,
+                    MaxWidth = 380,
                     Children =
                     {
                         new FontIcon
                         {
-                            Glyph = "\uE73E", // Checkmark icon
+                            Glyph = "\xEC61", // Checkmark icon
                             FontFamily = new FontFamily("Segoe Fluent Icons"),
                             FontSize = 44,
                             Foreground = (Brush)Application.Current.Resources["SuccessBrush"],
@@ -432,7 +490,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                             FontWeight = FontWeights.Bold,
                             TextAlignment = TextAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            FontFamily = globalFont
+                            TextWrapping = TextWrapping.Wrap,
+                            MaxWidth = 380,
+                            FontFamily = font
                         },
                         new TextBlock
                         {
@@ -441,7 +501,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
                             TextAlignment = TextAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            FontFamily = globalFont
+                            TextWrapping = TextWrapping.Wrap,
+                            MaxWidth = 380,
+                            FontFamily = font
                         },
                         new Border
                         {
@@ -470,7 +532,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                             HorizontalAlignment = HorizontalAlignment.Center,
                             MaxWidth = 380,
                             Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 71, 85, 105)),
-                            FontFamily = globalFont
+                            FontFamily = font
                         }
                     }
                 },
@@ -487,16 +549,20 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void RecallButton_Click(object sender, RoutedEventArgs e)
         {
-            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
-            var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16) };
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
+            var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16), Width = 380, MaxWidth = 380 };
 
             resultPanel.Children.Add(new TextBlock
             {
                 Text = Localizer.GetString("RecallCartInstruction"),
                 FontSize = 14,
                 TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 380,
                 Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
-                FontFamily = globalFont
+                FontFamily = font
             });
 
             var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
@@ -509,32 +575,35 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                         Text = Localizer.GetString("RecallCartInstruction"),
                         FontSize = 14,
                         TextWrapping = TextWrapping.Wrap,
+                        MaxWidth = 380,
                         Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
-                        FontFamily = globalFont
+                        FontFamily = font
                     });
                 }
             );
 
-            var contentPanel = new StackPanel { Spacing = 0 };
+            var contentPanel = new StackPanel { Spacing = 0, Width = 380, MaxWidth = 380, HorizontalAlignment = HorizontalAlignment.Center };
             contentPanel.Children.Add(resultPanel);
             contentPanel.Children.Add(keypadPanel);
 
             var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
             var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
-            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
             var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
             var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
-            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
             var dialog = new ContentDialog
             {
                 Title = new TextBlock
                 {
                     Text = Localizer.GetString("RecallCartTitle"),
-                    FontFamily = globalFont,
+                    FontFamily = font,
                     FontSize = 22,
-                    FontWeight = FontWeights.SemiBold
+                    FontWeight = FontWeights.SemiBold,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 380
                 },
                 Content = contentPanel,
                 Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
@@ -569,9 +638,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     }
                     else
                     {
-                        string displayError = string.IsNullOrWhiteSpace(errorReason)
-                            ? Localizer.GetString("ErrorInvalidPin")
-                            : errorReason;
+                        string displayError = !string.IsNullOrWhiteSpace(errorReason)
+                            ? Localizer.GetString(errorReason)
+                            : Localizer.GetString("ErrorCartNotFound");
+
+                        if (string.IsNullOrWhiteSpace(displayError))
+                        {
+                            displayError = Localizer.GetString("ErrorCartNotFound");
+                        }
+
                         ShowInlineError(resultPanel, displayError);
                         entryBox.Focus(FocusState.Programmatic);
                     }
@@ -579,7 +654,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"[Recall Exception] {ex}");
-                    ShowInlineError(resultPanel, "An error occurred while recalling your cart.");
+                    ShowInlineError(resultPanel, Localizer.GetString("ErrorRecallGeneric"));
                 }
                 finally
                 {
@@ -610,16 +685,20 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void AddItemManuallyLink_Click(object sender, RoutedEventArgs e)
         {
-            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
-            var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16) };
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
+            var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16), Width = 380, MaxWidth = 380 };
 
             TextBlock CreateInstructionText() => new TextBlock
             {
                 Text = Localizer.GetString("EnterBarcodeInstruction"),
                 FontSize = 14,
                 TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 380,
                 Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
-                FontFamily = globalFont
+                FontFamily = font
             };
 
             resultPanel.Children.Add(CreateInstructionText());
@@ -633,26 +712,28 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 }
             );
 
-            var contentPanel = new StackPanel { Spacing = 0 };
+            var contentPanel = new StackPanel { Spacing = 0, Width = 380, MaxWidth = 380, HorizontalAlignment = HorizontalAlignment.Center };
             contentPanel.Children.Add(resultPanel);
             contentPanel.Children.Add(keypadPanel);
 
             var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
             var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
-            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
             var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
             var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
-            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
             var dialog = new ContentDialog
             {
                 Title = new TextBlock
                 {
                     Text = Localizer.GetString("AddItemManuallyTitle"),
-                    FontFamily = globalFont,
+                    FontFamily = font,
                     FontSize = 22,
-                    FontWeight = FontWeights.SemiBold
+                    FontWeight = FontWeights.SemiBold,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 380
                 },
                 Content = contentPanel,
                 Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
@@ -850,7 +931,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void ShowInlineError(StackPanel targetPanel, string errorMessage)
         {
-            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
             targetPanel.Children.Clear();
 
             Brush dangerLight = (Application.Current.Resources.TryGetValue("DangerLightBrush", out var bg) && bg is Brush bgb)
@@ -869,15 +953,21 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(12, 10, 12, 10),
-                Margin = new Thickness(0, 0, 0, 4)
+                Margin = new Thickness(0, 0, 0, 4),
+                Width = 380,
+                MaxWidth = 380,
+                HorizontalAlignment = HorizontalAlignment.Center
             };
 
-            var errorPanel = new StackPanel
+            var errorGrid = new Grid
             {
-                Orientation = Orientation.Horizontal,
-                Spacing = 8,
-                VerticalAlignment = VerticalAlignment.Center
+                ColumnSpacing = 8,
+                VerticalAlignment = VerticalAlignment.Center,
+                Width = 356,
+                MaxWidth = 356
             };
+            errorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            errorGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             var icon = new FontIcon
             {
@@ -887,6 +977,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 Foreground = dangerFg,
                 VerticalAlignment = VerticalAlignment.Center
             };
+            Grid.SetColumn(icon, 0);
 
             var errorText = new TextBlock
             {
@@ -896,32 +987,41 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 FontWeight = FontWeights.SemiBold,
                 TextWrapping = TextWrapping.Wrap,
                 VerticalAlignment = VerticalAlignment.Center,
-                FontFamily = globalFont
+                MaxWidth = 320,
+                FontFamily = font
             };
+            Grid.SetColumn(errorText, 1);
 
-            errorPanel.Children.Add(icon);
-            errorPanel.Children.Add(errorText);
-            errorBorder.Child = errorPanel;
+            errorGrid.Children.Add(icon);
+            errorGrid.Children.Add(errorText);
+            errorBorder.Child = errorGrid;
             targetPanel.Children.Add(errorBorder);
         }
 
         private void ShowPriceCheckPlaceholder(StackPanel targetPanel)
         {
-            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
             targetPanel.Children.Clear();
             targetPanel.Children.Add(new TextBlock
             {
                 Text = Localizer.GetString("ScanOrTypeCode"),
                 FontSize = 14,
                 TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 380,
                 Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
-                FontFamily = globalFont
+                FontFamily = font
             });
         }
 
         private void RenderPriceCheckResult(StackPanel targetPanel, string code)
         {
-            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
             var product = ViewModel.FindProductBySku(code);
             targetPanel.Children.Clear();
 
@@ -934,28 +1034,32 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     BorderThickness = new Thickness(1.5),
                     CornerRadius = new CornerRadius(10),
                     Padding = new Thickness(16, 12, 16, 12),
-                    Margin = new Thickness(0, 0, 0, 4)
+                    Margin = new Thickness(0, 0, 0, 4),
+                    Width = 380,
+                    MaxWidth = 380
                 };
 
                 var row = new Grid();
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-                var leftStack = new StackPanel { Spacing = 2 };
+                var leftStack = new StackPanel { Spacing = 2, MaxWidth = 240 };
                 leftStack.Children.Add(new TextBlock
                 {
                     Text = product.Name,
                     FontWeight = FontWeights.Bold,
                     FontSize = 16,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 240,
                     Foreground = (Brush)Application.Current.Resources["TextPrimaryBrush"],
-                    FontFamily = globalFont
+                    FontFamily = font
                 });
                 leftStack.Children.Add(new TextBlock
                 {
                     Text = $"SKU: {product.Sku}",
                     FontSize = 12,
                     Foreground = (Brush)Application.Current.Resources["TextSecondaryBrush"],
-                    FontFamily = globalFont
+                    FontFamily = font
                 });
 
                 var rightStack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
@@ -966,7 +1070,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     FontSize = 22,
                     Foreground = (Brush)Application.Current.Resources["SuccessBrush"],
                     HorizontalAlignment = HorizontalAlignment.Right,
-                    FontFamily = globalFont
+                    FontFamily = font
                 });
                 rightStack.Children.Add(new TextBlock
                 {
@@ -975,7 +1079,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     FontWeight = FontWeights.SemiBold,
                     Foreground = (Brush)Application.Current.Resources["TextSecondaryBrush"],
                     HorizontalAlignment = HorizontalAlignment.Right,
-                    FontFamily = globalFont
+                    FontFamily = font
                 });
 
                 Grid.SetColumn(leftStack, 0);

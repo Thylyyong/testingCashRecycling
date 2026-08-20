@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
 using SelfCheckoutKiosk.App.Models;
@@ -26,28 +26,38 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             set => _currentBannerIndex = value;
         }
 
+        public BannerMedia? CurrentMedia => BannerMediaPaths.Count > 0 && CurrentBannerIndex < BannerMediaPaths.Count
+            ? BannerMediaPaths[CurrentBannerIndex]
+            : null;
+
         public KioskBaseViewModel(INavigationService navigationService)
         {
             NavigationService = navigationService;
 
-            LoadLocalAssets();
+            LoadMediaPlaylist();
+            MediaBrandingService.Instance.PlaylistChanged += (s, e) =>
+            {
+                App.MainWindowInstance?.DispatcherQueue.TryEnqueue(LoadMediaPlaylist);
+            };
+        }
+
+        public void LoadMediaPlaylist()
+        {
+            BannerMediaPaths.Clear();
+            var playlist = MediaBrandingService.Instance.GetActiveBannerPlaylist();
+            foreach (var item in playlist)
+            {
+                BannerMediaPaths.Add(item);
+            }
+
+            if (CurrentBannerIndex >= BannerMediaPaths.Count)
+            {
+                CurrentBannerIndex = 0;
+            }
 
             if (BannerMediaPaths.Count > 0)
             {
-                BannerMediaPaths[0].IsCurrent = true;
-            }
-        }
-
-        private void LoadLocalAssets()
-        {
-            const string bannerPath = "ms-appx:///Assets/Images/Banner/";
-
-            for (int i = 1; i <= 8; i++)
-            {
-                BannerMediaPaths.Add(new BannerMedia
-                {
-                    Path = $"{bannerPath}banner{i}.jpg"
-                });
+                BannerMediaPaths[CurrentBannerIndex].IsCurrent = true;
             }
         }
 

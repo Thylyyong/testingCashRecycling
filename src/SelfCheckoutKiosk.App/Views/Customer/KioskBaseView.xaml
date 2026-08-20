@@ -67,6 +67,14 @@
             <Image x:Name="BannerImageA" Stretch="UniformToFill" Opacity="1"/>
             <Image x:Name="BannerImageB" Stretch="UniformToFill" Opacity="0"/>
 
+            <!-- Banner Video Player (Plays video until end, then auto-swipes) -->
+            <MediaPlayerElement x:Name="BannerVideoPlayer"
+                                Stretch="UniformToFill"
+                                AutoPlay="False"
+                                AreTransportControlsEnabled="False"
+                                Opacity="0"
+                                IsHitTestVisible="False"/>
+
             <!-- Gradient Scrim for Contrast -->
             <Rectangle x:Name="ScrimRectangle" VerticalAlignment="Bottom" Height="320" IsHitTestVisible="False">
                 <Rectangle.Fill>

@@ -1,89 +1,688 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.UI.Xaml;
+using SelfCheckoutKiosk.App.Diagnostics;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Views.Customer;
+using SelfCheckoutKiosk.Core.Abstractions;
+using SelfCheckoutKiosk.Core.Engine;
+using SelfCheckoutKiosk.Core.Licensing;
+using SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX;
+using SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner;
+using SelfCheckoutKiosk.Hal.Vendor.EpsonM30;
+using SelfCheckoutKiosk.Infrastructure.Data;
+using SelfCheckoutKiosk.Infrastructure.Security;
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
-namespace SelfCheckoutKiosk.App
+namespace SelfCheckoutKiosk.App;
+
+public partial class App : Application
 {
-    public partial class App : Application
+    private Window? _window;
+
+    public static MainWindow? MainWindowInstance { get; private set; }
+
+    public static ICartService CartServiceInstance { get; } = new CartService();
+    public static IProductService ProductServiceInstance { get; private set; } = new MockProductService();
+    public static IPaymentService PaymentServiceInstance { get; private set; } = new PaymentService();
+    public static IReceiptPrinterService ReceiptPrinterServiceInstance { get; private set; } = new ReceiptPrinterService();
+
+    // Hardware & Core instances
+    public static ICashRecycler? CashRecyclerInstance { get; private set; }
+    public static IBarcodeScanner? BarcodeScannerInstance { get; private set; }
+    public static IReceiptPrinter? ReceiptPrinterInstance { get; private set; }
+    public static HardwareAppendLog? HardwareLogInstance { get; private set; }
+    public static OfflineLicenseManager? LicenseManagerInstance { get; private set; }
+
+    public App()
     {
-        private Window? _window;
+        InitializeComponent();
+    }
 
-        public static MainWindow? MainWindowInstance { get; private set; }
+    public static KioskDbContext CreateDbContext()
+    {
+        string dbPath = Path.Combine(AppContext.BaseDirectory, "kiosk.db");
+        return new KioskDbContext(dbPath, "dev-kiosk-passphrase");
+    }
 
-        public static ICartService CartServiceInstance { get; } = new CartService();
-        public static IProductService ProductServiceInstance { get; } = new MockProductService();
-        public static IPaymentService PaymentServiceInstance { get; } = new PaymentService();
-        public static IReceiptPrinterService ReceiptPrinterServiceInstance { get; } = new ReceiptPrinterService();
-
-        public App()
+    protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+    {
+        try
         {
-            InitializeComponent();
+#if DEBUG
+            DiagnosticConsole.Initialize();
+#endif
+            var mainWindow = new MainWindow();
+            _window = mainWindow;
+
+            MainWindowInstance = mainWindow;
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => OnApplicationShutdown();
+            mainWindow.Closed += (_, __) =>
+            {
+                OnApplicationShutdown();
+                MainWindowInstance = null;
+                _window = null;
+            };
+
+            // Navigate to KioskBaseView immediately so the UI is rendered without blank delay
+            mainWindow.NavigationService.NavigateTo(typeof(KioskBaseView));
+
+            _window.Activate();
+
+            await InitializeLocalizationAsync();
+
+            // Run system bootstrap and hardware initialization
+            await InitializeSystemAsync();
         }
-
-        protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        catch (Exception ex)
         {
+            Debug.WriteLine($"[App Startup Crash] {ex}");
+        }
+    }
+
+    private async Task InitializeSystemAsync()
+    {
+        try
+        {
+            // 1. Initialize SQLite Database & Seed Catalog
+            using (var db = CreateDbContext())
+            {
+                db.EnsureSchemaCreated();
+                CatalogSeeder.SeedIfEmpty(db);
+            }
+
+            ProductServiceInstance = new MockProductService();
+
+            // 2. Hardware Append Log
+            string logPath = Path.Combine(AppContext.BaseDirectory, "hardware_audit.log");
+            HardwareLogInstance = new HardwareAppendLog(logPath);
+
+            // 3. License Verification (Token Validation Mode)
+            string[] candidateTokenPaths =
+            {
+                Path.Combine(AppContext.BaseDirectory, "license.token"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "license.token"),
+                Path.Combine(Directory.GetCurrentDirectory(), "license.token"),
+                Path.Combine(Directory.GetCurrentDirectory(), "src", "SelfCheckoutKiosk.App", "license.token"),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "src", "SelfCheckoutKiosk.App", "license.token"),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "license.token"),
+                Path.Combine(AppContext.BaseDirectory, "..", "license.token")
+            };
+
+            string tokenPath = candidateTokenPaths.FirstOrDefault(File.Exists) ?? Path.Combine(AppContext.BaseDirectory, "license.token");
+
+            LicenseManagerInstance = new OfflineLicenseManager(
+                tokenFilePath: tokenPath,
+                publicKeySubjectPublicKeyInfo: DevLicenseKeys.PublicKeyBytes,
+                hardwareIdProvider: new HardwareIdProvider());
+
+            bool licenseValid = false;
+            string lastError = string.Empty;
             try
             {
-                var mainWindow = new MainWindow();
-                _window = mainWindow;
+                await LicenseManagerInstance.LoadAndValidateAsync();
+                licenseValid = true;
+                string expiryText = LicenseManagerInstance.ValidatedPayload != null
+                    ? $"{LicenseManagerInstance.ValidatedPayload.ExpiresAtUtc:yyyy-MM-dd} (Valid)"
+                    : "Valid";
+                HardwareStatusManager.Instance.SetLicenseStatus(true, LicenseManagerInstance.Tier.ToString(), expiryText);
+                Debug.WriteLine($"[License Check] License successfully verified from '{tokenPath}'! Tier: {LicenseManagerInstance.Tier}, Expiry: {expiryText}");
+            }
+            catch (Exception ex)
+            {
+                lastError = ex.Message;
+                Debug.WriteLine($"[License Check] License validation failed: {ex.Message}");
+                HardwareStatusManager.Instance.SetLicenseStatus(false, "Unlicensed", $"Missing / Invalid: {ex.Message}");
+                licenseValid = false;
+            }
 
-                MainWindowInstance = mainWindow;
-                mainWindow.Closed += (_, __) =>
+            if (!licenseValid)
+            {
+                MainWindowInstance?.ShowLicenseLockout($"License verification failed: {lastError}\n\nPlease ensure a valid signed 'license.token' is present next to the application.");
+                return;
+            }
+            else
+            {
+                MainWindowInstance?.HideLicenseLockout();
+                MainWindowInstance?.DispatcherQueue.TryEnqueue(() =>
                 {
-                    MainWindowInstance = null;
-                    _window = null;
+                    MainWindowInstance.NavigationService.NavigateTo(typeof(KioskBaseView));
+                });
+            }
+
+            // 4. Initialize Hardware Adapters — Auto-start Cash API / Simulator if needed
+            var testConfig = Composition.KioskTestPackageConfiguration.TryLoad(AppContext.BaseDirectory);
+            if (testConfig != null)
+            {
+                DiagnosticLogger.Log($"[Config] Loaded kiosk-test.json: Env={testConfig.Environment}, Mode={testConfig.CashHardwareMode}, Currencies={testConfig.CashDevice.Currency}, COM={testConfig.CashDevice.ComPort}");
+            }
+
+            string runningApiUrl = await CashApiProcessManager.EnsureCashApiRunningAsync();
+            string cashApiUrl = !string.IsNullOrWhiteSpace(testConfig?.CashDevice?.BaseUrl)
+                ? testConfig.CashDevice.BaseUrl
+                : runningApiUrl;
+            string cashComPortEnv = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_COM_PORT") ?? testConfig?.CashDevice?.ComPort ?? "AUTO";
+            string cashUsername = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_USERNAME") ?? testConfig?.CashDevice?.Username ?? "admin";
+            string cashPassword = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_PASSWORD") ?? testConfig?.CashDevice?.Password ?? "password";
+            string cashCurrency = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_CURRENCY") ?? testConfig?.CashDevice?.Currency ?? "USD,KHR";
+            int pollIntervalMs = testConfig?.CashDevice?.PollIntervalMilliseconds ?? 200;
+            int requestTimeoutMs = testConfig?.CashDevice?.RequestTimeoutMilliseconds ?? 5000;
+            int maxPollFailures = testConfig?.CashDevice?.MaximumPollFailures ?? 3;
+
+            // Build the list of COM ports to scan
+            string[] comPortsToScan;
+            if (!string.IsNullOrWhiteSpace(cashComPortEnv) && cashComPortEnv != "AUTO")
+            {
+                // Explicit port specified — use only that
+                comPortsToScan = new[] { cashComPortEnv };
+                DiagnosticLogger.Log($"[Hardware Init] Using explicit COM port: {cashComPortEnv}");
+            }
+            else
+            {
+                // AUTO: prioritize real USB serial devices (e.g. COM5, COM6) and filter out Bluetooth serial links (COM3, COM4)
+                comPortsToScan = GetPrioritizedComPorts();
+                DiagnosticLogger.Log($"[Hardware Init] AUTO COM scan — candidates: {string.Join(", ", comPortsToScan)}");
+            }
+
+            // Try each COM port until one connects successfully
+            string? connectedPort = null;
+            VendorXCashRecycler? connectedRecycler = null;
+
+            foreach (var candidatePort in comPortsToScan)
+            {
+                DiagnosticLogger.Log($"[Hardware Init] Trying COM port: {candidatePort} (Currencies: {cashCurrency})...");
+                var cashOptions = new CashRecyclerXOptions
+                {
+                    BaseUrl = cashApiUrl,
+                    Username = cashUsername,
+                    Password = cashPassword,
+                    ComPort = candidatePort,
+                    Currency = cashCurrency,
+                    SspAddress = testConfig?.CashDevice?.SspAddress ?? 0,
+                    PollInterval = TimeSpan.FromMilliseconds(pollIntervalMs),
+                    RequestTimeout = TimeSpan.FromMilliseconds(requestTimeoutMs),
+                    MaximumConsecutivePollFailures = maxPollFailures
                 };
 
-                _window.Activate();
+                var cashHttpClient = new System.Net.Http.HttpClient { Timeout = cashOptions.RequestTimeout };
+                var recycler = new VendorXCashRecycler(cashHttpClient, cashOptions);
 
-                await InitializeLocalizationAsync();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[App Startup Crash] {ex}");
-            }
-        }
-
-        private async Task InitializeLocalizationAsync()
-        {
-            string savedLang = "en";
-
-            try
-            {
-                // Access ApplicationData safely
-                if (AppInstanceIsPackaged())
+                try
                 {
-                    savedLang = Windows.Storage.ApplicationData.Current.LocalSettings.Values["AppLanguage"] as string ?? "en";
+                    await recycler.ConnectAsync();
+                    await recycler.DisarmAcceptanceAsync();
+                    connectedPort = candidatePort;
+                    connectedRecycler = recycler;
+                    DiagnosticLogger.Log($"[Hardware Init] ✅ Cash Recycler CONNECTED on {candidatePort} (Currencies: {cashCurrency})!");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    DiagnosticLogger.Log($"[Hardware Init] ❌ {candidatePort} failed: {ex.Message}");
+                    // Clean up and try next port
+                    cashHttpClient.Dispose();
                 }
             }
-            catch (Exception ex)
+
+            // If initial connect failed (e.g. 400 Failed to open device because REST host holds a stale session from a previous run),
+            // restart the Cash API process cleanly and retry once!
+            if (connectedRecycler == null && comPortsToScan.Length > 0)
             {
-                Debug.WriteLine($"[App Settings Warning] Could not read LocalSettings: {ex.Message}");
+                DiagnosticLogger.Log("[Hardware Init] Port probe failed. Restarting Cash API process to clear any stale port locks...");
+                try
+                {
+                    cashApiUrl = await CashApiProcessManager.RestartCashApiAsync();
+                    foreach (var candidatePort in comPortsToScan)
+                    {
+                        DiagnosticLogger.Log($"[Hardware Init] Retrying COM port: {candidatePort} after API restart...");
+                        var cashOptions = new CashRecyclerXOptions
+                        {
+                            BaseUrl = cashApiUrl,
+                            Username = cashUsername,
+                            Password = cashPassword,
+                            ComPort = candidatePort,
+                            Currency = cashCurrency,
+                            SspAddress = testConfig?.CashDevice?.SspAddress ?? 0,
+                            PollInterval = TimeSpan.FromMilliseconds(pollIntervalMs),
+                            RequestTimeout = TimeSpan.FromMilliseconds(requestTimeoutMs),
+                            MaximumConsecutivePollFailures = maxPollFailures
+                        };
+
+                        var cashHttpClient = new System.Net.Http.HttpClient { Timeout = cashOptions.RequestTimeout };
+                        var recycler = new VendorXCashRecycler(cashHttpClient, cashOptions);
+
+                        try
+                        {
+                            await recycler.ConnectAsync();
+                            await recycler.DisarmAcceptanceAsync();
+                            connectedPort = candidatePort;
+                            connectedRecycler = recycler;
+                            DiagnosticLogger.Log($"[Hardware Init] ✅ Cash Recycler CONNECTED on {candidatePort} (Currencies: {cashCurrency})!");
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            DiagnosticLogger.Log($"[Hardware Init] ❌ Retry {candidatePort} failed: {ex.Message}");
+                            cashHttpClient.Dispose();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DiagnosticLogger.LogError($"[Hardware Init] Cash API restart error: {ex.Message}", ex);
+                }
             }
 
-            try
+            if (connectedRecycler != null)
             {
-                await LocalizationService.Instance.SetLanguageAsync(savedLang);
+                CashRecyclerInstance = connectedRecycler;
+                HardwareStatusManager.Instance.SetCashAvailability(true, $"Physical Cash Recycler Online ({connectedPort})");
             }
-            catch (Exception ex)
+            else
             {
-                Debug.WriteLine($"[Localization Failed] {ex}");
+                // No port worked — create a fallback instance on COM5 so rest of app has a valid reference
+                DiagnosticLogger.Log("[Hardware Init] No COM port responded. Cash recycler offline.");
+                var fallbackOptions = new CashRecyclerXOptions
+                {
+                    BaseUrl = cashApiUrl,
+                    Username = cashUsername,
+                    Password = cashPassword,
+                    ComPort = "COM5",
+                    Currency = cashCurrency,
+                    SspAddress = 0,
+                    PollInterval = TimeSpan.FromMilliseconds(pollIntervalMs),
+                    RequestTimeout = TimeSpan.FromMilliseconds(requestTimeoutMs),
+                    MaximumConsecutivePollFailures = maxPollFailures
+                };
+                var fallbackClient = new System.Net.Http.HttpClient { Timeout = fallbackOptions.RequestTimeout };
+                CashRecyclerInstance = new VendorXCashRecycler(fallbackClient, fallbackOptions);
+                HardwareStatusManager.Instance.SetCashAvailability(false, "Offline / No Cash Machine Connected (scanned all COM ports)");
             }
-        }
 
-        private bool AppInstanceIsPackaged()
-        {
+            // Start continuous background health monitor for real-time plug/unplug detection
+            StartContinuousHardwareMonitor();
+
+            // Central Server / Cloud Connectivity Check
+            string serverUrl = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_CENTRAL_SERVER_URL") ?? "http://localhost:5000/api/health";
+            bool isServerReachable = false;
             try
             {
-                return Windows.ApplicationModel.Package.Current != null;
+                using var testClient = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMilliseconds(500) };
+                var response = await testClient.GetAsync(serverUrl);
+                isServerReachable = response.IsSuccessStatusCode;
             }
             catch
             {
-                return false;
+                isServerReachable = false;
+            }
+
+            HardwareStatusManager.Instance.SetServerOnline(isServerReachable, isServerReachable ? "Online (Central Server)" : "Offline (Local DB Only)");
+            HardwareStatusManager.Instance.SetQrAvailability(true, "Online");
+
+            // Initialize scanner
+            BarcodeScannerInstance = new DatalogicBarcodeScanner("COM4", 9600);
+            try
+            {
+                await BarcodeScannerInstance.ConnectAsync();
+                BarcodeScannerInstance.OnBarcodeScanned += HandleBarcodeScanned;
+                HardwareStatusManager.Instance.SetScannerAvailability(true);
+            }
+            catch
+            {
+                HardwareStatusManager.Instance.SetScannerAvailability(false);
+            }
+
+            // Initialize receipt printer
+            ReceiptPrinterInstance = new EpsonReceiptPrinter("USB001");
+            try
+            {
+                await ReceiptPrinterInstance.ConnectAsync();
+                HardwareStatusManager.Instance.SetPrinterAvailability(true);
+            }
+            catch
+            {
+                HardwareStatusManager.Instance.SetPrinterAvailability(false);
+            }
+
+            // 5. Connect Payment and Printer services to real hardware and db factory
+            PaymentServiceInstance = new PaymentService(
+                () => CreateDbContext(),
+                CashRecyclerInstance,
+                HardwareLogInstance
+            );
+
+            ReceiptPrinterServiceInstance = new ReceiptPrinterService(ReceiptPrinterInstance);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[System Init Error] {ex}");
+        }
+    }
+
+    private static string? LoadApiKey()
+    {
+        string? envKey = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_API_KEY");
+        if (!string.IsNullOrWhiteSpace(envKey)) return envKey.Trim();
+
+        string[] candidatePaths =
+        {
+            Path.Combine(AppContext.BaseDirectory, "api_key.secret"),
+            Path.Combine(Directory.GetCurrentDirectory(), "api_key.secret"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "src", "SelfCheckoutKiosk.App", "api_key.secret"),
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "SelfCheckoutKiosk.App", "api_key.secret")
+        };
+
+        foreach (var path in candidatePaths)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    string key = File.ReadAllText(path).Trim();
+                    if (!string.IsNullOrEmpty(key)) return key;
+                }
+            }
+            catch { }
+        }
+
+        return null;
+    }
+
+    private static void StartContinuousHardwareMonitor()
+    {
+        Task.Run(async () =>
+        {
+            int consecutiveMonitorFails = 0;
+            while (true)
+            {
+                await Task.Delay(2000);
+                try
+                {
+                    // Do NOT attempt reconnection or restart Cash API if a customer transaction is actively in progress
+                    // (e.g. paying cash, or split payment transferring to KHQR). Reconnect only after the transaction completes or resets.
+                    bool isTransactionActive = (PaymentServiceInstance != null && PaymentServiceInstance.TotalDueUsd > 0 && !PaymentServiceInstance.IsFullyPaid);
+                    if (isTransactionActive)
+                    {
+                        continue;
+                    }
+
+                    if (CashRecyclerInstance is VendorXCashRecycler recycler)
+                    {
+                        if (!recycler.IsConnected)
+                        {
+                            consecutiveMonitorFails++;
+                            if (consecutiveMonitorFails >= 3)
+                            {
+                                DiagnosticLogger.Log("[Hardware Monitor] Repeated probe failures. Restarting Cash API process to clear stale port locks...");
+                                try
+                                {
+                                    await CashApiProcessManager.RestartCashApiAsync();
+                                }
+                                catch { }
+                                consecutiveMonitorFails = 0;
+                            }
+
+                            var candidatePorts = GetPrioritizedComPorts();
+                            string runningApiUrl = await CashApiProcessManager.EnsureCashApiRunningAsync();
+                            var currentTestConfig = Composition.KioskTestPackageConfiguration.TryLoad(AppContext.BaseDirectory);
+                            string cashApiUrl = !string.IsNullOrWhiteSpace(currentTestConfig?.CashDevice?.BaseUrl)
+                                ? currentTestConfig.CashDevice.BaseUrl
+                                : runningApiUrl;
+                            string cashUsername = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_USERNAME") ?? currentTestConfig?.CashDevice?.Username ?? "admin";
+                            string cashPassword = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_PASSWORD") ?? currentTestConfig?.CashDevice?.Password ?? "password";
+                            string cashCurrency = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_CURRENCY") ?? currentTestConfig?.CashDevice?.Currency ?? "USD,KHR";
+
+                            bool reconnected = false;
+                            foreach (var port in candidatePorts)
+                            {
+                                try
+                                {
+                                    var newOptions = new CashRecyclerXOptions
+                                    {
+                                        BaseUrl = cashApiUrl,
+                                        Username = cashUsername,
+                                        Password = cashPassword,
+                                        ComPort = port,
+                                        Currency = cashCurrency,
+                                        SspAddress = currentTestConfig?.CashDevice?.SspAddress ?? 0,
+                                        PollInterval = TimeSpan.FromMilliseconds(currentTestConfig?.CashDevice?.PollIntervalMilliseconds ?? 200),
+                                        RequestTimeout = TimeSpan.FromMilliseconds(currentTestConfig?.CashDevice?.RequestTimeoutMilliseconds ?? 5000)
+                                    };
+                                    var newClient = new System.Net.Http.HttpClient { Timeout = newOptions.RequestTimeout };
+                                    var newRecycler = new VendorXCashRecycler(newClient, newOptions);
+
+                                    await newRecycler.ConnectAsync();
+
+                                    bool onCashPage = false;
+                                    MainWindowInstance?.DispatcherQueue.TryEnqueue(() =>
+                                    {
+                                        var content = MainWindowInstance?.MainRootFrame?.Content;
+                                        onCashPage = content is IngestionProgressView;
+                                    });
+
+                                    if (onCashPage)
+                                    {
+                                        await newRecycler.ArmAcceptanceAsync();
+                                        DiagnosticLogger.Log($"[Hardware Monitor] Reconnected on {port} and armed acceptor for active cash session.");
+                                    }
+                                    else
+                                    {
+                                        await newRecycler.DisarmAcceptanceAsync();
+                                        DiagnosticLogger.Log($"[Hardware Monitor] Reconnected on {port} (disarmed).");
+                                    }
+
+                                    CashRecyclerInstance = newRecycler;
+                                    PaymentServiceInstance?.AttachCashRecycler(newRecycler);
+                                    HardwareStatusManager.Instance.SetCashAvailability(true, $"Physical Cash Recycler Online ({port})");
+                                    reconnected = true;
+                                    break;
+                                }
+                                catch (Exception connEx)
+                                {
+                                    DiagnosticLogger.Log($"[Hardware Monitor] Port {port} probe failed: {connEx.Message}");
+                                }
+                            }
+
+                            if (!reconnected)
+                            {
+                                HardwareStatusManager.Instance.SetCashAvailability(false, "Offline / No Cash Machine Connected");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (HardwareStatusManager.Instance.IsCashAvailable)
+                    {
+                        HardwareStatusManager.Instance.SetCashAvailability(false, "Cash Machine Offline / Disconnected");
+                        DiagnosticLogger.LogError($"[Hardware Monitor] Cash machine connection lost: {ex.Message}", ex);
+                    }
+                }
+            }
+        });
+    }
+
+    private void HandleBarcodeScanned(object? sender, BarcodeScannedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(e.RawBarcode)) return;
+
+        MainWindowInstance?.DispatcherQueue.TryEnqueue(() =>
+        {
+            if (!HardwareStatusManager.Instance.IsCashAvailable && !HardwareStatusManager.Instance.IsQrAvailable)
+            {
+                Debug.WriteLine("[SCANNER] Rejected barcode scan because all payment services are unavailable.");
+                return;
+            }
+
+            var product = ProductServiceInstance.GetProductBySku(e.RawBarcode.Trim());
+            if (product != null)
+            {
+                CartServiceInstance.AddItem(product.Name, product.Sku, product.Price, 1);
+                Debug.WriteLine($"[SCANNER] Added {product.Name} to cart via barcode scan.");
+
+                var currentContent = MainWindowInstance?.MainRootFrame?.Content;
+                if (currentContent is Views.Customer.KioskBaseView)
+                {
+                    MainWindowInstance?.NavigationService?.NavigateTo(typeof(Views.Customer.CartView));
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"[SCANNER] No product found for barcode: {e.RawBarcode}");
+            }
+        });
+    }
+
+    private async Task InitializeLocalizationAsync()
+    {
+        string savedLang = "en";
+
+        try
+        {
+            if (AppInstanceIsPackaged())
+            {
+                savedLang = Windows.Storage.ApplicationData.Current.LocalSettings.Values["AppLanguage"] as string ?? "en";
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[App Settings Warning] Could not read LocalSettings: {ex.Message}");
+        }
+
+        try
+        {
+            await LocalizationService.Instance.SetLanguageAsync(savedLang);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Localization Failed] {ex}");
+        }
+    }
+
+    private bool AppInstanceIsPackaged()
+    {
+        try
+        {
+            return Windows.ApplicationModel.Package.Current != null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Enumerates system COM ports, prioritizing real USB serial devices (USBSER, FTDI, Prolific)
+    /// and filtering out virtual Bluetooth serial links (BthModem).
+    /// </summary>
+    private static string[] GetPrioritizedComPorts()
+    {
+        var usbPorts = new System.Collections.Generic.List<string>();
+        var bluetoothPorts = new System.Collections.Generic.List<string>();
+
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"HARDWARE\DEVICEMAP\SERIALCOMM");
+            if (key != null)
+            {
+                foreach (var valueName in key.GetValueNames())
+                {
+                    var portName = key.GetValue(valueName)?.ToString();
+                    if (string.IsNullOrWhiteSpace(portName)) continue;
+
+                    // Filter out Bluetooth serial links (\Device\BthModem0, \Device\BthModem1, etc.)
+                    if (valueName.Contains("Bth", StringComparison.OrdinalIgnoreCase) ||
+                        valueName.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase))
+                    {
+                        bluetoothPorts.Add(portName);
+                    }
+                    else
+                    {
+                        // Real hardware/USB serial port (\Device\USBSER000, etc.)
+                        usbPorts.Add(portName);
+                    }
+                }
+            }
+        }
+        catch { }
+
+        var prioritized = new System.Collections.Generic.List<string>();
+
+        // Prioritize COM5 first, then COM6 if detected
+        if (usbPorts.Contains("COM5", StringComparer.OrdinalIgnoreCase))
+        {
+            prioritized.Add("COM5");
+        }
+        if (usbPorts.Contains("COM6", StringComparer.OrdinalIgnoreCase))
+        {
+            prioritized.Add("COM6");
+        }
+
+        foreach (var port in usbPorts)
+        {
+            if (!prioritized.Contains(port, StringComparer.OrdinalIgnoreCase))
+            {
+                prioritized.Add(port);
             }
         }
 
+        // Fallback: COM5, COM6, then any non-bluetooth system ports
+        if (prioritized.Count == 0)
+        {
+            prioritized.Add("COM5");
+            prioritized.Add("COM6");
+            var systemPorts = System.IO.Ports.SerialPort.GetPortNames()
+                .Where(p => !bluetoothPorts.Contains(p, StringComparer.OrdinalIgnoreCase));
+            prioritized.AddRange(systemPorts);
+        }
+
+        return prioritized.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    /// <summary>
+    /// Safely releases hardware adapters and returns any physical banknote in escrow on shutdown.
+    /// </summary>
+    private static void OnApplicationShutdown()
+    {
+        try
+        {
+            if (CashRecyclerInstance is VendorXCashRecycler recycler)
+            {
+                try
+                {
+                    recycler.RejectEscrowedNoteAsync().GetAwaiter().GetResult();
+                }
+                catch { }
+
+                try
+                {
+                    recycler.DisarmAcceptanceAsync().GetAwaiter().GetResult();
+                }
+                catch { }
+
+                try
+                {
+                    recycler.DisconnectAsync().GetAwaiter().GetResult();
+                }
+                catch { }
+            }
+
+            CashApiProcessManager.Shutdown();
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Simple IHardwareIdProvider that returns a fixed pre-resolved hardware ID string.
+    /// Used to carry the TPM-resolved (or fallback) hardware ID into the OfflineLicenseManager.
+    /// </summary>
+    private sealed class FixedHardwareIdProvider : IHardwareIdProvider
+    {
+        private readonly string _hardwareId;
+        public FixedHardwareIdProvider(string hardwareId) => _hardwareId = hardwareId;
+        public string GetHardwareId() => _hardwareId;
     }
 }

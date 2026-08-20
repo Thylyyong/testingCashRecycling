@@ -22,9 +22,15 @@ public sealed class CompositionSeamTests
 {
     private sealed class FakeCashRecycler : ICashRecycler
     {
+        public event EventHandler<NoteInsertedEventArgs>? OnNoteInserted;
         public event EventHandler<NoteInEscrowEventArgs>? OnNoteInEscrow;
         public event EventHandler<HardwareFaultEventArgs>? OnFault;
+        public event EventHandler<CashAcceptorStateChangedEventArgs>? OnAcceptorStateChanged;
+        public event EventHandler<CashRecyclerJamEventArgs>? OnJam;
+        public event EventHandler<CassetteInventoryChangedEventArgs>? OnCassetteInventoryChanged;
+
         public Task ConnectAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task DisconnectAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task ArmAcceptanceAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task DisarmAcceptanceAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task StopAcceptingCashAsync(CancellationToken ct = default) => Task.CompletedTask;
@@ -51,10 +57,22 @@ public sealed class CompositionSeamTests
     [Fact]
     public void Engine_ConstructsAndStartsIdle_WithMockHal()
     {
-        var engine = new LLCoreLogicEngine(
-            new FakeCashRecycler(), new FakeScanner(), new FakePrinter(),
-            new DualCurrencyCalculator(), new LowFloatMonitor(), new OfflineLicenseManager());
+        string logPath = Path.Combine(Path.GetTempPath(), $"hal-audit-{Guid.NewGuid():N}.log");
+        try
+        {
+            using (var hardwareAppendLog = new HardwareAppendLog(logPath))
+            {
+                var engine = new LLCoreLogicEngine(
+                    new FakeCashRecycler(), new FakeScanner(), new FakePrinter(),
+                    new DualCurrencyCalculator(), new LowFloatMonitor(), new OfflineLicenseManager(),
+                    hardwareAppendLog);
 
-        Assert.Equal(KioskState.Idle, engine.CurrentState);
+                Assert.Equal(KioskState.Idle, engine.CurrentState);
+            } // HardwareAppendLog's FileStream must be closed before deleting the file below.
+        }
+        finally
+        {
+            if (File.Exists(logPath)) File.Delete(logPath);
+        }
     }
 }

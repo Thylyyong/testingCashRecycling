@@ -36,6 +36,8 @@
     <!-- Implicit Style for Button -->
     <Style TargetType="Button">
         <Setter Property="FontFamily" Value="{StaticResource GlobalAppFont}" />
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="AllowFocusOnInteraction" Value="False"/>
     </Style>
 
     <Style x:Key="DialogButtonStyle" TargetType="Button">

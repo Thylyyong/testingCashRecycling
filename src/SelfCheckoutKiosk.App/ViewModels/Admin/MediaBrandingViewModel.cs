@@ -20,12 +20,12 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
         private string _statusMessage = string.Empty;
         private bool _hasStatusMessage = false;
 
-        public ObservableCollection<AdminMediaItem> MediaItems { get; } = new();
+        public ObservableCollection<AdminMediaItem> MediaItems => MediaBrandingService.Instance.MediaItems;
 
         public BrandingConfig Branding
         {
-            get => _branding;
-            set { _branding = value; OnPropertyChanged(); }
+            get => MediaBrandingService.Instance.Branding;
+            set { OnPropertyChanged(); }
         }
 
         public string StatusMessage
@@ -47,84 +47,47 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
             _navigationService = navigationService
                 ?? App.MainWindowInstance?.NavigationService
                 ?? new NavigationService(null!);
-
-            InitializeDefaultMedia();
-        }
-
-        private void InitializeDefaultMedia()
-        {
-            MediaItems.Clear();
-
-            MediaItems.Add(new AdminMediaItem
-            {
-                FileName = "8afe2ed44f87458f9b3b9ab0b873cc01.mp4",
-                MediaType = "Video",
-                DurationSeconds = 10,
-                IsActive = true,
-                SortOrder = 0
-            });
-
-            MediaItems.Add(new AdminMediaItem
-            {
-                FileName = "branding-logo.png",
-                MediaType = "Image",
-                DurationSeconds = 10,
-                IsActive = true,
-                SortOrder = 1
-            });
         }
 
         public void MoveUp(AdminMediaItem item)
         {
-            int index = MediaItems.IndexOf(item);
-            if (index > 0)
-            {
-                MediaItems.Move(index, index - 1);
-                ReindexSortOrders();
-            }
+            MediaBrandingService.Instance.MoveUp(item);
+            StatusMessage = $"Moved up '{item.FileName}'.";
         }
 
         public void MoveDown(AdminMediaItem item)
         {
-            int index = MediaItems.IndexOf(item);
-            if (index >= 0 && index < MediaItems.Count - 1)
-            {
-                MediaItems.Move(index, index + 1);
-                ReindexSortOrders();
-            }
+            MediaBrandingService.Instance.MoveDown(item);
+            StatusMessage = $"Moved down '{item.FileName}'.";
         }
 
         public void ToggleActive(AdminMediaItem item)
         {
-            item.IsActive = !item.IsActive;
+            MediaBrandingService.Instance.ToggleActive(item);
             StatusMessage = $"Media '{item.FileName}' is now {item.StatusText}.";
         }
 
         public void RemoveMedia(AdminMediaItem item)
         {
-            if (MediaItems.Contains(item))
-            {
-                MediaItems.Remove(item);
-                ReindexSortOrders();
-                StatusMessage = $"Media '{item.FileName}' removed.";
-            }
+            MediaBrandingService.Instance.RemoveMedia(item);
+            StatusMessage = $"Media '{item.FileName}' removed.";
         }
 
         public void AddNewMedia(string type)
         {
-            string ext = string.Equals(type, "Video", StringComparison.OrdinalIgnoreCase) ? "mp4" : "png";
-            string name = $"{Guid.NewGuid().ToString("N").Substring(0, 12)}.{ext}";
+            bool isVideo = string.Equals(type, "Video", StringComparison.OrdinalIgnoreCase);
+            string name = isVideo ? $"video{new Random().Next(1, 3)}.mp4" : $"banner{new Random().Next(1, 10)}.jpg";
 
             var newItem = new AdminMediaItem
             {
                 FileName = name,
                 MediaType = type,
-                DurationSeconds = 10,
+                DurationSeconds = isVideo ? 15 : 7,
                 IsActive = true,
                 SortOrder = MediaItems.Count
             };
 
-            MediaItems.Add(newItem);
+            MediaBrandingService.Instance.AddMedia(newItem);
             StatusMessage = $"Added new {type}: {name}";
         }
 

@@ -40,15 +40,17 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void BackButton_Click(object sender, RoutedEventArgs e)
         {
-            var globalFont = (FontFamily)Application.Current.Resources["GlobalAppFont"];
+            var font = LocalizationService.Instance.CurrentLanguage == "km"
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
 
             var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
             var primaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseAccentStyle };
-            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            primaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
             var baseDialogStyle = (Style)Application.Current.Resources["DialogButtonStyle"];
             var secondaryButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
-            secondaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, globalFont));
+            secondaryButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
             var dialog = new ContentDialog
             {
@@ -60,36 +62,36 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     {
                         new FontIcon
                         {
-                            Glyph = "\uE814", // Warning Icon
+                            Glyph = "\uE814", // Warning / Question icon
                             FontFamily = new FontFamily("Segoe Fluent Icons"),
                             FontSize = 42,
-                            Foreground = (Brush)Application.Current.Resources["DangerBrush"],
+                            Foreground = (Brush)Application.Current.Resources["AccentBlueBrush"],
                             HorizontalAlignment = HorizontalAlignment.Center
                         },
                         new TextBlock
                         {
-                            Text = Localizer.GetString("CancelPaymentTitle") ?? "Cancel QR Payment?",
+                            Text = Localizer.GetString("ChangePaymentMethodTitle"),
                             FontSize = 20,
                             FontWeight = FontWeights.SemiBold,
                             TextAlignment = TextAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
-                            FontFamily = globalFont
+                            FontFamily = font
                         },
                         new TextBlock
                         {
-                            Text = Localizer.GetString("CancelPaymentMessage") ?? "Are you sure you want to cancel QR payment and return to payment selection?",
+                            Text = Localizer.GetString("ChangePaymentMethodMessage"),
                             FontSize = 16,
                             TextWrapping = TextWrapping.Wrap,
                             TextAlignment = TextAlignment.Center,
                             HorizontalAlignment = HorizontalAlignment.Center,
                             MaxWidth = 450,
-                            FontFamily = globalFont
+                            FontFamily = font
                         }
                     }
                 },
                 Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
-                PrimaryButtonText = Localizer.GetString("ContinuePayment") ?? "Continue Payment",
-                SecondaryButtonText = Localizer.GetString("CancelPayment") ?? "Cancel Payment",
+                PrimaryButtonText = Localizer.GetString("ContinuePayment"),
+                SecondaryButtonText = Localizer.GetString("BackToPaymentSelection"),
                 PrimaryButtonStyle = primaryButtonStyleWithFont,
                 SecondaryButtonStyle = secondaryButtonStyleWithFont,
                 XamlRoot = this.XamlRoot,

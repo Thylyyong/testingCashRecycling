@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- DEV-ONLY tool, never shipped or referenced by SelfCheckoutKiosk.App.
+       Generates a license.token signed with the DEV private key matching
+       SelfCheckoutKiosk.App.Composition.DevLicenseKeys' public key — lets
+       OfflineLicenseManager's real signature-verification path succeed
+       locally before the Lead embeds the production key. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SelfCheckoutKiosk.Tools.DevLicenseTokenGenerator</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Directory.Build.props defaults every non-Tests project to
+         IsAotCompatible=true — this is a throwaway dev-machine CLI tool,
+         never published/trimmed/AOT-compiled, so reflection-based
+         JsonSerializer calls here are fine. Same exemption rationale as the
+         Tests projects, just not named "*Tests". -->
+    <IsAotCompatible>false</IsAotCompatible>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SelfCheckoutKiosk.Domain\SelfCheckoutKiosk.Domain.csproj" />
+    <ProjectReference Include="..\..\src\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
+    <ProjectReference Include="..\..\src\SelfCheckoutKiosk.Infrastructure\SelfCheckoutKiosk.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

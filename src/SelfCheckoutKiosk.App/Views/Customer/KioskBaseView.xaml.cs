@@ -5,10 +5,17 @@ using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
+using Windows.Media.Core;
+using Windows.Media.Playback;
+using Windows.Storage;
 
 namespace SelfCheckoutKiosk.App.Views.Customer
 {
@@ -39,37 +46,109 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             ViewModel = new KioskBaseViewModel(navigationService);
 
-            if (ViewModel.BannerMediaPaths.Count > 0)
-            {
-                BannerImageA.Source = new BitmapImage(new Uri(ViewModel.BannerMediaPaths[0].Path));
-            }
-
             _slideTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(10)
+                Interval = TimeSpan.FromSeconds(7)
             };
+            _slideTimer.Tick += (s, e) => AdvanceBanner(forward: true);
 
-            _slideTimer.Tick += (s, e) => AdvanceBanner();
-            _slideTimer.Start();
+            SetupVideoPlayer();
 
             LocalizationService.Instance.PropertyChanged += Localizer_PropertyChanged;
             Unloaded += KioskBaseView_Unloaded;
         }
 
+        private void SetupVideoPlayer()
+        {
+            try
+            {
+                var player = BannerVideoPlayer.MediaPlayer;
+                if (player != null)
+                {
+                    player.AutoPlay = true;
+                    player.IsLoopingEnabled = false;
+                    player.MediaOpened += MediaPlayer_MediaOpened;
+                    player.MediaEnded += MediaPlayer_MediaEnded;
+                    player.MediaFailed += MediaPlayer_MediaFailed;
+                    player.PlaybackSession.PlaybackStateChanged += PlaybackSession_PlaybackStateChanged;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[BannerVideo Setup ERROR] {ex.Message}");
+            }
+        }
+
+        private void MediaPlayer_MediaOpened(MediaPlayer sender, object args)
+        {
+            Debug.WriteLine($"[BannerVideo MediaOpened] Video opened! Natural duration: {sender.PlaybackSession.NaturalDuration.TotalSeconds:F1}s");
+            DispatcherQueue?.TryEnqueue(() =>
+            {
+                sender.Play();
+            });
+        }
+
+        private void PlaybackSession_PlaybackStateChanged(MediaPlaybackSession sender, object args)
+        {
+            Debug.WriteLine($"[BannerVideo PlaybackState] State: {sender.PlaybackState}, Position: {sender.Position.TotalSeconds:F1}s");
+        }
+
+        private void MediaPlayer_MediaEnded(MediaPlayer sender, object args)
+        {
+            // Only advance if the video actually reached completion (duration > 0.5s)
+            if (sender.PlaybackSession.NaturalDuration.TotalSeconds > 0.5)
+            {
+                Debug.WriteLine("[BannerVideo MediaEnded] Video completed full playback. Auto-advancing banner...");
+                DispatcherQueue?.TryEnqueue(() =>
+                {
+                    AdvanceBanner(forward: true);
+                });
+            }
+            else
+            {
+                Debug.WriteLine("[BannerVideo MediaEnded] Ignored premature MediaEnded event during initialization.");
+            }
+        }
+
+        private void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+        {
+            Debug.WriteLine($"[BannerVideo MediaFailed] Error: {args.Error}, ExtendedErrorCode: {args.ExtendedErrorCode?.Message}, Message: {args.ErrorMessage}");
+            DispatcherQueue?.TryEnqueue(() =>
+            {
+                AdvanceBanner(forward: true);
+            });
+        }
+
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
             UpdateIndicators();
+            DisplayCurrentMedia(isInitial: true);
         }
 
         private void Localizer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            // {x:Bind Localizer.GetString(...)} will refresh when the
-            // localization service raises PropertyChanged.
+            // {x:Bind Localizer.GetString(...)} refreshes automatically
         }
 
         private void KioskBaseView_Unloaded(object sender, RoutedEventArgs e)
         {
             _slideTimer.Stop();
+
+            try
+            {
+                var player = BannerVideoPlayer.MediaPlayer;
+                if (player != null)
+                {
+                    player.Pause();
+                    player.MediaOpened -= MediaPlayer_MediaOpened;
+                    player.MediaEnded -= MediaPlayer_MediaEnded;
+                    player.MediaFailed -= MediaPlayer_MediaFailed;
+                    player.PlaybackSession.PlaybackStateChanged -= PlaybackSession_PlaybackStateChanged;
+                }
+                BannerVideoPlayer.Source = null;
+            }
+            catch { }
+
             LocalizationService.Instance.PropertyChanged -= Localizer_PropertyChanged;
         }
 
@@ -96,8 +175,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     AdvanceBanner(forward: true);
                 else
                     AdvanceBanner(forward: false);
-
-                ResetTimer();
             }
         }
 
@@ -115,7 +192,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 else
                     AdvanceBanner(forward: true);
 
-                ResetTimer();
                 e.Handled = true;
             }
         }
@@ -123,7 +199,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private void BannerContainer_Tapped(object sender, TappedRoutedEventArgs e)
         {
             if (!_wasManipulated)
+            {
                 ViewModel.ProceedToHome();
+            }
         }
 
         private void AdvanceBanner(bool forward = true)
@@ -138,50 +216,161 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             else
                 ViewModel.PreviousBanner();
 
-            var nextPath = ViewModel.BannerMediaPaths[ViewModel.CurrentBannerIndex].Path;
-            var incoming = _showingA ? BannerImageB : BannerImageA;
-            var outgoing = _showingA ? BannerImageA : BannerImageB;
-
-            incoming.Source = new BitmapImage(new Uri(nextPath));
-
-            var fadeOut = new DoubleAnimation
-            {
-                From = 1.0,
-                To = 0.0,
-                Duration = TimeSpan.FromMilliseconds(600)
-            };
-
-            Storyboard.SetTarget(fadeOut, outgoing);
-            Storyboard.SetTargetProperty(fadeOut, "Opacity");
-
-            var fadeIn = new DoubleAnimation
-            {
-                From = 0.0,
-                To = 1.0,
-                Duration = TimeSpan.FromMilliseconds(600)
-            };
-
-            Storyboard.SetTarget(fadeIn, incoming);
-            Storyboard.SetTargetProperty(fadeIn, "Opacity");
-
-            var sb = new Storyboard();
-            sb.Children.Add(fadeOut);
-            sb.Children.Add(fadeIn);
-
-            sb.Completed += (s, args) =>
-            {
-                _showingA = !_showingA;
-                _isTransitioning = false;
-            };
-
-            sb.Begin();
+            DisplayCurrentMedia(isInitial: false);
             UpdateIndicators();
         }
 
-        private void ResetTimer()
+        private async Task<MediaSource?> CreateMediaSourceAsync(string path)
         {
-            _slideTimer.Stop();
-            _slideTimer.Start();
+            try
+            {
+                string localPath = path;
+                if (path.StartsWith("ms-appx:///", StringComparison.OrdinalIgnoreCase))
+                {
+                    string relative = path.Substring("ms-appx:///".Length).Replace('/', System.IO.Path.DirectorySeparatorChar);
+                    localPath = System.IO.Path.Combine(AppContext.BaseDirectory, relative);
+                }
+                else if (path.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase))
+                {
+                    string relative = path.Substring("ms-appx://".Length).Replace('/', System.IO.Path.DirectorySeparatorChar);
+                    localPath = System.IO.Path.Combine(AppContext.BaseDirectory, relative);
+                }
+
+                Debug.WriteLine($"[BannerVideo] Loading video from path: '{localPath}' (File exists: {System.IO.File.Exists(localPath)})");
+
+                if (System.IO.File.Exists(localPath))
+                {
+                    var file = await StorageFile.GetFileFromPathAsync(System.IO.Path.GetFullPath(localPath));
+                    return MediaSource.CreateFromStorageFile(file);
+                }
+
+                if (Uri.TryCreate(path, UriKind.Absolute, out var uri))
+                {
+                    return MediaSource.CreateFromUri(uri);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[BannerVideo CreateMediaSource ERROR] {ex}");
+            }
+
+            return null;
+        }
+
+        private async void DisplayCurrentMedia(bool isInitial = false)
+        {
+            if (ViewModel.BannerMediaPaths.Count == 0) return;
+
+            var current = ViewModel.BannerMediaPaths[ViewModel.CurrentBannerIndex];
+            Debug.WriteLine($"[Banner] Displaying index {ViewModel.CurrentBannerIndex}: '{current.Path}' (IsVideo: {current.IsVideo})");
+
+            if (current.IsVideo)
+            {
+                // Stop image slide timer while video plays
+                _slideTimer.Stop();
+
+                var mediaSource = await CreateMediaSourceAsync(current.Path);
+                if (mediaSource != null)
+                {
+                    BannerVideoPlayer.Source = mediaSource;
+                    BannerVideoPlayer.Opacity = 1.0;
+
+                    var player = BannerVideoPlayer.MediaPlayer;
+                    if (player != null)
+                    {
+                        player.IsLoopingEnabled = false;
+                        player.Play();
+                    }
+
+                    AnimateOpacity(BannerImageA, 0.0, 300);
+                    AnimateOpacity(BannerImageB, 0.0, 300, () => _isTransitioning = false);
+                }
+                else
+                {
+                    Debug.WriteLine($"[BannerVideo] Video source not found for '{current.Path}'. Advancing...");
+                    _isTransitioning = false;
+                    AdvanceBanner(forward: true);
+                }
+            }
+            else
+            {
+                // Pause and fade out video player when displaying an image
+                try
+                {
+                    var player = BannerVideoPlayer.MediaPlayer;
+                    player?.Pause();
+                }
+                catch { }
+
+                var incoming = _showingA ? BannerImageB : BannerImageA;
+                var outgoing = _showingA ? BannerImageA : BannerImageB;
+
+                try
+                {
+                    incoming.Source = new BitmapImage(GetMediaUri(current.Path));
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[BannerImage ERROR] Failed to load image '{current.Path}': {ex.Message}");
+                }
+
+                AnimateOpacity(BannerVideoPlayer, 0.0, 300);
+                AnimateOpacity(outgoing, 0.0, 400);
+                AnimateOpacity(incoming, 1.0, 400, () =>
+                {
+                    _showingA = !_showingA;
+                    _isTransitioning = false;
+                });
+
+                // Start timer for image duration
+                int duration = current.DurationSeconds > 0 ? current.DurationSeconds : 7;
+                _slideTimer.Interval = TimeSpan.FromSeconds(duration);
+                _slideTimer.Stop();
+                _slideTimer.Start();
+            }
+        }
+
+        private Uri GetMediaUri(string path)
+        {
+            try
+            {
+                if (path.StartsWith("ms-appx:///", StringComparison.OrdinalIgnoreCase))
+                {
+                    string relative = path.Substring("ms-appx:///".Length).Replace('/', System.IO.Path.DirectorySeparatorChar);
+                    string localPath = System.IO.Path.Combine(AppContext.BaseDirectory, relative);
+                    if (System.IO.File.Exists(localPath))
+                    {
+                        return new Uri(localPath);
+                    }
+                }
+                return new Uri(path);
+            }
+            catch
+            {
+                return new Uri(path, UriKind.RelativeOrAbsolute);
+            }
+        }
+
+        private void AnimateOpacity(UIElement target, double toOpacity, double durationMs, Action? onCompleted = null)
+        {
+            var anim = new DoubleAnimation
+            {
+                To = toOpacity,
+                Duration = TimeSpan.FromMilliseconds(durationMs)
+            };
+
+            Storyboard.SetTarget(anim, target);
+            Storyboard.SetTargetProperty(anim, "Opacity");
+
+            var sb = new Storyboard();
+            sb.Children.Add(anim);
+
+            if (onCompleted != null)
+            {
+                sb.Completed += (s, e) => onCompleted();
+            }
+
+            sb.Begin();
         }
 
         private void UpdateIndicators()

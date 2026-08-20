@@ -15,5 +15,35 @@
 
     <Grid KeyDown="Window_KeyDown" IsTabStop="True" Background="White">
         <Frame x:Name="RootFrame"/>
+
+        <!-- FULLSCREEN INVALID LICENSE / SYSTEM UNAVAILABLE OVERLAY (BLOCKS ALL TOUCH INPUT) -->
+        <Grid x:Name="LicenseLockoutOverlay"
+              Background="#000000"
+              Visibility="Collapsed"
+              Canvas.ZIndex="9999"
+              IsHitTestVisible="True"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch">
+            <Viewbox Stretch="Uniform" Margin="40">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24" MaxWidth="1000">
+                    <FontIcon Glyph="&#xE7BA;" FontSize="120" Foreground="#FF0000" HorizontalAlignment="Center"/>
+                    <TextBlock Text="SYSTEM UNAVAILABLE: INVALID LICENSE"
+                               FontSize="48"
+                               FontWeight="Black"
+                               Foreground="#FF0000"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               CharacterSpacing="50"/>
+                    <TextBlock x:Name="LicenseLockoutDetailText"
+                               Text="Hardware authentication failed or license token is missing/expired. Please contact authorized kiosk support."
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               Foreground="#CCCCCC"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               Margin="20,0"/>
+                </StackPanel>
+            </Viewbox>
+        </Grid>
     </Grid>
 </Window>

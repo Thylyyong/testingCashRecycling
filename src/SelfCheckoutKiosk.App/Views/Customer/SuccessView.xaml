@@ -154,11 +154,19 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Printer Warning Banner -->
+                <!-- Printer Success Banner -->
+                <Border x:Name="PrinterSuccessBanner" Background="#E6F4EA" BorderBrush="#34A853" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="16,12" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE73E;" FontSize="16" Foreground="#1E8E3E"/>
+                        <TextBlock Text="Receipt printed successfully. Please take your receipt below." FontSize="{StaticResource FontSizeSubtitle}" Foreground="#137333" TextWrapping="Wrap" HorizontalAlignment="Center" FontFamily="{StaticResource GlobalAppFont}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Printer Warning / Failed Banner -->
                 <Border x:Name="PrinterWarningBanner" Background="{StaticResource DangerLightBrush}" BorderBrush="{StaticResource DangerBrush}" BorderThickness="1" CornerRadius="{StaticResource KioskCardCornerRadius}" Padding="16,12" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
                         <FontIcon x:Name="PrinterWarningIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE7BA;" FontSize="16" Foreground="{StaticResource DangerBrush}"/>
-                        <TextBlock x:Name="PrinterWarningText" Text="We couldn't print your receipt — please ask a staff member." FontSize="{StaticResource FontSizeSubtitle}" Foreground="{StaticResource DangerHoverBrush}" TextWrapping="Wrap" HorizontalAlignment="Center" FontFamily="{StaticResource GlobalAppFont}"/>
+                        <TextBlock x:Name="PrinterWarningText" Text="Printer error — please contact staff for assistance." FontSize="{StaticResource FontSizeSubtitle}" Foreground="{StaticResource DangerHoverBrush}" TextWrapping="Wrap" HorizontalAlignment="Center" FontFamily="{StaticResource GlobalAppFont}"/>
                     </StackPanel>
                 </Border>
 

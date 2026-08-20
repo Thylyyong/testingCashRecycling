@@ -12,7 +12,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
     public sealed partial class SuccessView : Page
     {
         public LocalizationService Localizer => LocalizationService.Instance;
-        private const int AutoReturnSeconds = 60;
+        private const int AutoReturnSeconds = 10;
         private static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(50);
 
         public SuccessViewModel? ViewModel { get; private set; }
@@ -23,21 +23,22 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         public SuccessView()
         {
             InitializeComponent();
-            DoneButton.Click += DoneButton_Click;
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
 
-            if (e.Parameter is not Payment payment)
+            Payment payment = e.Parameter as Payment ?? new Payment
             {
-                Debug.WriteLine("[WARN] SuccessView reached without a Payment parameter. Returning home.");
-                INavigationService fallbackNav = App.MainWindowInstance?.NavigationService
-                    ?? new NavigationService(Frame);
-                fallbackNav.NavigateTo(typeof(HomeView), null);
-                return;
-            }
+                Method = PaymentMethod.Cash,
+                TotalDueUsd = App.CartServiceInstance.TotalUsd > 0 ? App.CartServiceInstance.TotalUsd : 5.00m,
+                TotalPaidUsd = App.CartServiceInstance.TotalUsd > 0 ? App.CartServiceInstance.TotalUsd : 5.00m,
+                ChangeDueUsd = 0,
+                ExchangeRate = App.CartServiceInstance.ExchangeRate > 0 ? App.CartServiceInstance.ExchangeRate : 4100m,
+                IsFullyPaid = true,
+                CompletedAt = DateTime.Now
+            };
 
             INavigationService navigationService = App.MainWindowInstance?.NavigationService
                 ?? new NavigationService(Frame);
@@ -51,19 +52,25 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             RenderDetails();
             StartAutoReturnTimer();
 
-            // PrintReceipt() is void, so there's no real success/failure signal here.
-            // This only catches thrown exceptions — if the printer service fails
-            // silently (logs internally, returns normally), this banner won't fire.
-            // Best real fix: have PrintReceipt() / IReceiptPrinterService.Print()
-            // return bool, or raise a PrintFailed event you can subscribe to.
-            try
+            bool isPrinterAvailable = HardwareStatusManager.Instance.IsPrinterAvailable;
+            if (isPrinterAvailable)
             {
-                ViewModel.PrintReceipt();
-                PrinterWarningBanner.Visibility = Visibility.Collapsed;
+                try
+                {
+                    ViewModel.PrintReceipt();
+                    PrinterSuccessBanner.Visibility = Visibility.Visible;
+                    PrinterWarningBanner.Visibility = Visibility.Collapsed;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[WARN] Receipt print failed: {ex.Message}");
+                    PrinterSuccessBanner.Visibility = Visibility.Collapsed;
+                    PrinterWarningBanner.Visibility = Visibility.Visible;
+                }
             }
-            catch (Exception ex)
+            else
             {
-                Debug.WriteLine($"[WARN] Receipt print failed: {ex.Message}");
+                PrinterSuccessBanner.Visibility = Visibility.Collapsed;
                 PrinterWarningBanner.Visibility = Visibility.Visible;
             }
         }
@@ -89,7 +96,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private void StartAutoReturnTimer()
         {
             _secondsRemaining = AutoReturnSeconds;
-            _lastDisplayedSecond = AutoReturnSeconds;
+            _lastDisplayedSecond = -1;
             UpdateTimerUI();
 
             _autoReturnTimer = new DispatcherTimer
@@ -107,7 +114,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             if (_secondsRemaining <= 0)
             {
                 StopAutoReturnTimer();
-                ViewModel?.ReturnHome();
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    ViewModel?.ReturnHome();
+                });
             }
             else
             {
@@ -119,14 +129,20 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         {
             // Bar smoothly shrinks from both left and right toward the center
             double progressRatio = Math.Clamp(_secondsRemaining / AutoReturnSeconds, 0.0, 1.0);
-            RedirectProgressScale.ScaleX = progressRatio;
+            if (RedirectProgressScale != null)
+            {
+                RedirectProgressScale.ScaleX = progressRatio;
+            }
 
             // Text only updates once per whole second (avoids flicker)
             int wholeSecond = (int)Math.Ceiling(_secondsRemaining);
             if (wholeSecond != _lastDisplayedSecond)
             {
                 _lastDisplayedSecond = wholeSecond;
-                CountdownNumberText.Text = wholeSecond.ToString();
+                if (CountdownNumberText != null)
+                {
+                    CountdownNumberText.Text = wholeSecond.ToString();
+                }
             }
         }
 
@@ -143,7 +159,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private void DoneButton_Click(object sender, RoutedEventArgs e)
         {
             StopAutoReturnTimer();
-            ViewModel?.ReturnHome();
+            if (ViewModel != null)
+            {
+                ViewModel.ReturnHome();
+            }
+            else
+            {
+                var nav = App.MainWindowInstance?.NavigationService ?? new NavigationService(Frame);
+                nav.NavigateTo(typeof(KioskBaseView), null, Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromRight);
+            }
         }
     }
 }

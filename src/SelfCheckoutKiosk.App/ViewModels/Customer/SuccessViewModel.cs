@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
@@ -63,29 +63,34 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public string BuildVirtualReceiptText()
         {
             var lines = new System.Text.StringBuilder();
-            lines.AppendLine("      SELF-CHECKOUT KIOSK       ");
-            lines.AppendLine("       OFFICIAL RECEIPT        ");
-            lines.AppendLine(new string('=', 32));
-            lines.AppendLine($"Txn ID:   {TransactionId}");
-            lines.AppendLine($"Date:     {CompletedAtText}");
-            lines.AppendLine(new string('-', 32));
-            lines.AppendLine($"Method:   {MethodLabel}");
-            lines.AppendLine($"Due:      {FormattedTotalDue}");
-            lines.AppendLine($"Paid:     {FormattedTotalPaid}");
+            lines.AppendLine("         SELF-CHECKOUT KIOSK          ");
+            lines.AppendLine("     AUTHENTIC FOOD & BEVERAGES       ");
+            lines.AppendLine("        Phnom Penh, Cambodia          ");
+            lines.AppendLine(new string('=', 38));
+            lines.AppendLine($"Order: {TransactionId,-16} Type: DINE_IN");
+            lines.AppendLine($"Date : {CompletedAtText,-16} Cashier: Kiosk");
+            lines.AppendLine(new string('-', 38));
+            lines.AppendLine("QTY & ITEM                      AMOUNT");
+            lines.AppendLine(new string('-', 38));
+            lines.AppendLine($"1x Order Total                 ${Payment.TotalDueUsd,7:F2}");
+            lines.AppendLine(new string('-', 38));
+            lines.AppendLine($"SUBTOTAL:                      ${Payment.TotalDueUsd,7:F2}");
+            lines.AppendLine(new string('-', 38));
+            lines.AppendLine($"TOTAL (USD):                   ${Payment.TotalDueUsd,7:F2}");
+            lines.AppendLine($"                        {Payment.TotalDueKhr,10:N0} KHR");
+            lines.AppendLine($"PAID:                          ${Payment.TotalPaidUsd,7:F2}");
 
             if (HasChangeDue)
-                lines.AppendLine($"Change:   {FormattedChangeDue}");
-
-            lines.AppendLine(new string('-', 32));
-            lines.AppendLine("ACCEPTED TENDER:");
-
-            foreach (var attempt in AcceptedAttempts)
             {
-                lines.AppendLine($" [{attempt.Timestamp:HH:mm:ss}]  {attempt.DisplayAmount,16}");
+                lines.AppendLine($"CHANGE:                        {Payment.ChangeDueKhr,10:N0} KHR");
             }
 
-            lines.AppendLine(new string('=', 32));
-            lines.AppendLine("  Thank you for shopping with us! ");
+            lines.AppendLine(new string('-', 38));
+            lines.AppendLine($"PAYMENT METHOD:                 {MethodLabel.ToUpperInvariant()}");
+            lines.AppendLine(new string('=', 38));
+            lines.AppendLine("      THANK YOU FOR YOUR VISIT!       ");
+            lines.AppendLine("          Please Come Again           ");
+            lines.AppendLine("         Powered by Kiosk POS         ");
 
             return lines.ToString();
         }
