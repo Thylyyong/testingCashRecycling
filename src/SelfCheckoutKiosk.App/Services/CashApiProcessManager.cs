@@ -89,12 +89,33 @@ public static class CashApiProcessManager
         }
     }
 
+    /// <summary>
+    /// Controls whether the Cash API / Simulator process runs silently in the background (hidden window)
+    /// or in a visible console window for debugging.
+    /// Defaults to TRUE (hidden background execution).
+    /// Can be toggled in code (CashApiProcessManager.RunInBackground = false) or via environment variable
+    /// 'SELFCHECKOUTKIOSK_SHOW_CASH_API_WINDOW=1' or 'true'.
+    /// </summary>
+    public static bool RunInBackground { get; set; } = true;
+
+    private static bool ShouldRunInBackground()
+    {
+        string? showEnv = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_SHOW_CASH_API_WINDOW");
+        if (!string.IsNullOrWhiteSpace(showEnv) && (showEnv == "1" || showEnv.Equals("true", StringComparison.OrdinalIgnoreCase)))
+        {
+            return false; // User requested visible window for debugging
+        }
+        return RunInBackground;
+    }
+
     private static async Task<string> LaunchCashApiProcessAsync(CancellationToken cancellationToken = default)
     {
         string? envUrl = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_BASE_URL");
         string[] candidateUrls = !string.IsNullOrWhiteSpace(envUrl)
             ? new[] { envUrl.TrimEnd('/') }
             : new[] { "http://127.0.0.1:5000", "http://localhost:5000", "http://localhost:5055", "http://127.0.0.1:5055" };
+
+        bool runInBackground = ShouldRunInBackground();
 
         lock (_lock)
         {
@@ -112,16 +133,16 @@ public static class CashApiProcessManager
                     {
                         FileName = exePath,
                         WorkingDirectory = Path.GetDirectoryName(exePath) ?? AppContext.BaseDirectory,
-                        UseShellExecute = true,
-                        CreateNoWindow = false,
-                        WindowStyle = ProcessWindowStyle.Normal
+                        UseShellExecute = !runInBackground,
+                        CreateNoWindow = runInBackground,
+                        WindowStyle = runInBackground ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal
                     };
 
                     _apiProcess = Process.Start(startInfo);
                     if (_apiProcess != null)
                     {
                         AppDomain.CurrentDomain.ProcessExit += (_, _) => KillProcessSafely(_apiProcess);
-                        Console.WriteLine($"[CashApiProcessManager] Started Cash API process: {exePath} (PID: {_apiProcess.Id})");
+                        Console.WriteLine($"[CashApiProcessManager] Started Cash API process: {exePath} (PID: {_apiProcess.Id}, Background: {runInBackground})");
                     }
                 }
                 catch (Exception ex)
@@ -142,16 +163,16 @@ public static class CashApiProcessManager
                             FileName = "dotnet",
                             Arguments = $"run --project \"{projectPath}\"",
                             WorkingDirectory = Path.GetDirectoryName(projectPath) ?? AppContext.BaseDirectory,
-                            UseShellExecute = true,
-                            CreateNoWindow = false,
-                            WindowStyle = ProcessWindowStyle.Normal
+                            UseShellExecute = !runInBackground,
+                            CreateNoWindow = runInBackground,
+                            WindowStyle = runInBackground ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal
                         };
 
                         _apiProcess = Process.Start(startInfo);
                         if (_apiProcess != null)
                         {
                             AppDomain.CurrentDomain.ProcessExit += (_, _) => KillProcessSafely(_apiProcess);
-                            Console.WriteLine($"[CashApiProcessManager] Started CashDeviceSimulator in separate console (PID: {_apiProcess.Id})");
+                            Console.WriteLine($"[CashApiProcessManager] Started CashDeviceSimulator (PID: {_apiProcess.Id}, Background: {runInBackground})");
                         }
                     }
                     catch (Exception ex)

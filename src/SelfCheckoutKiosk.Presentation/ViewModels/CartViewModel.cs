@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using SelfCheckoutKiosk.Core.Currency;
 using SelfCheckoutKiosk.Core.Engine;
 using SelfCheckoutKiosk.Domain.Enums;
 using SelfCheckoutKiosk.Presentation.Services;
@@ -30,9 +31,8 @@ public sealed class CartViewModel : KioskViewModelBase
     }
 
     /// <summary>Display-only KHR equivalent of <see cref="RunningTotalUsd"/>
-    /// at the engine's cached offline rate — never used for change
-    /// calculation (that stays entirely inside the engine).</summary>
-    public decimal RunningTotalKhr => RunningTotalUsd * Engine.UsdToKhrRate;
+    /// at the engine's cached offline rate — rounded up to the nearest 100 KHR per Cambodian retail rule.</summary>
+    public decimal RunningTotalKhr => DualCurrencyCalculator.CalculateTotalKhr(RunningTotalUsd, Engine.UsdToKhrRate);
 
     public bool HasItems => Items.Count > 0;
 

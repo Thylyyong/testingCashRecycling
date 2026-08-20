@@ -252,6 +252,7 @@ public sealed class LLCoreLogicEngineTests : IDisposable
 
     private sealed class FakeBarcodeScanner : IBarcodeScanner
     {
+        public bool IsConnected => true;
         public event EventHandler<BarcodeScannedEventArgs>? OnBarcodeScanned;
         public Task ConnectAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task DisconnectAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -261,6 +262,7 @@ public sealed class LLCoreLogicEngineTests : IDisposable
 #pragma warning disable CS0067 // raised by the interface contract but unused by these tests
     private sealed class FakePrinter : IReceiptPrinter
     {
+        public bool IsConnected => true;
         public event EventHandler<PrintJobStatusEventArgs>? OnJobStatusChanged;
         public Task ConnectAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<bool> IsPaperPresentAsync(CancellationToken cancellationToken = default) => Task.FromResult(true);

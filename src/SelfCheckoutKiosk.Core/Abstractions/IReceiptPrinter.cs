@@ -7,6 +7,7 @@ namespace SelfCheckoutKiosk.Core.Abstractions;
 /// </summary>
 public interface IReceiptPrinter
 {
+    bool IsConnected { get; }
     event EventHandler<PrintJobStatusEventArgs>? OnJobStatusChanged;
 
     Task ConnectAsync(CancellationToken cancellationToken = default);

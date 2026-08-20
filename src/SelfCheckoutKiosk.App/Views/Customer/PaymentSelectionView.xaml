@@ -130,14 +130,24 @@
         <!-- 0. HEADER                                                 -->
         <!-- ========================================================= -->
         <Grid Grid.Row="0" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1">
-            <Viewbox x:Name="HeaderViewbox" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" x:FieldModifier="public">
-                <Grid x:Name="HeaderContainer" Margin="32,20,32,16">
-                    <StackPanel Spacing="4" HorizontalAlignment="Left">
-                        <TextBlock x:Name="HeaderSubTitle" Text="{x:Bind Localizer.GetString('CHECKOUT'), Mode=OneWay}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="100"/>
-                        <TextBlock x:Name="HeaderTitle" Text="{x:Bind Localizer.GetString('PaymentOptionTitle'), Mode=OneWay}" FontSize="36" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+            <Grid x:Name="HeaderContainer" Margin="32,20,32,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="4" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBlock x:Name="HeaderSubTitle" Text="{x:Bind Localizer.GetString('CHECKOUT'), Mode=OneWay}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="100"/>
+                    <TextBlock x:Name="HeaderTitle" Text="{x:Bind Localizer.GetString('PaymentOptionTitle'), Mode=OneWay}" FontSize="36" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                </StackPanel>
+                <Button x:Name="HelpButton" Grid.Column="1" Height="48" Padding="18,0" CornerRadius="12"
+                        Background="{StaticResource SurfaceHoverBrush}" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1.5"
+                        Click="HelpButton_Click" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE897;" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="{StaticResource AccentBlueBrush}"/>
+                        <TextBlock Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
-                </Grid>
-            </Viewbox>
+                </Button>
+            </Grid>
         </Grid>
 
         <!-- ========================================================= -->

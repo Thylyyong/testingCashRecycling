@@ -41,6 +41,7 @@ public sealed class CompositionSeamTests
 
     private sealed class FakeScanner : IBarcodeScanner
     {
+        public bool IsConnected => true;
         public event EventHandler<BarcodeScannedEventArgs>? OnBarcodeScanned;
         public Task ConnectAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task DisconnectAsync(CancellationToken ct = default) => Task.CompletedTask;
@@ -48,6 +49,7 @@ public sealed class CompositionSeamTests
 
     private sealed class FakePrinter : IReceiptPrinter
     {
+        public bool IsConnected => true;
         public event EventHandler<PrintJobStatusEventArgs>? OnJobStatusChanged;
         public Task ConnectAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task<bool> IsPaperPresentAsync(CancellationToken ct = default) => Task.FromResult(true);

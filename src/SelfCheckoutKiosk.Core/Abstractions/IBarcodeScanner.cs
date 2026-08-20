@@ -8,6 +8,7 @@ namespace SelfCheckoutKiosk.Core.Abstractions;
 /// </summary>
 public interface IBarcodeScanner
 {
+    bool IsConnected { get; }
     event EventHandler<BarcodeScannedEventArgs>? OnBarcodeScanned;
 
     Task ConnectAsync(CancellationToken cancellationToken = default);

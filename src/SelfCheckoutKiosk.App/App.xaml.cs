@@ -328,7 +328,7 @@ public partial class App : Application
             {
                 await BarcodeScannerInstance.ConnectAsync();
                 BarcodeScannerInstance.OnBarcodeScanned += HandleBarcodeScanned;
-                HardwareStatusManager.Instance.SetScannerAvailability(true);
+                HardwareStatusManager.Instance.SetScannerAvailability(BarcodeScannerInstance.IsConnected);
             }
             catch
             {
@@ -340,7 +340,7 @@ public partial class App : Application
             try
             {
                 await ReceiptPrinterInstance.ConnectAsync();
-                HardwareStatusManager.Instance.SetPrinterAvailability(true);
+                HardwareStatusManager.Instance.SetPrinterAvailability(ReceiptPrinterInstance.IsConnected);
             }
             catch
             {
@@ -673,6 +673,113 @@ public partial class App : Application
             CashApiProcessManager.Shutdown();
         }
         catch { }
+    }
+
+    /// <summary>
+    /// Displays a standardized modal alert dialog requesting staff assistance (matching design system specs).
+    /// </summary>
+    public static async Task<bool> ShowStaffAssistanceAlertAsync(string title = "One moment — staff assistance needed", string message = "A staff member needs to approve one of your items. Please wait — someone will be with you shortly.")
+    {
+        if (MainWindowInstance == null) return false;
+
+        var tcs = new TaskCompletionSource<bool>();
+
+        MainWindowInstance.DispatcherQueue.TryEnqueue(async () =>
+        {
+            try
+            {
+                var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+                {
+                    XamlRoot = MainWindowInstance.Content.XamlRoot,
+                    RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Light,
+                    Style = (Microsoft.UI.Xaml.Style)Microsoft.UI.Xaml.Application.Current.Resources["KioskContentDialogStyle"]
+                };
+
+                var container = new Microsoft.UI.Xaml.Controls.StackPanel
+                {
+                    HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Center,
+                    Spacing = 16,
+                    Padding = new Microsoft.UI.Xaml.Thickness(16, 12, 16, 12),
+                    MaxWidth = 460
+                };
+
+                var iconBadge = new Microsoft.UI.Xaml.Controls.Border
+                {
+                    Width = 64,
+                    Height = 64,
+                    CornerRadius = new Microsoft.UI.Xaml.CornerRadius(32),
+                    Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 239, 246, 255)),
+                    BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 219, 234, 254)),
+                    BorderThickness = new Microsoft.UI.Xaml.Thickness(1.5),
+                    HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Center,
+                    Child = new Microsoft.UI.Xaml.Controls.FontIcon
+                    {
+                        FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons"),
+                        Glyph = "\uE77B",
+                        FontSize = 26,
+                        Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 37, 99, 235)),
+                        HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Center,
+                        VerticalAlignment = Microsoft.UI.Xaml.VerticalAlignment.Center
+                    }
+                };
+                container.Children.Add(iconBadge);
+
+                var titleBlock = new Microsoft.UI.Xaml.Controls.TextBlock
+                {
+                    Text = title,
+                    FontSize = 20,
+                    FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                    Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)),
+                    HorizontalTextAlignment = Microsoft.UI.Xaml.TextAlignment.Center,
+                    TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap
+                };
+                container.Children.Add(titleBlock);
+
+                var msgBlock = new Microsoft.UI.Xaml.Controls.TextBlock
+                {
+                    Text = message,
+                    FontSize = 14,
+                    Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
+                    HorizontalTextAlignment = Microsoft.UI.Xaml.TextAlignment.Center,
+                    TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 0, 0, 12)
+                };
+                container.Children.Add(msgBlock);
+
+                var adminBtn = new Microsoft.UI.Xaml.Controls.Button
+                {
+                    Content = new Microsoft.UI.Xaml.Controls.TextBlock { Text = "Admin", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 14, Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)) },
+                    Height = 40,
+                    Padding = new Microsoft.UI.Xaml.Thickness(24, 0, 24, 0),
+                    CornerRadius = new Microsoft.UI.Xaml.CornerRadius(8),
+                    Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 241, 245, 249)),
+                    BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 226, 232, 240)),
+                    BorderThickness = new Microsoft.UI.Xaml.Thickness(1),
+                    HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Left
+                };
+                adminBtn.Click += (s, e) =>
+                {
+                    dialog.Hide();
+                    MainWindowInstance.NavigationService.NavigateTo(
+                        typeof(Views.Admin.AdminLoginView),
+                        null,
+                        Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromBottom
+                    );
+                };
+                container.Children.Add(adminBtn);
+
+                dialog.Content = container;
+                await dialog.ShowAsync();
+                tcs.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticLogger.LogError($"[StaffAssistanceModal] Error: {ex.Message}", ex);
+                tcs.TrySetResult(false);
+            }
+        });
+
+        return await tcs.Task;
     }
 
     /// <summary>

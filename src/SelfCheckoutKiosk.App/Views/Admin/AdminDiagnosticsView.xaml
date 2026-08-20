@@ -19,7 +19,6 @@
             <Setter Property="Margin" Value="0,0,0,14"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
         </Style>
-
         <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="Bold"/>
@@ -43,7 +42,6 @@
                         <Setter Target="SingleColumnStack.Visibility" Value="Visible"/>
                     </VisualState.Setters>
                 </VisualState>
-
                 <!-- Horizontal Widescreen (16:9: >= 1100px) -->
                 <VisualState x:Name="HorizontalState">
                     <VisualState.StateTriggers>
@@ -82,7 +80,7 @@
                     <TextBlock Text="Attendant Hardware &amp; Vault Diagnostics" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
                 </StackPanel>
 
-                <!-- Clean Close Button in Header -->
+                <!-- Clean Close Button (text only, no icon) -->
                 <Button
                     x:Name="CloseButton"
                     Grid.Column="1"
@@ -92,15 +90,12 @@
                     CornerRadius="8"
                     VerticalAlignment="Center"
                     Style="{StaticResource DialogButtonStyle}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE711;" FontSize="12" Foreground="#0F172A"/>
-                        <TextBlock Text="Close" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
-                    </StackPanel>
+                    <TextBlock Text="Close" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
                 </Button>
             </Grid>
         </Border>
 
-        <!-- MAIN SCROLLABLE CONTENT (Aligned Symmetrically with Header) -->
+        <!-- MAIN SCROLLABLE CONTENT -->
         <ScrollViewer x:Name="ContentScrollViewer" Grid.Row="1" Padding="20,16" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="0" HorizontalAlignment="Stretch">
 
@@ -119,7 +114,77 @@
                     </StackPanel>
                 </Border>
 
-                <!-- PROMINENT MEDIA & BRANDING ACCESS CARD (Moved out of Header) -->
+                <!-- ======================================================== -->
+                <!-- AGE-RESTRICTED ITEM APPROVAL CARD (New design, kept)      -->
+                <!-- ======================================================== -->
+                <Border
+                    Visibility="{x:Bind ViewModel.HasPendingAgeApproval, Mode=OneWay}"
+                    Background="White"
+                    BorderBrush="#E2E8F0"
+                    BorderThickness="1.5"
+                    CornerRadius="12"
+                    Padding="18,16"
+                    Margin="0,0,0,14">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Age-Restricted Item — Approval Needed" FontSize="14" FontWeight="SemiBold" Foreground="#475569"/>
+
+                        <!-- Item Name & Barcode/SKU -->
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Bind ViewModel.PendingAgeItemName, Mode=OneWay}" FontSize="17" FontWeight="Bold" Foreground="#0F172A"/>
+                            <TextBlock Text="{x:Bind ViewModel.PendingAgeItemSku, Mode=OneWay}" FontSize="13" Foreground="#64748B" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Approve & Reject Buttons -->
+                        <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,8,0,0">
+                            <!-- Approve Button -->
+                            <Button
+                                x:Name="ApproveAgeButton"
+                                Click="ApproveAgeButton_Click"
+                                Height="40"
+                                Width="120"
+                                CornerRadius="8"
+                                Background="#2563EB"
+                                Foreground="White"
+                                FontWeight="Bold"
+                                FontSize="13"
+                                BorderThickness="0">
+                                <Button.Resources>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#1D4ED8"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#1E40AF"/>
+                                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White"/>
+                                    <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
+                                </Button.Resources>
+                                <TextBlock Text="Approve" FontWeight="Bold" Foreground="White"/>
+                            </Button>
+
+                            <!-- Reject Button -->
+                            <Button
+                                x:Name="RejectAgeButton"
+                                Click="RejectAgeButton_Click"
+                                Height="40"
+                                Width="120"
+                                CornerRadius="8"
+                                Background="White"
+                                BorderBrush="#EF4444"
+                                BorderThickness="1.5"
+                                Foreground="#EF4444"
+                                FontWeight="Bold"
+                                FontSize="13">
+                                <Button.Resources>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FEF2F2"/>
+                                    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FEE2E2"/>
+                                    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#DC2626"/>
+                                    <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#B91C1C"/>
+                                    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#DC2626"/>
+                                    <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#B91C1C"/>
+                                </Button.Resources>
+                                <TextBlock Text="Reject" FontWeight="Bold" Foreground="#EF4444"/>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- PROMINENT MEDIA & BRANDING ACCESS CARD -->
                 <Border Background="White" BorderBrush="#CBD5E1" BorderThickness="1.5" CornerRadius="12" Padding="18,14" Margin="0,0,0,14" HorizontalAlignment="Stretch">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -127,16 +192,13 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-
                         <Border Grid.Column="0" Width="40" Height="40" CornerRadius="10" Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" Margin="0,0,12,0">
                             <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xEB9F;" FontSize="18" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                             <TextBlock Text="Media &amp; Branding Management" FontWeight="Bold" FontSize="14" Foreground="#0F172A"/>
                             <TextBlock Text="Configure welcome attract playlist and branding configurations" FontSize="12" Foreground="#64748B" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
-
                         <Button
                             x:Name="MediaBrandingButton"
                             Grid.Column="2"
@@ -155,7 +217,7 @@
                 </Border>
 
                 <!-- ======================================================== -->
-                <!-- 1. HORIZONTAL WIDESCREEN 2-COLUMN VIEW -->
+                <!-- 1. HORIZONTAL WIDESCREEN 2-COLUMN VIEW                    -->
                 <!-- ======================================================== -->
                 <Grid x:Name="TwoColumnGrid" ColumnSpacing="16" Visibility="Visible" HorizontalAlignment="Stretch">
                     <Grid.ColumnDefinitions>
@@ -169,7 +231,6 @@
                         <Border Style="{StaticResource DiagnosticsCardStyle}">
                             <StackPanel Spacing="10">
                                 <TextBlock Text="Hardware Connectivity" Style="{StaticResource SectionHeaderStyle}"/>
-
                                 <ItemsControl ItemsSource="{x:Bind ViewModel.HardwareDevices}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -185,16 +246,13 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
-
                                                     <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Margin="0,0,10,0">
                                                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="{x:Bind Glyph}" FontSize="15" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
-
                                                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                                                         <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="14" Foreground="#0F172A"/>
                                                         <TextBlock Text="{x:Bind PortOrInterface}" FontSize="12" Foreground="#64748B"/>
                                                     </StackPanel>
-
                                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                                         <Ellipse Width="10" Height="10" Fill="{x:Bind StatusColor}"/>
                                                         <TextBlock Text="{x:Bind StatusText}" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
@@ -210,9 +268,42 @@
                         <!-- Cash Recycler Cassettes Card -->
                         <Border Style="{StaticResource DiagnosticsCardStyle}">
                             <StackPanel Spacing="10">
-                                <TextBlock Text="Cash Recycler Vault Breakdown" Style="{StaticResource SectionHeaderStyle}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Cash Recycler Vault Breakdown" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center" Margin="0"/>
+                                    <!-- Reset Vault Button -->
+                                    <Button
+                                        x:Name="ResetVaultButton"
+                                        Grid.Column="1"
+                                        Click="ResetVaultButton_Click"
+                                        Height="34"
+                                        Padding="14,0"
+                                        CornerRadius="6"
+                                        Background="#FEF2F2"
+                                        BorderBrush="#FECACA"
+                                        BorderThickness="1.5"
+                                        Foreground="#DC2626"
+                                        FontWeight="Bold"
+                                        FontSize="11">
+                                        <Button.Resources>
+                                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FEE2E2"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FECACA"/>
+                                            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#B91C1C"/>
+                                            <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#991B1B"/>
+                                            <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#FCA5A5"/>
+                                            <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#F87171"/>
+                                        </Button.Resources>
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74D;" FontSize="11" Foreground="#DC2626"/>
+                                            <TextBlock Text="Reset Counts" FontSize="11" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
 
-                                <TextBlock Text="Khmer Riel (KHR)" FontSize="13" FontWeight="Bold" Foreground="#475569"/>
+                                <TextBlock Text="Khmer Riel (KHR)" FontSize="12" FontWeight="Bold" Foreground="#475569"/>
                                 <ItemsControl ItemsSource="{x:Bind ViewModel.KhrCassettes}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -221,8 +312,8 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="models:CassetteCountItem">
-                                            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,6,6">
-                                                <TextBlock FontSize="12" Foreground="#0F172A" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="4,2" Margin="0,0,4,4">
+                                                <TextBlock FontSize="11" Foreground="#0F172A" VerticalAlignment="Center" HorizontalAlignment="Center">
                                                     <Run Text="{x:Bind DenominationLabel}" FontWeight="Bold"/>
                                                     <Run Text=" : " Foreground="#94A3B8"/>
                                                     <Run Text="{x:Bind Count, Mode=OneWay}" FontWeight="SemiBold" Foreground="#2563EB"/>
@@ -232,17 +323,17 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <TextBlock Text="US Dollar (USD)" FontSize="13" FontWeight="Bold" Foreground="#475569" Margin="0,8,0,0"/>
+                                <TextBlock Text="US Dollar (USD)" FontSize="12" FontWeight="Bold" Foreground="#475569" Margin="0,6,0,0"/>
                                 <ItemsControl ItemsSource="{x:Bind ViewModel.UsdCassettes}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <VariableSizedWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="4" ItemWidth="125" ItemHeight="42"/>
+                                            <VariableSizedWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="3" ItemWidth="115" ItemHeight="38"/>
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="models:CassetteCountItem">
-                                            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,6,6">
-                                                <TextBlock FontSize="12" Foreground="#0F172A" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="4,2" Margin="0,0,4,4">
+                                                <TextBlock FontSize="11" Foreground="#0F172A" VerticalAlignment="Center" HorizontalAlignment="Center">
                                                     <Run Text="{x:Bind DenominationLabel}" FontWeight="Bold"/>
                                                     <Run Text=" : " Foreground="#94A3B8"/>
                                                     <Run Text="{x:Bind Count, Mode=OneWay}" FontWeight="SemiBold" Foreground="#2563EB"/>
@@ -253,7 +344,10 @@
                                 </ItemsControl>
                             </StackPanel>
                         </Border>
+                    </StackPanel>
 
+                    <!-- RIGHT COLUMN -->
+                    <StackPanel Grid.Column="1" Spacing="0">
                         <!-- Hardware Logs Card -->
                         <Border Style="{StaticResource DiagnosticsCardStyle}">
                             <Grid>
@@ -263,19 +357,16 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock Text="Unresolved Hardware Logs" FontWeight="Bold" FontSize="14" Foreground="#0F172A"/>
-                                    <TextBlock Text="Hardware fault and error queue" FontSize="12" Foreground="#64748B"/>
+                                    <TextBlock Text="Unresolved Hardware Logs" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
+                                    <TextBlock Text="Hardware fault and error queue" FontSize="11" Foreground="#64748B"/>
                                 </StackPanel>
 
-                                <Border Grid.Column="1" Background="#DCFCE7" BorderBrush="#86EFAC" BorderThickness="1" CornerRadius="6" Padding="14,4" VerticalAlignment="Center">
-                                    <TextBlock Text="{x:Bind ViewModel.UnresolvedLogCount, Mode=OneWay}" FontWeight="Bold" FontSize="16" Foreground="#166534"/>
+                                <Border Grid.Column="1" Background="#DCFCE7" BorderBrush="#86EFAC" BorderThickness="1" CornerRadius="6" Padding="12,3" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind ViewModel.UnresolvedLogCount, Mode=OneWay}" FontWeight="Bold" FontSize="15" Foreground="#166534"/>
                                 </Border>
                             </Grid>
                         </Border>
-                    </StackPanel>
 
-                    <!-- RIGHT COLUMN -->
-                    <StackPanel Grid.Column="1" Spacing="0">
                         <!-- License Card -->
                         <Border Style="{StaticResource DiagnosticsCardStyle}">
                             <StackPanel Spacing="10">
@@ -288,20 +379,20 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0" Spacing="2">
-                                        <TextBlock Text="Tier:" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
-                                        <TextBlock Text="{x:Bind ViewModel.LicenseTier, Mode=OneWay}" FontWeight="Bold" FontSize="14" Foreground="#0F172A"/>
+                                        <TextBlock Text="Tier:" FontSize="11" FontWeight="SemiBold" Foreground="#64748B"/>
+                                        <TextBlock Text="{x:Bind ViewModel.LicenseTier, Mode=OneWay}" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1" Spacing="2">
-                                        <TextBlock Text="Expires:" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
-                                        <TextBlock Text="{x:Bind ViewModel.LicenseExpiry, Mode=OneWay}" FontWeight="Bold" FontSize="14" Foreground="#0F172A"/>
+                                        <TextBlock Text="Expires:" FontSize="11" FontWeight="SemiBold" Foreground="#64748B"/>
+                                        <TextBlock Text="{x:Bind ViewModel.LicenseExpiry, Mode=OneWay}" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
                                     </StackPanel>
                                 </Grid>
 
                                 <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,4,0,0">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xED14;" FontSize="15" Foreground="#2563EB"/>
-                                        <TextBlock Text="Scan a license QR code to activate or renew." FontSize="12" FontWeight="SemiBold" Foreground="#475569" VerticalAlignment="Center"/>
+                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xED14;" FontSize="14" Foreground="#2563EB"/>
+                                        <TextBlock Text="Scan a license QR code to activate or renew." FontSize="11" FontWeight="SemiBold" Foreground="#475569" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
@@ -316,8 +407,8 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock Text="Cloud Synchronization" FontWeight="Bold" FontSize="14" Foreground="#0F172A"/>
-                                    <TextBlock FontSize="12" Foreground="#64748B">
+                                    <TextBlock Text="Cloud Synchronization" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
+                                    <TextBlock FontSize="11" Foreground="#64748B">
                                         <Run Text="Last Sync: "/>
                                         <Run Text="{x:Bind ViewModel.LastSyncTime, Mode=OneWay}" FontWeight="SemiBold" Foreground="#0F172A"/>
                                     </TextBlock>
@@ -327,13 +418,13 @@
                                     Grid.Column="1"
                                     Click="SyncCloudButton_Click"
                                     IsEnabled="{x:Bind ViewModel.IsNotSyncing, Mode=OneWay}"
-                                    Height="38"
-                                    Padding="16,0"
-                                    CornerRadius="8"
+                                    Height="36"
+                                    Padding="14,0"
+                                    CornerRadius="6"
                                     Style="{StaticResource DialogButtonStyle}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE895;" FontSize="13" Foreground="#2563EB"/>
-                                        <TextBlock Text="Sync Now" FontSize="12" FontWeight="Bold"/>
+                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE895;" FontSize="12" Foreground="#2563EB"/>
+                                        <TextBlock Text="Sync Now" FontSize="11" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Button>
                             </Grid>
@@ -346,14 +437,14 @@
                                 <Button
                                     x:Name="ReprintButton"
                                     Click="ReprintReceiptButton_Click"
-                                    Height="42"
-                                    Padding="20,0"
+                                    Height="40"
+                                    Padding="18,0"
                                     HorizontalAlignment="Left"
                                     CornerRadius="8"
                                     Style="{StaticResource AccentButtonStyle}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE749;" FontSize="14" Foreground="White"/>
-                                        <TextBlock Text="Reprint Last Receipt" FontWeight="Bold" FontSize="13" Foreground="White"/>
+                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE749;" FontSize="13" Foreground="White"/>
+                                        <TextBlock Text="Reprint Last Receipt" FontWeight="Bold" FontSize="12" Foreground="White"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -362,14 +453,14 @@
                 </Grid>
 
                 <!-- ======================================================== -->
-                <!-- 2. VERTICAL PORTRAIT SINGLE-COLUMN VIEW -->
+                <!-- 2. VERTICAL PORTRAIT SINGLE-COLUMN VIEW                   -->
                 <!-- ======================================================== -->
                 <StackPanel x:Name="SingleColumnStack" Spacing="0" Visibility="Collapsed" HorizontalAlignment="Stretch">
+
                     <!-- Hardware Connectivity Card -->
                     <Border Style="{StaticResource DiagnosticsCardStyle}">
                         <StackPanel Spacing="10">
                             <TextBlock Text="Hardware Connectivity" Style="{StaticResource SectionHeaderStyle}"/>
-
                             <ItemsControl ItemsSource="{x:Bind ViewModel.HardwareDevices}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -385,19 +476,16 @@
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-
                                                 <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" Margin="0,0,10,0">
                                                     <FontIcon FontFamily="Segoe Fluent Icons" Glyph="{x:Bind Glyph}" FontSize="15" Foreground="#2563EB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
-
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
-                                                    <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
-                                                    <TextBlock Text="{x:Bind PortOrInterface}" FontSize="11" Foreground="#64748B"/>
+                                                    <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="14" Foreground="#0F172A"/>
+                                                    <TextBlock Text="{x:Bind PortOrInterface}" FontSize="12" Foreground="#64748B"/>
                                                 </StackPanel>
-
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                    <Ellipse Width="8" Height="8" Fill="{x:Bind StatusColor}"/>
-                                                    <TextBlock Text="{x:Bind StatusText}" FontWeight="Bold" FontSize="12" Foreground="#0F172A"/>
+                                                    <Ellipse Width="10" Height="10" Fill="{x:Bind StatusColor}"/>
+                                                    <TextBlock Text="{x:Bind StatusText}" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
@@ -407,16 +495,47 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Cash Recycler Cassettes Card (3 Columns with responsive ItemWidth) -->
+                    <!-- Cash Recycler Cassettes Card -->
                     <Border Style="{StaticResource DiagnosticsCardStyle}">
                         <StackPanel Spacing="10">
-                            <TextBlock Text="Cash Recycler Vault Breakdown" Style="{StaticResource SectionHeaderStyle}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Cash Recycler Vault Breakdown" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center" Margin="0"/>
+                                <Button
+                                    Grid.Column="1"
+                                    Click="ResetVaultButton_Click"
+                                    Height="34"
+                                    Padding="14,0"
+                                    CornerRadius="6"
+                                    Background="#FEF2F2"
+                                    BorderBrush="#FECACA"
+                                    BorderThickness="1.5"
+                                    Foreground="#DC2626"
+                                    FontWeight="Bold"
+                                    FontSize="11">
+                                    <Button.Resources>
+                                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FEE2E2"/>
+                                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FECACA"/>
+                                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#B91C1C"/>
+                                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#991B1B"/>
+                                        <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#FCA5A5"/>
+                                        <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#F87171"/>
+                                    </Button.Resources>
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74D;" FontSize="11" Foreground="#DC2626"/>
+                                        <TextBlock Text="Reset Counts" FontSize="11" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
 
                             <TextBlock Text="Khmer Riel (KHR)" FontSize="12" FontWeight="Bold" Foreground="#475569"/>
                             <ItemsControl ItemsSource="{x:Bind ViewModel.KhrCassettes}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <VariableSizedWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="3" ItemWidth="115" ItemHeight="38"/>
+                                        <VariableSizedWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="4" ItemWidth="125" ItemHeight="42"/>
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
@@ -554,6 +673,7 @@
                             </Button>
                         </StackPanel>
                     </Border>
+
                 </StackPanel>
 
             </StackPanel>

@@ -60,6 +60,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             this.Loaded += CartView_Loaded;
             this.Unloaded += CartView_Unloaded;
 
+            // Subscribe permanently (not in Loaded/Unloaded) so the event fires
+            // even while CartView is off-screen during admin navigation.
+            AgeRestrictedApprovalManager.Instance.OnProductApproved += HandleAgeProductApproved;
+
             HardwareStatusManager.Instance.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(HardwareStatusManager.IsServerOnline))
@@ -106,6 +110,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             {
                 App.BarcodeScannerInstance.OnBarcodeScanned -= Scanner_OnBarcodeScanned;
             }
+        }
+
+        private void HandleAgeProductApproved(Product product)
+        {
+            DispatcherQueue?.TryEnqueue(() =>
+            {
+                ViewModel.AddItem(product.Name, product.Sku, product.Price, 1);
+                UpdateCartStateUI();
+            });
         }
 
         private void Scanner_OnBarcodeScanned(object? sender, SelfCheckoutKiosk.Core.Abstractions.BarcodeScannedEventArgs e)
@@ -199,18 +212,138 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async Task ProcessScannedBarcodeAsync(string sku)
         {
-            bool added = ViewModel.TryAddScannedBarcode(sku, out _);
-
-            if (added)
+            var product = ViewModel.FindProductBySku(sku);
+            if (product == null)
             {
-                UpdateCartStateUI();
+                var notFoundDialog = CreateBaseDialog("Item Not Found", $"No product found for barcode: {sku}");
+                notFoundDialog.CloseButtonText = "OK";
+                await ShowDialogBlockingScansAsync(notFoundDialog);
+                return;
+            }
+
+            if (product.IsAgeRestricted)
+            {
+                await ShowStaffAssistanceApprovalModalAsync(product);
             }
             else
             {
-                var dialog = CreateBaseDialog("Item Not Found", $"No product found for barcode: {sku}");
-                dialog.CloseButtonText = "OK";
-                await ShowDialogBlockingScansAsync(dialog);
+                ViewModel.AddItem(product.Name, product.Sku, product.Price, 1);
+                UpdateCartStateUI();
             }
+        }
+
+        private async Task<bool> ShowStaffAssistanceApprovalModalAsync(Product product)
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = this.XamlRoot ?? App.MainWindowInstance?.Content?.XamlRoot,
+                RequestedTheme = ElementTheme.Light,
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"]
+            };
+
+            var container = new StackPanel
+            {
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Spacing = 16,
+                Padding = new Thickness(12, 10, 12, 10),
+                MaxWidth = 460
+            };
+
+            var iconBadge = new Border
+            {
+                Width = 64,
+                Height = 64,
+                CornerRadius = new CornerRadius(32),
+                Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 239, 246, 255)),
+                BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 219, 234, 254)),
+                BorderThickness = new Thickness(1.5),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Child = new FontIcon
+                {
+                    FontFamily = new FontFamily("Segoe Fluent Icons"),
+                    Glyph = "\uE77B",
+                    FontSize = 26,
+                    Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 37, 99, 235)),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            container.Children.Add(iconBadge);
+
+            var titleText = new TextBlock
+            {
+                Text = "One moment — staff assistance needed",
+                FontSize = 20,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)),
+                HorizontalTextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.Wrap
+            };
+            container.Children.Add(titleText);
+
+            var subtitleText = new TextBlock
+            {
+                Text = "A staff member needs to approve one of your items. Please wait — someone will be with you shortly.",
+                FontSize = 14,
+                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
+                HorizontalTextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            container.Children.Add(subtitleText);
+
+            var adminBtn = new Button
+            {
+                Content = new TextBlock { Text = "Admin", FontWeight = FontWeights.SemiBold, FontSize = 14, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 15, 23, 42)) },
+                Height = 40,
+                Padding = new Thickness(24, 0, 24, 0),
+                CornerRadius = new CornerRadius(8),
+                Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 241, 245, 249)),
+                BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 226, 232, 240)),
+                BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Left
+            };
+            adminBtn.Click += (s, e) =>
+            {
+                dialog.Hide();
+                App.MainWindowInstance?.NavigationService.NavigateTo(
+                    typeof(Views.Admin.AdminLoginView),
+                    null,
+                    SlideNavigationTransitionEffect.FromBottom
+                );
+            };
+            container.Children.Add(adminBtn);
+
+            dialog.Content = container;
+
+            var approvalTask = AgeRestrictedApprovalManager.Instance.RequestApprovalAsync(product);
+
+            _ = approvalTask.ContinueWith(t =>
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    try { dialog.Hide(); } catch { }
+                });
+            });
+
+            _activeDialog = dialog;
+            _scanBehavior = ScanBehavior.Blocked;
+            try
+            {
+                await dialog.ShowAsync();
+            }
+            finally
+            {
+                _activeDialog = null;
+                _scanBehavior = ScanBehavior.AddToCart;
+            }
+
+            if (approvalTask.IsCompleted)
+            {
+                return await approvalTask;
+            }
+
+            return false;
         }
 
         private void UpdateCartStateUI()

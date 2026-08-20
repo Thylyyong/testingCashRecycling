@@ -24,7 +24,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             : (_paymentService.TotalDueUsd > 0 ? _paymentService.TotalDueUsd : _cartService.TotalUsd);
 
         public decimal ExchangeRate => _paymentService.ExchangeRate > 0 ? _paymentService.ExchangeRate : _cartService.ExchangeRate;
-        public decimal TotalDueKhr => TotalDueUsd * ExchangeRate;
+        public decimal TotalDueKhr => SelfCheckoutKiosk.Core.Currency.DualCurrencyCalculator.CalculateTotalKhr(TotalDueUsd, ExchangeRate);
 
         // Formatted display string matching kiosk dual-currency standard
         public string FormattedTotalDue => $"${TotalDueUsd:0.00}";

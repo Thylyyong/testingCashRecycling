@@ -184,5 +184,55 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             ViewModel.Cancel();
             ViewModel.ProceedToCart();
         }
+
+        private async void HelpButton_Click(object sender, RoutedEventArgs e)
+        {
+            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+
+            var dialog = new ContentDialog
+            {
+                Content = new StackPanel
+                {
+                    Spacing = 16,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Children =
+                    {
+                        new FontIcon
+                        {
+                            Glyph = "\uE946",
+                            FontFamily = new FontFamily("Segoe Fluent Icons"),
+                            FontSize = 42,
+                            Foreground = (Brush)Application.Current.Resources["AccentBlueBrush"],
+                            HorizontalAlignment = HorizontalAlignment.Center
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("HelpIsOnTheWay"),
+                            FontSize = 20,
+                            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = globalFont
+                        },
+                        new TextBlock
+                        {
+                            Text = Localizer.GetString("HelpMessage"),
+                            FontSize = 16,
+                            TextWrapping = TextWrapping.Wrap,
+                            TextAlignment = TextAlignment.Center,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            FontFamily = globalFont
+                        }
+                    }
+                },
+                Style = (Style)Application.Current.Resources["KioskContentDialogStyle"],
+                CloseButtonText = Localizer.GetString("OK"),
+                CloseButtonStyle = (Style)Application.Current.Resources["DialogButtonStyle"],
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = ElementTheme.Light
+            };
+
+            await dialog.ShowAsync();
+        }
     }
 }

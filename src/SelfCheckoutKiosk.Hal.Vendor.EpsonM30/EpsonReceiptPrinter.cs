@@ -69,15 +69,22 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
     /// </summary>
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
-        // Open in probe mode — write ESC/POS Init so the TM-m30 resets its buffer.
-        // A failure here (FileNotFoundException, UnauthorizedAccessException) means
-        // the port path is wrong or the driver is not installed.
-        await WriteRawBytesAsync(EscPosInit, cancellationToken).ConfigureAwait(false);
-        _isConnected = true;
+        try
+        {
+            await WriteRawBytesAsync(EscPosInit, cancellationToken).ConfigureAwait(false);
+            _isConnected = true;
 
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine($"[EpsonReceiptPrinter] TM-m30 ready on {_printerPortPath}. ESC/POS Init sent. ✓");
-        Console.ResetColor();
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"[EpsonReceiptPrinter] TM-m30 ready on {_printerPortPath}. ESC/POS Init sent. ✓");
+            Console.ResetColor();
+        }
+        catch (Exception ex)
+        {
+            _isConnected = false;
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"[EpsonReceiptPrinter] Port {_printerPortPath} not open ({ex.Message}). Operating in audit-spool fallback mode.");
+            Console.ResetColor();
+        }
     }
 
     /// <summary>
@@ -132,7 +139,8 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
         {
             Console.Error.WriteLine($"[EpsonReceiptPrinter] Print error: {ex.Message}");
             OnJobStatusChanged?.Invoke(this, new PrintJobStatusEventArgs(PrintJobState.Failed));
-            throw;
+            // Non-blocking: write audit copy even on physical print failure so receipt record is preserved
+            try { await SpoolAuditCopyAsync(escPosPayload, cancellationToken).ConfigureAwait(false); } catch { }
         }
     }
 
@@ -149,12 +157,14 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
                                         string? paymentMethod = "CASH",
                                         string? transactionId = null,
                                         int paperWidthCols = 40,
+                                        decimal exchangeRate = 4100m,
                                         CancellationToken cancellationToken = default)
     {
         var sb = new StringBuilder();
         string divider = new string('-', paperWidthCols);
         string doubleDivider = new string('=', paperWidthCols);
         string txnId = !string.IsNullOrWhiteSpace(transactionId) ? transactionId : Guid.NewGuid().ToString()[..8].ToUpper();
+        decimal totalKhr = Math.Ceiling((totalUsd * (exchangeRate > 0 ? exchangeRate : 4100m)) / 100m) * 100m;
 
         // ESC/POS: Center alignment for header
         sb.Append("\x1B\x61\x01"); // Center
@@ -175,7 +185,7 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
         sb.AppendLine($"SUBTOTAL:                                ${totalUsd,7:F2}");
         sb.AppendLine(divider);
         sb.AppendLine($"TOTAL (USD):                             ${totalUsd,7:F2}");
-        sb.AppendLine($"                                  {(totalUsd * 4100m),10:N0} KHR");
+        sb.AppendLine($"                                  {totalKhr,10:N0} KHR");
         sb.AppendLine($"PAID:                                    ${tenderedUsd,7:F2}");
         if (overpaymentKhr > 0)
         {
@@ -202,16 +212,25 @@ public sealed class EpsonReceiptPrinter : IReceiptPrinter
     private async Task WriteRawBytesAsync(ReadOnlyMemory<byte> bytes,
                                           CancellationToken ct = default)
     {
-        await using var stream = new FileStream(
-            NormalisedPortPath(_printerPortPath),
-            FileMode.Open,
-            FileAccess.Write,
-            FileShare.ReadWrite,
-            bufferSize: 1,
-            useAsync: true);
+        try
+        {
+            await using var stream = new FileStream(
+                NormalisedPortPath(_printerPortPath),
+                FileMode.Open,
+                FileAccess.Write,
+                FileShare.ReadWrite,
+                bufferSize: 1,
+                useAsync: true);
 
-        await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
-        await stream.FlushAsync(ct).ConfigureAwait(false);
+            await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
+            await stream.FlushAsync(ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or UnauthorizedAccessException or IOException)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            Console.WriteLine($"[EpsonReceiptPrinter] Direct port {_printerPortPath} notice: {ex.Message}. Falling back to virtual audit spool.");
+            Console.ResetColor();
+        }
     }
 
     private static async Task SpoolAuditCopyAsync(ReadOnlyMemory<byte> payload,

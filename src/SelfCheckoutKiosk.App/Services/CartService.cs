@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -45,7 +45,7 @@ namespace SelfCheckoutKiosk.App.Services
         }
 
         public decimal TotalUsd => Items.Sum(i => i.LineTotal);
-        public decimal TotalKhr => TotalUsd * ExchangeRate;
+        public decimal TotalKhr => SelfCheckoutKiosk.Core.Currency.DualCurrencyCalculator.CalculateTotalKhr(TotalUsd, ExchangeRate);
         public int TotalItemCount => Items.Sum(i => i.Quantity);
         public bool IsEmpty => Items.Count == 0;
 

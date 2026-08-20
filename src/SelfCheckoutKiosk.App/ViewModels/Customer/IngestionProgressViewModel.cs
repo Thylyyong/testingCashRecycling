@@ -19,11 +19,11 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public ObservableCollection<PaymentAttempt> Attempts => _paymentService.Attempts;
 
         public decimal TotalDueUsd => _paymentService.TotalDueUsd;
-        public decimal TotalDueKhr => TotalDueUsd * ExchangeRate;
+        public decimal TotalDueKhr => SelfCheckoutKiosk.Core.Currency.DualCurrencyCalculator.CalculateTotalKhr(TotalDueUsd, ExchangeRate);
         public decimal TotalPaidUsd => _paymentService.TotalPaidUsd;
         public decimal TotalPaidKhr => TotalPaidUsd * ExchangeRate;
         public decimal RemainingDueUsd => _paymentService.RemainingDueUsd;
-        public decimal RemainingDueKhr => RemainingDueUsd * ExchangeRate;
+        public decimal RemainingDueKhr => SelfCheckoutKiosk.Core.Currency.DualCurrencyCalculator.CalculateTotalKhr(RemainingDueUsd, ExchangeRate);
         public decimal ExchangeRate => _paymentService.ExchangeRate;
 
         public CashAcceptorState AcceptorState => _paymentService.CashAcceptorState;

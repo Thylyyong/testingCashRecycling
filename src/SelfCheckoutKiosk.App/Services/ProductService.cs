@@ -39,7 +39,14 @@ public class ProductService : IProductService
                         Name = p.Description,
                         Price = p.UsdPrice,
                         Category = DetermineCategory(p.Description),
-                        IsAgeRestricted = p.Description.Contains("Beer", StringComparison.OrdinalIgnoreCase) || p.Description.Contains("Red Bull", StringComparison.OrdinalIgnoreCase),
+                        IsAgeRestricted = p.Description.Contains("Beer", StringComparison.OrdinalIgnoreCase) || 
+                                          p.Description.Contains("Cigarettes", StringComparison.OrdinalIgnoreCase) || 
+                                          p.Description.Contains("Tobacco", StringComparison.OrdinalIgnoreCase) ||
+                                          p.Description.Contains("Alcohol", StringComparison.OrdinalIgnoreCase) ||
+                                          p.Description.Contains("Wine", StringComparison.OrdinalIgnoreCase) ||
+                                          p.Description.Contains("Red Bull", StringComparison.OrdinalIgnoreCase) ||
+                                          p.Ean13 == "8850001100072" || 
+                                          p.Ean13 == "8850001100081",
                         RequiresWeighing = p.Description.Contains("(kg)", StringComparison.OrdinalIgnoreCase)
                     }).ToList();
                 }

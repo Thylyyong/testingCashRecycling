@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
 using System.Collections.Generic;
@@ -25,6 +25,8 @@ namespace SelfCheckoutKiosk.App.Services
         bool GoBack(NavigationTransitionInfo? transitionInfo = null);
 
         bool GoBack(SlideNavigationTransitionEffect effect);
+
+        bool NavigateBackToCustomer(SlideNavigationTransitionEffect effect = SlideNavigationTransitionEffect.FromLeft);
 
         Type? CurrentPageType { get; }
     }
@@ -113,6 +115,35 @@ namespace SelfCheckoutKiosk.App.Services
                 {
                     Effect = effect
                 }
+            );
+        }
+
+        public bool NavigateBackToCustomer(
+            SlideNavigationTransitionEffect effect = SlideNavigationTransitionEffect.FromLeft)
+        {
+            var frame = TargetFrame;
+            if (frame == null)
+                return false;
+
+            // Prune admin views from the top of the back stack so we return to the caller customer page
+            while (frame.CanGoBack && (
+                frame.BackStack.LastOrDefault()?.SourcePageType.Namespace?.Contains("Admin") == true ||
+                frame.BackStack.LastOrDefault()?.SourcePageType == typeof(Views.Admin.AdminLoginView) ||
+                frame.BackStack.LastOrDefault()?.SourcePageType == typeof(Views.Admin.AdminDiagnosticsView) ||
+                frame.BackStack.LastOrDefault()?.SourcePageType == typeof(Views.Admin.MediaBrandingView)))
+            {
+                frame.BackStack.RemoveAt(frame.BackStack.Count - 1);
+            }
+
+            if (frame.CanGoBack)
+            {
+                return GoBack(effect);
+            }
+
+            return NavigateTo(
+                typeof(Views.Customer.KioskBaseView),
+                null,
+                effect
             );
         }
     }

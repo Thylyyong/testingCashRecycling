@@ -29,6 +29,10 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
     public ObservableCollection<CassetteCountItem> KhrCassettes { get; } = new();
     public ObservableCollection<CassetteCountItem> UsdCassettes { get; } = new();
 
+    public bool HasPendingAgeApproval => AgeRestrictedApprovalManager.Instance.HasPendingRequest;
+    public string PendingAgeItemName => AgeRestrictedApprovalManager.Instance.PendingItemName;
+    public string PendingAgeItemSku => AgeRestrictedApprovalManager.Instance.PendingItemSku;
+
     public AdminDiagnosticsViewModel(INavigationService? navigationService = null)
     {
         _navigationService = navigationService
@@ -36,12 +40,53 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
             ?? new NavigationService(null!);
 
         RefreshDiagnostics();
-        InitializeCassettes();
+        RefreshCassettes();
 
         HardwareStatusManager.Instance.PropertyChanged += (s, e) =>
         {
             App.MainWindowInstance?.DispatcherQueue.TryEnqueue(RefreshDiagnostics);
         };
+
+        VaultInventoryService.Instance.VaultInventoryChanged += (s, e) =>
+        {
+            App.MainWindowInstance?.DispatcherQueue.TryEnqueue(RefreshCassettes);
+        };
+
+        AgeRestrictedApprovalManager.Instance.PendingRequestChanged += (s, e) =>
+        {
+            App.MainWindowInstance?.DispatcherQueue.TryEnqueue(() =>
+            {
+                OnPropertyChanged(nameof(HasPendingAgeApproval));
+                OnPropertyChanged(nameof(PendingAgeItemName));
+                OnPropertyChanged(nameof(PendingAgeItemSku));
+            });
+        };
+    }
+
+    public void ApproveAgeRestrictedItem()
+    {
+        AgeRestrictedApprovalManager.Instance.Approve();
+        StatusMessage = "Item approved by attendant.";
+        IsStatusSuccess = true;
+        OnPropertyChanged(nameof(HasPendingAgeApproval));
+        ExitToCustomerMode();
+    }
+
+    public void RejectAgeRestrictedItem()
+    {
+        AgeRestrictedApprovalManager.Instance.Reject();
+        StatusMessage = "Item rejected.";
+        IsStatusSuccess = false;
+        OnPropertyChanged(nameof(HasPendingAgeApproval));
+        ExitToCustomerMode();
+    }
+
+    public void ResetVaultCounts()
+    {
+        VaultInventoryService.Instance.ResetVault();
+        RefreshCassettes();
+        StatusMessage = "Cash vault breakdown counts reset to zero.";
+        IsStatusSuccess = true;
     }
 
     public bool IsSyncing
@@ -96,11 +141,39 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
 
     public bool HasStatusMessage => _hasStatusMessage;
 
+    public bool IsCashRecyclerConnected => HardwareStatusManager.Instance.IsCashAvailable;
+    public string CashRecyclerStatusText => IsCashRecyclerConnected ? "Connected" : "Disconnected";
+    public Microsoft.UI.Xaml.Media.SolidColorBrush CashRecyclerStatusColor => IsCashRecyclerConnected 
+        ? new(Windows.UI.Color.FromArgb(255, 34, 197, 94)) 
+        : new(Windows.UI.Color.FromArgb(255, 239, 68, 68));
+
+    public bool IsBarcodeScannerConnected => HardwareStatusManager.Instance.IsScannerAvailable;
+    public string BarcodeScannerStatusText => IsBarcodeScannerConnected ? "Connected" : "Disconnected";
+    public Microsoft.UI.Xaml.Media.SolidColorBrush BarcodeScannerStatusColor => IsBarcodeScannerConnected 
+        ? new(Windows.UI.Color.FromArgb(255, 34, 197, 94)) 
+        : new(Windows.UI.Color.FromArgb(255, 239, 68, 68));
+
+    public bool IsReceiptPrinterConnected => HardwareStatusManager.Instance.IsPrinterAvailable;
+    public string ReceiptPrinterStatusText => IsReceiptPrinterConnected ? "Connected" : "Disconnected";
+    public Microsoft.UI.Xaml.Media.SolidColorBrush ReceiptPrinterStatusColor => IsReceiptPrinterConnected 
+        ? new(Windows.UI.Color.FromArgb(255, 34, 197, 94)) 
+        : new(Windows.UI.Color.FromArgb(255, 239, 68, 68));
+
     public void RefreshDiagnostics()
     {
         var hw = HardwareStatusManager.Instance;
         LicenseTier = hw.LicenseTier;
         LicenseExpiry = hw.LicenseExpiryText;
+
+        OnPropertyChanged(nameof(IsCashRecyclerConnected));
+        OnPropertyChanged(nameof(CashRecyclerStatusText));
+        OnPropertyChanged(nameof(CashRecyclerStatusColor));
+        OnPropertyChanged(nameof(IsBarcodeScannerConnected));
+        OnPropertyChanged(nameof(BarcodeScannerStatusText));
+        OnPropertyChanged(nameof(BarcodeScannerStatusColor));
+        OnPropertyChanged(nameof(IsReceiptPrinterConnected));
+        OnPropertyChanged(nameof(ReceiptPrinterStatusText));
+        OnPropertyChanged(nameof(ReceiptPrinterStatusColor));
 
         HardwareDevices.Clear();
 
@@ -146,24 +219,26 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
         });
     }
 
-    private void InitializeCassettes()
+    private void RefreshCassettes()
     {
+        var khrCounts = VaultInventoryService.Instance.KhrCounts;
         KhrCassettes.Clear();
-        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "100 ៛", Currency = "KHR", UnitValue = 100, Count = 45 });
-        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "500 ៛", Currency = "KHR", UnitValue = 500, Count = 50 });
-        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "1,000 ៛", Currency = "KHR", UnitValue = 1000, Count = 60 });
-        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "5,000 ៛", Currency = "KHR", UnitValue = 5000, Count = 30 });
-        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "10,000 ៛", Currency = "KHR", UnitValue = 10000, Count = 40 });
-        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "20,000 ៛", Currency = "KHR", UnitValue = 20000, Count = 25 });
-        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "50,000 ៛", Currency = "KHR", UnitValue = 50000, Count = 20 });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "100 ៛", Currency = "KHR", UnitValue = 100, Count = khrCounts.GetValueOrDefault(100, 0) });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "500 ៛", Currency = "KHR", UnitValue = 500, Count = khrCounts.GetValueOrDefault(500, 0) });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "1,000 ៛", Currency = "KHR", UnitValue = 1000, Count = khrCounts.GetValueOrDefault(1000, 0) });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "5,000 ៛", Currency = "KHR", UnitValue = 5000, Count = khrCounts.GetValueOrDefault(5000, 0) });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "10,000 ៛", Currency = "KHR", UnitValue = 10000, Count = khrCounts.GetValueOrDefault(10000, 0) });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "20,000 ៛", Currency = "KHR", UnitValue = 20000, Count = khrCounts.GetValueOrDefault(20000, 0) });
+        KhrCassettes.Add(new CassetteCountItem { DenominationLabel = "50,000 ៛", Currency = "KHR", UnitValue = 50000, Count = khrCounts.GetValueOrDefault(50000, 0) });
 
+        var usdCounts = VaultInventoryService.Instance.UsdCounts;
         UsdCassettes.Clear();
-        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$1.00", Currency = "USD", UnitValue = 1, Count = 40 });
-        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$5.00", Currency = "USD", UnitValue = 5, Count = 30 });
-        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$10.00", Currency = "USD", UnitValue = 10, Count = 25 });
-        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$20.00", Currency = "USD", UnitValue = 20, Count = 20 });
-        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$50.00", Currency = "USD", UnitValue = 50, Count = 15 });
-        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$100.00", Currency = "USD", UnitValue = 100, Count = 10 });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$1.00", Currency = "USD", UnitValue = 1, Count = usdCounts.GetValueOrDefault(1, 0) });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$5.00", Currency = "USD", UnitValue = 5, Count = usdCounts.GetValueOrDefault(5, 0) });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$10.00", Currency = "USD", UnitValue = 10, Count = usdCounts.GetValueOrDefault(10, 0) });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$20.00", Currency = "USD", UnitValue = 20, Count = usdCounts.GetValueOrDefault(20, 0) });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$50.00", Currency = "USD", UnitValue = 50, Count = usdCounts.GetValueOrDefault(50, 0) });
+        UsdCassettes.Add(new CassetteCountItem { DenominationLabel = "$100.00", Currency = "USD", UnitValue = 100, Count = usdCounts.GetValueOrDefault(100, 0) });
     }
 
     public async Task ReprintLastReceiptAsync()
@@ -205,11 +280,7 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
 
     public void NavigateBackToCustomer()
     {
-        _navigationService.NavigateTo(
-            typeof(KioskBaseView),
-            null,
-            SlideNavigationTransitionEffect.FromLeft
-        );
+        _navigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromLeft);
     }
 
     public void NavigateToMediaBranding()

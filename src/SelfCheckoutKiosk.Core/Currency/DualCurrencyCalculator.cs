@@ -39,6 +39,31 @@ public sealed class DualCurrencyCalculator
     private const int KhrRoundingStep = 100;
 
     /// <summary>
+    /// Converts a USD total to KHR using the Cambodian retail rounding rule:
+    /// Any fractional remainder between 1 and 99 KHR (e.g. 50 KHR) is ALWAYS rounded
+    /// UP to the nearest 100 KHR.
+    /// Example: $1.01 * 4100 = 4141 KHR -> 4200 KHR.
+    /// Example: $1.00 * 4100 = 4100 KHR -> 4100 KHR.
+    /// </summary>
+    public static decimal CalculateTotalKhr(decimal totalUsd, decimal usdToKhrRate)
+    {
+        if (totalUsd <= 0) return 0m;
+        if (usdToKhrRate <= 0) throw new InvalidExchangeRateException(usdToKhrRate);
+
+        decimal rawKhr = totalUsd * usdToKhrRate;
+        return Math.Ceiling(rawKhr / KhrRoundingStep) * KhrRoundingStep;
+    }
+
+    /// <summary>
+    /// Rounds any raw KHR amount UP to the nearest 100 KHR (Cambodian retail pricing rule).
+    /// </summary>
+    public static decimal RoundUpToNearest100Khr(decimal rawKhr)
+    {
+        if (rawKhr <= 0) return 0m;
+        return Math.Ceiling(rawKhr / KhrRoundingStep) * KhrRoundingStep;
+    }
+
+    /// <summary>
     /// Step 1: remaining balance owed = max(0, total - tendered). If tendered
     /// hasn't covered the total yet there is no change to dispense.
     /// Step 2: overpayment = max(0, tendered - total) splits into a whole-dollar

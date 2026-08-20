@@ -155,11 +155,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
         public void ReturnToCustomerMode()
         {
             ClearPin();
-            _navigationService.NavigateTo(
-                typeof(KioskBaseView),
-                null,
-                SlideNavigationTransitionEffect.FromBottom
-            );
+            _navigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromBottom);
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

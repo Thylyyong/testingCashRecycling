@@ -234,8 +234,9 @@ public class PaymentService : IPaymentService
         RecordAttempt(PaymentAttemptResult.Accepted, reason, amount, isUsd);
         OnPropertyChanged(nameof(HasAcceptedAnyPayment));
 
-        // Log audit event
+        // Log audit event and update vault inventory
         _hardwareLog?.LogCommittedToVault(isUsd ? Money.Usd(amount) : Money.Khr(amount));
+        VaultInventoryService.Instance.RecordDeposit(isUsd ? "USD" : "KHR", (int)amount);
 
         // Hardware Inhibit Rule: Once total is met, immediately disable/inhibit acceptor
         if (IsFullyPaid && _cashRecycler != null)
@@ -353,6 +354,7 @@ public class PaymentService : IPaymentService
 
                 RecordAttempt(PaymentAttemptResult.Accepted, acceptedReason, amount, isUsd);
                 _hardwareLog?.LogCommittedToVault(e.Note);
+                VaultInventoryService.Instance.RecordDeposit(isUsd ? "USD" : "KHR", (int)amount);
 
                 DiagnosticLogger.Log($"[PaymentService] Banknote ACCEPTED & committed: {amount} {(isUsd ? "USD" : "KHR")}. Total Paid: ${TotalPaidUsd:0.00} / ${TotalDueUsd:0.00}");
 

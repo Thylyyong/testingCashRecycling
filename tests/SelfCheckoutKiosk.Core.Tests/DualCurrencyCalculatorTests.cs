@@ -112,6 +112,38 @@ public sealed class DualCurrencyCalculatorTests
         => Assert.Throws<ArgumentOutOfRangeException>(
             () => _calculator.CalculateChange(totalUsd: 1m, tenderedUsd: -5m, usdToKhrRate: 4100m));
 
+    [Theory]
+    [InlineData(1.00, 4100, 4100)]    // Exact multiple: 4100 KHR -> 4100 KHR
+    [InlineData(1.01, 4100, 4200)]    // 4141 KHR -> rounds UP to 4200 KHR (41 KHR remainder)
+    [InlineData(1.000244, 4100, 4200)]// 4101 KHR -> rounds UP to 4200 KHR (1 KHR remainder)
+    [InlineData(0, 4100, 0)]          // Zero total -> 0 KHR
+    [InlineData(2.50, 4000, 10000)]   // Exact multiple: 10000 KHR -> 10000 KHR
+    public void CalculateTotalKhr_EnforcesRetailRoundUpRule(decimal totalUsd, decimal rate, decimal expectedKhr)
+    {
+        decimal actualKhr = DualCurrencyCalculator.CalculateTotalKhr(totalUsd, rate);
+        Assert.Equal(expectedKhr, actualKhr);
+    }
+
+    [Theory]
+    [InlineData(4101, 4200)]   // 1 KHR remainder -> rounds up to 4200
+    [InlineData(4150, 4200)]   // 50 KHR remainder -> rounds up to 4200
+    [InlineData(4199, 4200)]   // 99 KHR remainder -> rounds up to 4200
+    [InlineData(4100, 4100)]   // Exact 100 -> stays 4100
+    [InlineData(0, 0)]         // 0 -> 0
+    public void RoundUpToNearest100Khr_RoundsFractionsUp(decimal rawKhr, decimal expectedKhr)
+    {
+        decimal actualKhr = DualCurrencyCalculator.RoundUpToNearest100Khr(rawKhr);
+        Assert.Equal(expectedKhr, actualKhr);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void CalculateTotalKhr_InvalidRate_Throws(decimal rate)
+    {
+        Assert.Throws<InvalidExchangeRateException>(() => DualCurrencyCalculator.CalculateTotalKhr(10m, rate));
+    }
+
     private static void ChangeBreakdownAssertEmpty(SelfCheckoutKiosk.Domain.ValueObjects.ChangeBreakdown change)
     {
         Assert.Empty(change.UsdNotes);

@@ -35,6 +35,8 @@ public static class CatalogSeeder
         new() { Ean13 = "8850124005010", Description = "Instant Noodles Pack", UsdPrice = 0.50m, KhrPrice = 2000m },
         new() { Ean13 = "4801981102901", Description = "Bottled Water 500ml", UsdPrice = 0.35m, KhrPrice = 1400m },
         new() { Ean13 = "8858899101012", Description = "Jasmine Rice 1kg Bag", UsdPrice = 1.20m, KhrPrice = 4900m },
+        new() { Ean13 = "8850001100072", Description = "Cigarettes (Pack of 20)", UsdPrice = 2.50m, KhrPrice = 10250m },
+        new() { Ean13 = "8850001100081", Description = "Beer 330ml Can", UsdPrice = 1.25m, KhrPrice = 5125m },
     ];
 
     /// <summary>Idempotent — a no-op once the catalog has at least one row, so

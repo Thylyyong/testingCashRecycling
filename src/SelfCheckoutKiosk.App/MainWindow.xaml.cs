@@ -191,11 +191,7 @@ namespace SelfCheckoutKiosk.App
                     currentPageType == typeof(AdminDiagnosticsView) ||
                     currentPageType == typeof(MediaBrandingView))
                 {
-                    NavigationService.NavigateTo(
-                        typeof(KioskBaseView),
-                        null,
-                        SlideNavigationTransitionEffect.FromBottom
-                    );
+                    NavigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromBottom);
                 }
                 else
                 {
@@ -230,6 +226,14 @@ namespace SelfCheckoutKiosk.App
 
             if (!string.IsNullOrWhiteSpace(details))
                 LicenseLockoutDetailText.Text = details;
+
+            // Navigate the frame to a blank Page so KioskBaseView (and its MediaPlayer) is
+            // properly unloaded — otherwise the video audio continues playing under the overlay.
+            if (RootFrame.Content != null)
+            {
+                RootFrame.Navigate(typeof(Page));
+                RootFrame.BackStack.Clear();
+            }
 
             LicenseLockoutOverlay.Visibility = Visibility.Visible;
         }
