@@ -12,7 +12,7 @@ An offline-first, high-reliability touch kiosk system designed for supermarkets 
 ## ⚡ Quick Start & Installation
 
 ### Option 1: 1-Click Windows Installer (Recommended for Deployments)
-1. Right-click **[`Install-Kiosk.bat`](Install-Kiosk.bat)** (or **[`Installer.bat`](Installer.bat)**) in the root directory and select **Run as administrator**.
+1. Run **[`scripts/Install-Kiosk.bat`](scripts/Install-Kiosk.bat)** (or use **`dist/SelfCheckoutKiosk-Installer/Install.bat`**) as **Administrator**.
 2. The installer will automatically:
    - Deploy the WinUI 3 touch application and background daemons.
    - Inspect this machine's hardware ID and generate a valid offline node-locked `license.token`.
@@ -22,7 +22,7 @@ An offline-first, high-reliability touch kiosk system designed for supermarkets 
 3. Launch the kiosk anytime via the **Desktop shortcut** or `Start-Kiosk-With-API.bat`.
 
 ### Option 2: Quick Start from Source (For Developers)
-Double-click **[`QuickStart-Kiosk.bat`](QuickStart-Kiosk.bat)** in the root directory. It automatically ensures a license token exists, launches the Cash Device API bridge, and opens the kiosk UI.
+Double-click **[`scripts/QuickStart-Kiosk.bat`](scripts/QuickStart-Kiosk.bat)**. It automatically ensures a license token exists, launches the Cash Device API bridge, and opens the kiosk UI.
 
 ### Option 3: Command-Line PowerShell Installation
 ```powershell
@@ -38,14 +38,14 @@ Double-click **[`QuickStart-Kiosk.bat`](QuickStart-Kiosk.bat)** in the root dire
 ## 📦 Project Structure
 
 ```
-├── Install-Kiosk.bat          # 1-Click Interactive Windows Installer Launcher
-├── Installer.bat              # Alias to Install-Kiosk.bat
-├── Installer.ps1              # PowerShell installer entrypoint
-├── QuickStart-Kiosk.bat       # Fast development & testing launcher
-├── Generate-License.bat       # Standalone node-locked machine license generator
-├── Build-DeploymentPackage.bat # Compiles & bundles standalone distribution package
-├── LICENSE                    # Enterprise EULA & Terms of Use
-├── README.md                  # System & deployment documentation
+├── dist/                                     # Standalone Distribution Packages
+│   ├── SelfCheckoutKiosk-Portable/           # Portable unpackaged version
+│   └── SelfCheckoutKiosk-Installer/          # Windows installer package
+├── scripts/                                  # Build, Deploy & Automation Scripts
+│   ├── Build-DeploymentPackage.bat / .ps1    # Compiles Release portable & installer packages
+│   ├── Install-Kiosk.bat / .ps1              # System installer engine
+│   ├── QuickStart-Kiosk.bat                  # Fast development launcher
+│   └── Generate-License.bat                  # Standalone node-locked machine license generator
 ├── src/
 │   ├── SelfCheckoutKiosk.Domain             # Core entity models & business rules (0 dependencies)
 │   ├── SelfCheckoutKiosk.Core               # Contracts, currency math, licensing engine, HAL interfaces
@@ -56,13 +56,13 @@ Double-click **[`QuickStart-Kiosk.bat`](QuickStart-Kiosk.bat)** in the root dire
 │   ├── SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner # Barcode & 2D scanner serial/USB driver
 │   └── SelfCheckoutKiosk.Hal.Vendor.ItlRestCashRecycler # ITL NV200/NV11 Cash recycler REST client
 ├── tools/
-│   ├── CashDeviceSimulator    # Cash Recycler REST API Daemon Simulator (Port 5055)
-│   └── DevLicenseTokenGenerator # Node-locked cryptographic license generator
-└── tests/
-    ├── SelfCheckoutKiosk.Core.Tests
-    ├── SelfCheckoutKiosk.Infrastructure.Tests
-    ├── SelfCheckoutKiosk.Integration.Tests
-    └── SelfCheckoutKiosk.Presentation.Tests
+│   ├── CashDeviceSimulator                  # Cash Recycler REST API Daemon Simulator (Port 5055)
+│   └── DevLicenseTokenGenerator             # Node-locked cryptographic license generator (GenerateLicense.exe)
+├── tests/                                   # Unit and Integration test projects
+├── Directory.Build.props                    # Shared Roslyn analyzer and build properties
+├── LICENSE                                  # Enterprise EULA & Terms of Use
+├── README.md                                # System & deployment documentation
+└── SelfCheckoutKiosk.sln                    # Visual Studio 2022/2026 Solution
 ```
 
 ---
@@ -84,23 +84,21 @@ The system uses ECDSA P-256 / SHA-256 cryptographic signatures tied to the physi
 
 1. To generate a license for the current machine:
    ```cmd
-   Generate-License.bat
+   scripts\Generate-License.bat
    ```
 2. The generated `license.token` is placed in the application root and automatically validated on startup with zero internet access required.
-3. If hardware components change, run `Generate-License.bat` again to refresh the node lock.
+3. If hardware components change, run `scripts\Generate-License.bat` again to refresh the node lock.
 
 ---
 
 ## 🛠️ Building a Standalone Distribution Package
 
-To build and package the complete self-contained x64 deployment folder:
+To build and package both the **Portable** and **Installer** Release distributions:
 
-1. Run **[`Build-DeploymentPackage.bat`](Build-DeploymentPackage.bat)**.
-2. The standalone package will be generated at:
-   ```
-   dist/SelfCheckoutKiosk-Package/
-   ```
-3. This package contains all self-contained .NET binaries, Windows App SDK runtimes, assets, configuration templates, launcher scripts, and license generators. It can be zipped or copied to any target Windows 10/11 machine.
+1. Run **[`scripts/Build-DeploymentPackage.bat`](scripts/Build-DeploymentPackage.bat)**.
+2. The standalone packages will be generated at:
+   - `dist/SelfCheckoutKiosk-Portable/` (Unpackaged version)
+   - `dist/SelfCheckoutKiosk-Installer/` (Installer package)
 
 ---
 

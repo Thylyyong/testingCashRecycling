@@ -1,11 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 title Self-Checkout Kiosk V2 — Installer
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
-:: -----------------------------------------------------------------------------
-:: Check for Administrative Rights and Request Elevation if needed
-:: -----------------------------------------------------------------------------
 net session >nul 2>&1
 if %errorLevel% neq 0 (
     echo =================================================================
@@ -19,17 +16,6 @@ echo =================================================================
 echo        SELF-CHECKOUT KIOSK SYSTEM V2 — WINDOWS INSTALLER         
 echo =================================================================
 echo.
-echo This installer will set up:
-echo   - Self-Checkout Kiosk WinUI 3 Application
-echo   - Cash Device REST API Bridge (Daemon)
-echo   - Offline Node-Locked Machine License
-echo   - Desktop and Start Menu Shortcuts
-echo   - Windows Firewall Port Configurations
-echo.
-echo =================================================================
-echo.
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\Install-Kiosk.ps1"
-
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Install-Kiosk.ps1"
 echo.
 pause
