@@ -58,7 +58,7 @@ Write-Ok "dist\ cleared and recreated fresh"
 
 # ─── STEP 2: Publish KioskApp ────────────────────────────────────────────────
 Write-Step "Publishing SelfCheckoutKiosk.App (self-contained $Configuration)..."
-$appDest = Join-Path $portableDir "app"
+$appDest = $portableDir
 & dotnet publish $appProj `
     -c $Configuration -r $Runtime `
     -p:Platform=x64 `
@@ -81,9 +81,9 @@ if (Test-Path $appPriSource) {
     Copy-Item -LiteralPath $appPriSource -Destination (Join-Path $appDest "resources.pri") -Force
     Write-Ok "WinUI 3 resources.pri bundled"
 }
-Write-Ok "KioskApp published to app\"
+Write-Ok "KioskApp published to portable distribution"
 
-# ─── STEP 3: Publish CashDeviceSimulator, drop it inside app\ ────────────────
+# ─── STEP 3: Publish CashDeviceSimulator, drop it inside portable root ───────
 #
 #  The simulator is the FALLBACK for machines without physical hardware.
 #  The real ITL CashDevice-RestAPI is bundled separately in Step 3b below.
@@ -106,7 +106,7 @@ if ($LASTEXITCODE -ne 0) { throw "CashDeviceSimulator publish failed." }
 $simExe = Join-Path $simStage "CashDeviceSimulator.exe"
 if (Test-Path $simExe) {
     Copy-Item -LiteralPath $simExe -Destination (Join-Path $appDest "CashDeviceSimulator.exe") -Force
-    Write-Ok "CashDeviceSimulator.exe placed inside app\ (simulator fallback)"
+    Write-Ok "CashDeviceSimulator.exe placed in portable root (simulator fallback)"
 } else {
     Write-Warn "CashDeviceSimulator.exe not found -- cash will fall back to dotnet run"
 }
@@ -115,11 +115,11 @@ Remove-Item -LiteralPath $simStage -Recurse -Force -ErrorAction SilentlyContinue
 # ─── STEP 3b: Bundle real ITL CashDevice-RestAPI if available ────────────────
 #
 #  Searches well-known locations for the real ITL REST API package.
-#  When found, copies the entire folder into app\ so the published release
+#  When found, copies the entire folder into portable root so the published release
 #  behaves identically to pressing F5 on the dev machine with hardware.
 #
 #  CashApiProcessManager priority:  CashDevice-RestAPI.exe  >  CashDeviceSimulator.exe
-#  So dropping it into app\ is all that's needed — no config required.
+#  So dropping it into portable root is all that's needed — no config required.
 #
 Write-Step "Looking for real ITL CashDevice-RestAPI to bundle..."
 $userProfile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
@@ -137,10 +137,10 @@ foreach ($itlPath in $itlSearchPaths) {
     $itlExe = Join-Path $itlPath "CashDevice-RestAPI.exe"
     if (Test-Path $itlExe) {
         Write-Host "   Found ITL API at: $itlPath" -ForegroundColor Cyan
-        # Copy the entire ITL API folder contents into app\
+        # Copy the entire ITL API folder contents into portable root
         # The exe and all its DLLs/configs go side-by-side with SelfCheckoutKiosk.App.exe
         Copy-Item -Path "$itlPath\*" -Destination $appDest -Recurse -Force
-        Write-Ok "Real ITL CashDevice-RestAPI bundled into app\ -- physical hardware ENABLED"
+        Write-Ok "Real ITL CashDevice-RestAPI bundled into portable root -- physical hardware ENABLED"
         $itlApiFound = $true
         break
     }
@@ -148,7 +148,7 @@ foreach ($itlPath in $itlSearchPaths) {
 
 if (-not $itlApiFound) {
     Write-Warn "ITL CashDevice-RestAPI not found on this machine -- only simulator will be available"
-    Write-Host "   To enable real hardware: copy CashDevice-RestAPI folder contents into app\" -ForegroundColor Gray
+    Write-Host "   To enable real hardware: copy CashDevice-RestAPI folder contents into portable root" -ForegroundColor Gray
 }
 
 
@@ -171,8 +171,7 @@ $licToken = Join-Path $portableDir "license.token"
 if ($LASTEXITCODE -eq 0 -and (Test-Path $licExe)) {
     & $licExe --universal --quiet --output $licToken 2>&1 | Out-Null
     if (Test-Path $licToken) {
-        Copy-Item -LiteralPath $licToken -Destination (Join-Path $appDest "license.token") -Force
-        Write-Ok "Universal license.token generated and placed in app\ and portable root"
+        Write-Ok "Universal license.token generated in portable root"
     } else {
         Write-Warn "GenerateLicense.exe ran but produced no file -- kiosk will auto-unlock at runtime"
     }
@@ -183,7 +182,7 @@ if ($LASTEXITCODE -eq 0 -and (Test-Path $licExe)) {
 # ─── STEP 5: Write Start-Kiosk.bat ───────────────────────────────────────────
 #
 #  Three lines. Identical to pressing F5:
-#    1. cd into app\ (sets AppContext.BaseDirectory correctly)
+#    1. cd into current directory (sets AppContext.BaseDirectory correctly)
 #    2. launch SelfCheckoutKiosk.App.exe
 #  The app automatically starts CashDeviceSimulator.exe in the background
 #  via CashApiProcessManager.EnsureCashApiRunningAsync(). No bat script
@@ -191,7 +190,7 @@ if ($LASTEXITCODE -eq 0 -and (Test-Path $licExe)) {
 #
 Write-Step "Writing Start-Kiosk.bat..."
 $startBat = '@echo off' + "`r`n" +
-            'cd /d "%~dp0app"' + "`r`n" +
+            'cd /d "%~dp0"' + "`r`n" +
             'start "" "SelfCheckoutKiosk.App.exe"' + "`r`n"
 [IO.File]::WriteAllText((Join-Path $portableDir "Start-Kiosk.bat"), $startBat)
 Write-Ok "Start-Kiosk.bat written (3 lines, same behaviour as F5)"
@@ -210,10 +209,9 @@ QUICK START (PORTABLE)
    Done.
 
 What happens when you double-click Start-Kiosk.bat:
-  - Changes directory into app\
   - Launches SelfCheckoutKiosk.App.exe
   - The app checks for a cash API on port 5000. If nothing is running:
-      * If CashDevice-RestAPI.exe is in app\   -> starts real ITL API  (HARDWARE)
+      * If CashDevice-RestAPI.exe is present   -> starts real ITL API  (HARDWARE)
       * Otherwise CashDeviceSimulator.exe      -> starts simulator     (TESTING)
   - When you close the kiosk window the cash API shuts down too
   This is exactly the same as pressing F5 in Visual Studio.
@@ -222,36 +220,28 @@ LICENSE
 --------
 A pre-generated universal license.token is already included.
 It works on every machine -- no action needed, no hardware locking.
+If needed, DevLicenseTokenGenerator\GenerateLicense.exe can generate new licenses.
 
 FOLDER STRUCTURE
 -----------------
 SelfCheckoutKiosk-Portable\
-  app\                          <- Everything the kiosk needs
-    SelfCheckoutKiosk.App.exe   <- Main kiosk (WinUI 3)
-    CashDeviceSimulator.exe     <- Cash REST API fallback (simulator/testing)
-    license.token               <- Universal license (ready to go)
-    Assets\                     <- Images, fonts, media
-    ...                         <- Runtime DLLs
+  SelfCheckoutKiosk.App.exe     <- Main kiosk (WinUI 3)
+  CashDeviceSimulator.exe       <- Cash REST API fallback (simulator/testing)
+  CashDevice-RestAPI.exe        <- Real ITL Cash API (if physical hardware bundled)
+  license.token                 <- Universal license (ready to go)
   Start-Kiosk.bat               <- Double-click to launch
-  license.token                 <- Backup copy of the license
+  Assets\                       <- Images, fonts, media
+  DevLicenseTokenGenerator\     <- License generator tool
   README-DEPLOYMENT.txt         <- This file
 
 REAL PHYSICAL CASH MACHINE (ITL NV200 / NV400 / SmartPayout)
 --------------------------------------------------------------
   The app AUTOMATICALLY uses real hardware if CashDevice-RestAPI.exe
-  is placed inside app\. The simulator is only used as a fallback.
-
-  To activate real hardware:
-  1. Copy CashDevice-RestAPI.exe (from your ITL SDK package) into app\
-  2. Connect the USB-Serial cable for the cash machine
-  3. Double-click Start-Kiosk.bat as normal
+  is in the folder. The simulator is only used as a fallback.
 
   Priority order (first found wins):
-    app\CashDevice-RestAPI.exe    <- REAL HARDWARE (use this for production)
-    app\CashDeviceSimulator.exe   <- Simulator fallback (testing only)
-
-  NOTE: CashDevice-RestAPI.exe is NOT included in this package because
-  it is proprietary ITL hardware software. Get it from your ITL SDK.
+    CashDevice-RestAPI.exe    <- REAL HARDWARE (use this for production)
+    CashDeviceSimulator.exe   <- Simulator fallback (testing only)
 
 DEPLOYING TO ANOTHER PC
 -------------------------
@@ -267,8 +257,8 @@ INSTALLER EDITION
 
 LOGS
 -----
-  app\startup_crash.log    <- Startup / crash errors
-  app\hardware_audit.log   <- Cash and hardware audit trail
+  startup_crash.log    <- Startup / crash errors
+  hardware_audit.log   <- Cash and hardware audit trail
 '@
 [IO.File]::WriteAllText((Join-Path $portableDir "README-DEPLOYMENT.txt"), $readme)
 Write-Ok "README-DEPLOYMENT.txt written"
