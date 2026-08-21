@@ -1,27 +1,75 @@
+## =============================================================================
 ## .NET / Visual Studio
+## =============================================================================
 bin/
 obj/
 [Dd]ebug/
 [Rr]elease/
 *.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.userprefs
 .vs/
+
+## =============================================================================
+## Build Outputs, Packaging & Dist
+## =============================================================================
 publish/
 dist/
 artifacts/
-*.log
+AppPackages/
+BundleArtifacts/
+TestResults/
+*.msix
+*.appx
+*.appxbundle
+*.msixbundle
 
-## AOT native intermediates
+## =============================================================================
+## Logs, Crash Dumps & Diagnostics
+## =============================================================================
+*.log
+*.dmp
+*.crash
+*.trace
+startup_crash.log
+
+## =============================================================================
+## Runtime Databases & State (SQLCipher / SQLite)
+## =============================================================================
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+## =============================================================================
+## Native AOT & Intermediates
+## =============================================================================
 *.o
 *.exports
 
-## Local-only verification source (never commit)
+## =============================================================================
+## Local Verification & Overrides
+## =============================================================================
 nuget.verify.config
+*.local.json
 
-## Secrets — NEVER commit provisioning material
+## =============================================================================
+## Secrets & Security Keys — NEVER commit private keys or secrets
+## =============================================================================
 deploy/Provisioning/*.key
 deploy/Provisioning/*.pfx
 deploy/Provisioning/secrets.*
 *.secret
+*.key
+*.pfx
+*.p12
 
-# Ignore node-locked license tokens
+## =============================================================================
+## Node-Locked License Tokens
+## =============================================================================
 license.token
+*.token
+!development-license-public.pem
