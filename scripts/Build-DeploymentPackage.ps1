@@ -55,11 +55,22 @@ $kioskAppDest = Join-Path $portableDir "KioskApp"
 & dotnet publish $appProj -c $Configuration -r $Runtime --self-contained `
     -p:Platform=x64 `
     -p:WindowsPackageType=None `
-    -p:WindowsAppSDKSelfContained=true `
     -p:PublishTrimmed=false `
     -o $kioskAppDest
 
 if ($LASTEXITCODE -ne 0) { throw "Failed to publish KioskApp." }
+
+# Ensure WinUI 3 PRI resource files (SelfCheckoutKiosk.App.pri and resources.pri) are bundled in the publish root
+$appBinDir = Join-Path $repoRoot "src\SelfCheckoutKiosk.App\bin\x64\$Configuration\net10.0-windows10.0.19041.0\win-x64"
+$appPriSource = Join-Path $appBinDir "SelfCheckoutKiosk.App.pri"
+if (-not (Test-Path $appPriSource)) {
+    $appPriSource = Join-Path $repoRoot "src\SelfCheckoutKiosk.App\bin\x64\$Configuration\net10.0-windows10.0.19041.0\SelfCheckoutKiosk.App.pri"
+}
+if (Test-Path $appPriSource) {
+    Copy-Item -LiteralPath $appPriSource -Destination (Join-Path $kioskAppDest "SelfCheckoutKiosk.App.pri") -Force
+    Copy-Item -LiteralPath $appPriSource -Destination (Join-Path $kioskAppDest "resources.pri") -Force
+    Write-Host "      [OK] Bundled WinUI 3 XAML Resource Index (resources.pri)" -ForegroundColor Green
+}
 
 # 3. Publish Cash Device API Daemon
 Write-Step "Publishing CashDeviceSimulator API Daemon..."
