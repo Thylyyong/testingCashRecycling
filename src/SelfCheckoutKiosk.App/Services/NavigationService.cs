@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SelfCheckoutKiosk.App.Navigation;
+using SelfCheckoutKiosk.App.Services.Audio;
 
 namespace SelfCheckoutKiosk.App.Services
 {
@@ -76,6 +77,9 @@ namespace SelfCheckoutKiosk.App.Services
             if (frame.CurrentSourcePageType == pageType)
                 return false;
 
+            // Cut off any active voice prompt when transitioning between screens
+            AppSound.StopVoice();
+
             if (transitionInfo != null)
             {
                 return frame.Navigate(
@@ -138,6 +142,9 @@ namespace SelfCheckoutKiosk.App.Services
 
             if (frame == null || !frame.CanGoBack)
                 return false;
+
+            // Cut off any active voice prompt on back navigation
+            AppSound.StopVoice();
 
             if (transitionInfo != null)
             {

@@ -79,6 +79,11 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             UpdateCartStateUI();
             this.Focus(FocusState.Programmatic);
 
+            if (ViewModel.IsEmpty)
+            {
+                AppSound.PleaseScanFirstItem();
+            }
+
             if (App.MainWindowInstance?.Content is UIElement root)
             {
                 root.RemoveHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler);

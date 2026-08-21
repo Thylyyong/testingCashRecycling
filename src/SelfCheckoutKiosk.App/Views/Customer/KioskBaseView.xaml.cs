@@ -56,7 +56,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             SetupVideoPlayer();
 
             LocalizationService.Instance.PropertyChanged += Localizer_PropertyChanged;
-            Loaded += (s, e) => AppSound.Welcome();
             Unloaded += KioskBaseView_Unloaded;
         }
 
@@ -83,42 +82,49 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void MediaPlayer_MediaOpened(MediaPlayer sender, object args)
         {
-            Debug.WriteLine($"[BannerVideo MediaOpened] Video opened! Natural duration: {sender.PlaybackSession.NaturalDuration.TotalSeconds:F1}s");
-            DispatcherQueue?.TryEnqueue(() =>
+            try
             {
-                sender.Play();
-            });
+                Debug.WriteLine($"[BannerVideo MediaOpened] Video opened!");
+                DispatcherQueue?.TryEnqueue(() =>
+                {
+                    try { sender.Play(); } catch { }
+                });
+            }
+            catch { }
         }
 
         private void PlaybackSession_PlaybackStateChanged(MediaPlaybackSession sender, object args)
         {
-            Debug.WriteLine($"[BannerVideo PlaybackState] State: {sender.PlaybackState}, Position: {sender.Position.TotalSeconds:F1}s");
+            try
+            {
+                Debug.WriteLine($"[BannerVideo PlaybackState] State: {sender.PlaybackState}");
+            }
+            catch { }
         }
 
         private void MediaPlayer_MediaEnded(MediaPlayer sender, object args)
         {
-            // Only advance if the video actually reached completion (duration > 0.5s)
-            if (sender.PlaybackSession.NaturalDuration.TotalSeconds > 0.5)
+            try
             {
-                Debug.WriteLine("[BannerVideo MediaEnded] Video completed full playback. Auto-advancing banner...");
                 DispatcherQueue?.TryEnqueue(() =>
                 {
                     AdvanceBanner(forward: true);
                 });
             }
-            else
-            {
-                Debug.WriteLine("[BannerVideo MediaEnded] Ignored premature MediaEnded event during initialization.");
-            }
+            catch { }
         }
 
         private void MediaPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
-            Debug.WriteLine($"[BannerVideo MediaFailed] Error: {args.Error}, ExtendedErrorCode: {args.ExtendedErrorCode?.Message}, Message: {args.ErrorMessage}");
-            DispatcherQueue?.TryEnqueue(() =>
+            try
             {
-                AdvanceBanner(forward: true);
-            });
+                Debug.WriteLine($"[BannerVideo MediaFailed] Error: {args.Error}");
+                DispatcherQueue?.TryEnqueue(() =>
+                {
+                    AdvanceBanner(forward: true);
+                });
+            }
+            catch { }
         }
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
@@ -132,25 +138,29 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             // {x:Bind Localizer.GetString(...)} refreshes automatically
         }
 
-        private void KioskBaseView_Unloaded(object sender, RoutedEventArgs e)
+        private void TearDownVideoPlayer()
         {
-            _slideTimer.Stop();
-
             try
             {
                 var player = BannerVideoPlayer.MediaPlayer;
                 if (player != null)
                 {
-                    player.Pause();
-                    player.MediaOpened -= MediaPlayer_MediaOpened;
-                    player.MediaEnded -= MediaPlayer_MediaEnded;
-                    player.MediaFailed -= MediaPlayer_MediaFailed;
-                    player.PlaybackSession.PlaybackStateChanged -= PlaybackSession_PlaybackStateChanged;
+                    try { player.MediaOpened -= MediaPlayer_MediaOpened; } catch { }
+                    try { player.MediaEnded -= MediaPlayer_MediaEnded; } catch { }
+                    try { player.MediaFailed -= MediaPlayer_MediaFailed; } catch { }
+                    try { player.PlaybackSession.PlaybackStateChanged -= PlaybackSession_PlaybackStateChanged; } catch { }
+                    try { player.Pause(); } catch { }
+                    try { player.Source = null; } catch { }
                 }
                 BannerVideoPlayer.Source = null;
             }
             catch { }
+        }
 
+        private void KioskBaseView_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _slideTimer.Stop();
+            TearDownVideoPlayer();
             LocalizationService.Instance.PropertyChanged -= Localizer_PropertyChanged;
         }
 
@@ -202,7 +212,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         {
             if (!_wasManipulated)
             {
-                AppSound.ButtonClick();
+                _wasManipulated = true;
+                _slideTimer.Stop();
+                TearDownVideoPlayer();
+                AppSound.Welcome();
                 ViewModel.ProceedToHome();
             }
         }

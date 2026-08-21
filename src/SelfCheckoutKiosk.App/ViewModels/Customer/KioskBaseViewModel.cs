@@ -89,7 +89,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         public void ProceedToHome()
         {
-            NavigationService.NavigateTo(KioskRoute.Home, SlideNavigationTransitionEffect.FromRight);
+            NavigationService.NavigateTo(KioskRoute.Home, "FromAttract", SlideNavigationTransitionEffect.FromRight);
         }
 
         public void ProceedToCart()

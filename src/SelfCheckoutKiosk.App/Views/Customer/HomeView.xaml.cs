@@ -59,6 +59,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             Unloaded += HomeView_Unloaded;
         }
 
+        protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            if (e.Parameter is string param && param == "FromAttract")
+            {
+                AppSound.Welcome();
+            }
+        }
+
         private async void HomeView_Loaded(object sender, RoutedEventArgs e)
         {
             // Sync font, flag, and dropdown label with the current language loaded at startup
@@ -127,7 +136,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 return;
             }
 
-            AppSound.PleaseScanFirstItem();
             ViewModel.ProceedToCart();
         }
 

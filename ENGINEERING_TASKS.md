@@ -194,9 +194,10 @@
 - [x] **10.1 Unpackaged Publish Pipeline:**
   - Published `SelfCheckoutKiosk.App` self-contained unpackaged win-x64 binaries into `dist/SelfCheckoutKiosk`.
   - Copied compiled resource indexes (`resources.pri`, `SelfCheckoutKiosk.App.pri`) and bundled `Assets/` and `Config/` into the package root.
-- [x] **10.2 Isolated `CashAPI/` Subfolder:**
-  - Placed all Cash Device REST API executables, DLLs, and simulator binaries into `dist/SelfCheckoutKiosk/CashAPI/` to prevent root clutter.
-  - Configured `CashApiProcessManager` to automatically discover and manage the daemon lifecycle inside `CashAPI/`.
+- [x] **10.2 Isolated `CashAPI/` Subfolder & Runtime Isolation:**
+  - Placed all Cash Device REST API executables, native drivers, and configs into `dist/SelfCheckoutKiosk/CashAPI/` to prevent root clutter.
+  - Isolated fallback simulator into `CashAPI/Simulator/` to prevent self-contained .NET 10 host files (`hostfxr.dll`) from polluting the .NET 8.0 ITL hardware daemon directory.
+  - Configured `CashApiProcessManager` to automatically discover and manage the daemon lifecycle inside `CashAPI/` and `CashAPI/Simulator/`.
 - [x] **10.3 1-Click Launcher & Offline Licensing:**
   - Included `Start-Kiosk.bat` and `LicenseGenerator/GenerateLicense.exe` with a pre-generated machine `license.token`.
 - [x] **10.4 Continuous Build & Test Verification Protocol:**
@@ -313,6 +314,13 @@
   - Ergonomic static calls available throughout the application (e.g. `AppSound.ButtonClick()`, `AppSound.SuccessBeep()`, `AppSound.ChoosePaymentMethod()`).
 - [x] **16.4 Full View & ViewModel Integration:**
   - Integrated into `CartView`, `AdminLoginView`, `AdminLoginViewModel`, `PaymentSelectionView`, `SuccessView`, `HomeView`, `KioskBaseView`, `PaymentOptionView`, `QRPaymentView`, and `IngestionProgressView`.
+- [x] **16.5 Screen-Aware Voice Lifecycle & Cut-Off on Navigation:**
+  - Automatically cuts off active voice prompts (`Welcome`, `PleaseScanFirstItem`, `ChoosePaymentMethod`, `ThankYouTakeReceipt`) whenever navigating between screens in `NavigationService` (`NavigateTo`, `GoBack`, `NavigateBackToCustomer`).
+  - Triggers `Welcome` chime exclusively when customers transition from `KioskBaseView` into `HomeView` (suppressed when returning from `CartView`).
+  - Triggers `PleaseScanFirstItem` voice prompt upon entering an empty `CartView`.
+- [x] **16.6 Admin Login Masked Input & Manual Attendant Sign-In:**
+  - Added real-time PIN masking property change notification (`DisplayPin`) in `AdminLoginViewModel` for instantaneous `● ● ● ●` dot rendering on keypad touches.
+  - Replaced automatic submission with explicit manual sign-in requiring attendants to tap "Sign In" (or press Enter).
 
 ---
 

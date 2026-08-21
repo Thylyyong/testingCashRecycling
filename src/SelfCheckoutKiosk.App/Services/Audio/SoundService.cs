@@ -58,6 +58,9 @@ public sealed class SoundService : ISoundService
             _voicePlayer.Volume = 1.0;
             _sfxPlayer.Volume = 0.85;
 
+            _voicePlayer.MediaFailed += (s, e) => Debug.WriteLine($"[SoundService Voice Error] {e.ErrorMessage}");
+            _sfxPlayer.MediaFailed += (s, e) => Debug.WriteLine($"[SoundService SFX Error] {e.ErrorMessage}");
+
             // Pre-resolve asset file paths
             string baseDir = AppContext.BaseDirectory;
             foreach (var kvp in SoundFileMap)

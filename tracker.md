@@ -26,7 +26,7 @@
 | 🟢 | `HIGH` | **Layered Clean/Onion Solution** | Multi-project layout: Domain → Core → Infrastructure → Hal → Presentation/App. Strict dependency rule (Domain has 0 dependencies). | [SelfCheckoutKiosk.sln](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/SelfCheckoutKiosk.sln) |
 | 🟢 | `HIGH` | **AOT-Friendly Build Configuration** | `TreatWarningsAsErrors=true`, `Nullable=enable`, trimming annotations, compiled EF models, zero reflection in critical paths. | Configured across all `.csproj` files |
 | 🟢 | `HIGH` | **Presentation/App Split (Section 2a)** | ViewModels cleanly isolated in headless `SelfCheckoutKiosk.Presentation` (net10.0), XAML views in `SelfCheckoutKiosk.App` (WinUI 3). | Ratified in Blueprint Section 2a |
-| 🟢 | `HIGH` | **Standalone Unpackaged Distribution** | Self-contained unpackaged win-x64 release build in `dist/SelfCheckoutKiosk/` with isolated `CashAPI/` daemon subfolder, offline licensing, and 1-click execution. | [dist/SelfCheckoutKiosk](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/dist/SelfCheckoutKiosk) |
+| 🟢 | `HIGH` | **Standalone Unpackaged Distribution** | Self-contained unpackaged win-x64 release build in `dist/SelfCheckoutKiosk/` with isolated clean `CashAPI/` daemon subfolder (.NET 8 runtime safe), `CashAPI/Simulator/`, offline licensing, and 1-click execution. | [dist/SelfCheckoutKiosk](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/dist/SelfCheckoutKiosk) |
 
 ---
 

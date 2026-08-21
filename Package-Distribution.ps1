@@ -64,11 +64,13 @@ if (Test-Path $ItlPackage) {
     Copy-Item "$ItlPackage\*" $CashApiDir -Recurse -Force
 }
 
+$SimDir = Join-Path $CashApiDir "Simulator"
+New-Item -ItemType Directory -Force -Path $SimDir | Out-Null
 dotnet publish "$RepoRoot\tools\CashDeviceSimulator\CashDeviceSimulator.csproj" `
     -c Release `
     -r win-x64 `
     --self-contained true `
-    -o $CashApiDir
+    -o $SimDir
 
 # 6. Package License Generator & Generate Token
 Write-Host "[6/6] Packaging License Generator & 1-Click Launcher..." -ForegroundColor Yellow

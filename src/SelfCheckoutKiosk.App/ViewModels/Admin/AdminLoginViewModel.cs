@@ -38,6 +38,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
                     _enteredPin = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(MaskedPinDisplay));
+                    OnPropertyChanged(nameof(DisplayPin));
                     OnPropertyChanged(nameof(CanSubmit));
                     OnPropertyChanged(nameof(PinLengthDisplay));
                 }
@@ -52,7 +53,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
 
         public string PinLengthDisplay => $"{_enteredPin.Length} / {RequiredPinLength}";
 
-        public bool CanSubmit => _enteredPin.Length == RequiredPinLength && !_isAuthenticating;
+        public bool CanSubmit => _enteredPin.Length > 0 && !_isAuthenticating;
 
         public string ErrorMessage
         {
@@ -91,11 +92,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
 
             ErrorMessage = string.Empty;
             EnteredPin += digit;
-
-            if (_enteredPin.Length == RequiredPinLength)
-            {
-                TryAuthenticate();
-            }
+            // Manual sign-in: do NOT auto authenticate
         }
 
         public void DeleteLast()

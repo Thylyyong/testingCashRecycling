@@ -318,7 +318,9 @@ public static class CashApiProcessManager
         {
             baseDir,
             Path.Combine(baseDir, "CashAPI"),
+            Path.Combine(baseDir, "CashAPI", "Simulator"),
             Path.Combine(baseDir, "..", "CashAPI"),
+            Path.Combine(baseDir, "..", "CashAPI", "Simulator"),
             Path.Combine(baseDir, ".."),
             Path.Combine(baseDir, "..", "CashDevice-RestAPI"),
             Path.Combine(baseDir, "CashDevice-RestAPI"),
@@ -326,6 +328,7 @@ public static class CashApiProcessManager
             Path.Combine(baseDir, "CashDeviceSimulator-API"),
             currentDir,
             Path.Combine(currentDir, "CashAPI"),
+            Path.Combine(currentDir, "CashAPI", "Simulator"),
             Path.Combine(currentDir, "CashDevice-RestAPI"),
             Path.Combine(currentDir, "CashDeviceSimulator-API"),
             Path.Combine(currentDir, "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
