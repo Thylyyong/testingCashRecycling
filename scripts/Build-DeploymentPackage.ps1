@@ -60,9 +60,11 @@ Write-Ok "dist\ cleared and recreated fresh"
 Write-Step "Publishing SelfCheckoutKiosk.App (self-contained $Configuration)..."
 $appDest = Join-Path $portableDir "app"
 & dotnet publish $appProj `
-    -c $Configuration -r $Runtime --self-contained `
+    -c $Configuration -r $Runtime `
     -p:Platform=x64 `
     -p:WindowsPackageType=None `
+    -p:WindowsAppSDKSelfContained=true `
+    --self-contained true `
     -p:PublishTrimmed=false `
     -o $appDest
 
@@ -90,8 +92,11 @@ Write-Step "Publishing CashDeviceSimulator (fallback for testing)..."
 $simStage = Join-Path $env:TEMP ("CashSimStage_" + [guid]::NewGuid().ToString("N"))
 [IO.Directory]::CreateDirectory($simStage) | Out-Null
 & dotnet publish $simProj `
-    -c $Configuration -r $Runtime --self-contained `
+    -c $Configuration -r $Runtime `
     -p:Platform=x64 `
+    -p:WindowsPackageType=None `
+    -p:WindowsAppSDKSelfContained=true `
+    --self-contained true `
     -p:PublishSingleFile=true `
     -p:PublishTrimmed=false `
     -o $simStage
@@ -148,23 +153,19 @@ if (-not $itlApiFound) {
 
 
 
-# ─── STEP 4: Auto-generate universal license.token ───────────────────────────
-#
-#  Generates with HardwareId="*" -- works on every machine, no node-locking.
-#  Copies into app\ (so the kiosk finds it on startup) and into the portable
-#  root (backup / reference copy).
-#
-Write-Step "Generating universal license.token..."
-$licStage = Join-Path $env:TEMP ("LicStage_" + [guid]::NewGuid().ToString("N"))
-[IO.Directory]::CreateDirectory($licStage) | Out-Null
+# ─── STEP 4: Publish DevLicenseTokenGenerator & Generate license.token ───────
+Write-Step "Publishing DevLicenseTokenGenerator and generating universal license.token..."
+$licDest = Join-Path $portableDir "DevLicenseTokenGenerator"
 & dotnet publish $licProj `
-    -c $Configuration -r $Runtime --self-contained `
+    -c $Configuration -r $Runtime `
     -p:Platform=x64 `
-    -p:PublishSingleFile=true `
+    -p:WindowsPackageType=None `
+    -p:WindowsAppSDKSelfContained=true `
+    --self-contained true `
     -p:PublishTrimmed=false `
-    -o $licStage
+    -o $licDest
 
-$licExe   = Join-Path $licStage "GenerateLicense.exe"
+$licExe   = Join-Path $licDest "GenerateLicense.exe"
 $licToken = Join-Path $portableDir "license.token"
 
 if ($LASTEXITCODE -eq 0 -and (Test-Path $licExe)) {
@@ -175,10 +176,8 @@ if ($LASTEXITCODE -eq 0 -and (Test-Path $licExe)) {
     } else {
         Write-Warn "GenerateLicense.exe ran but produced no file -- kiosk will auto-unlock at runtime"
     }
-    Remove-Item -LiteralPath $licStage -Recurse -Force -ErrorAction SilentlyContinue
 } else {
-    Write-Warn "License generator build failed -- kiosk will auto-unlock at runtime"
-    if (Test-Path $licStage) { Remove-Item -LiteralPath $licStage -Recurse -Force -ErrorAction SilentlyContinue }
+    Write-Warn "License generator publish failed -- kiosk will auto-unlock at runtime"
 }
 
 # ─── STEP 5: Write Start-Kiosk.bat ───────────────────────────────────────────
@@ -279,6 +278,7 @@ Write-Step "Assembling Installer package..."
 
 # Installer payload = everything in portable
 $installerPayload = Join-Path $installerDir "payload"
+if (-not (Test-Path $installerPayload)) { [IO.Directory]::CreateDirectory($installerPayload) | Out-Null }
 Copy-Item -Path "$portableDir\*" -Destination $installerPayload -Recurse -Force
 
 # Install.bat -- self-elevates then calls Installer.ps1
