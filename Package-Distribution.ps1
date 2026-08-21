@@ -105,6 +105,61 @@ start "" "%~dp0SelfCheckoutKiosk.App.exe"
 
 Set-Content -Path (Join-Path $DistDir "Start-Kiosk.bat") -Value $BatContent
 
+# 8. Create Test-Hardware.bat Hardware Diagnostics Tool
+$TestBatContent = @"
+@echo off
+title Self-Checkout Kiosk - Hardware Diagnostic Utility
+cd /d "%~dp0"
+echo =======================================================
+echo   Self-Checkout Kiosk V2 - Hardware Diagnostic Tool
+echo =======================================================
+echo.
+
+echo [1/4] Checking .NET Runtimes...
+dotnet --list-runtimes 2>nul | findstr /i "Microsoft.AspNetCore.App 8."
+if %ERRORLEVEL% equ 0 (
+    echo   [OK] ASP.NET Core 8.0 Runtime found.
+) else (
+    echo   [WARN] ASP.NET Core 8.0 Runtime NOT detected!
+    echo          Download from https://dotnet.microsoft.com/download/dotnet/8.0
+)
+echo.
+
+echo [2/4] Detecting Active Serial COM Ports...
+powershell -NoProfile -Command "[System.IO.Ports.SerialPort]::GetPortNames() | ForEach-Object { Write-Host '  Found Port:' `$_ -ForegroundColor Cyan }"
+echo.
+
+echo [3/4] Checking Cash API Executables...
+if exist "CashAPI\CashDevice-RestAPI.exe" (
+    echo   [OK] CashDevice-RestAPI.exe present.
+) else (
+    echo   [FAIL] CashDevice-RestAPI.exe missing!
+)
+if exist "CashAPI\CashDeviceSimulator.exe" (
+    echo   [OK] CashDeviceSimulator.exe present.
+) else (
+    echo   [FAIL] CashDeviceSimulator.exe missing!
+)
+echo.
+
+echo [4/4] Checking License Token...
+if exist "license.token" (
+    echo   [OK] license.token present.
+) else (
+    echo   [WARN] license.token missing. Generating...
+    if exist "LicenseGenerator\GenerateLicense.exe" (
+        "LicenseGenerator\GenerateLicense.exe" --silent --output "license.token"
+        echo   [OK] Generated license.token.
+    )
+)
+echo.
+echo =======================================================
+echo Diagnostic complete. Press any key to exit.
+pause >nul
+"@
+
+Set-Content -Path (Join-Path $DistDir "Test-Hardware.bat") -Value $TestBatContent
+
 Write-Host "==================================================" -ForegroundColor Green
 Write-Host "  PACKAGING COMPLETE: dist/SelfCheckoutKiosk/     " -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Green
