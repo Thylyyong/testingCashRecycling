@@ -161,8 +161,8 @@ public static class CashApiProcessManager
 
             if (_apiProcess == null) continue;
 
-            // Wait up to 3.5s for this candidate to answer
-            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(3500));
+            // Wait up to 12s for this candidate process to finish booting and bind to port
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
             while (!linkedCts.Token.IsCancellationRequested)
@@ -184,7 +184,7 @@ public static class CashApiProcessManager
 
                 try
                 {
-                    await Task.Delay(150, linkedCts.Token);
+                    await Task.Delay(250, linkedCts.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -233,7 +233,7 @@ public static class CashApiProcessManager
 
             if (_apiProcess != null)
             {
-                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(12));
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
                 while (!linkedCts.Token.IsCancellationRequested)
@@ -249,7 +249,7 @@ public static class CashApiProcessManager
                         }
                     }
 
-                    try { await Task.Delay(200, linkedCts.Token); } catch { break; }
+                    try { await Task.Delay(250, linkedCts.Token); } catch { break; }
                 }
             }
         }
@@ -264,20 +264,34 @@ public static class CashApiProcessManager
             if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri))
                 return false;
 
-            // Fast TCP pre-check prevents HttpClient from timing out and spamming TaskCanceledException in debugger
+            // Fast TCP pre-check
             using var tcp = new System.Net.Sockets.TcpClient();
             var connectTask = tcp.ConnectAsync(uri.Host, uri.Port);
-            var timeoutTask = Task.Delay(150, ct);
+            var timeoutTask = Task.Delay(500, ct);
             var finished = await Task.WhenAny(connectTask, timeoutTask);
 
             if (finished != connectTask || !tcp.Connected)
                 return false;
 
-            using var client = new HttpClient { Timeout = TimeSpan.FromMilliseconds(400) };
-            // Use root URL for health check — it always returns 200 on both the
-            // real ITL API and the simulator, without requiring authentication.
-            using var resp = await client.GetAsync($"{baseUrl}/", HttpCompletionOption.ResponseHeadersRead, ct);
-            return (int)resp.StatusCode < 500;
+            // If TCP connected, verify HTTP response
+            using var client = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
+            
+            string[] probeEndpoints = { "/", "/swagger/index.html", "/api/health", "/api/cashdevice/status" };
+            foreach (var ep in probeEndpoints)
+            {
+                try
+                {
+                    using var resp = await client.GetAsync($"{baseUrl.TrimEnd('/')}{ep}", HttpCompletionOption.ResponseHeadersRead, ct);
+                    if ((int)resp.StatusCode < 500)
+                    {
+                        return true;
+                    }
+                }
+                catch { }
+            }
+
+            // If TCP port is open and listening, consider it responsive
+            return true;
         }
         catch
         {

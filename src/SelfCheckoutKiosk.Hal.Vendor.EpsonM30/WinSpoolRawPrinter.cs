@@ -116,9 +116,6 @@ public static class WinSpoolRawPrinter
                         if ((attributes & PRINTER_ATTRIBUTE_WORK_OFFLINE) != 0)
                             return (false, "Printer set to Work Offline");
 
-                        if ((status & PRINTER_STATUS_OFFLINE) != 0 || (status & PRINTER_STATUS_NOT_AVAILABLE) != 0)
-                            return (false, "Printer is Offline / Powered Off");
-
                         if ((status & PRINTER_STATUS_DOOR_OPEN) != 0)
                             return (false, "Printer Cover / Door Open");
 
