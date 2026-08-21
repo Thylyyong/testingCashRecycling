@@ -20,6 +20,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private double _secondsRemaining = AutoReturnSeconds;
         private int _lastDisplayedSecond = AutoReturnSeconds;
 
+        private static readonly System.Collections.Generic.HashSet<string> _printedTransactions = new();
+        private Payment? _activePayment;
+
         public SuccessView()
         {
             InitializeComponent();
@@ -29,7 +32,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         {
             base.OnNavigatedTo(e);
 
-            Payment payment = e.Parameter as Payment ?? new Payment
+            Payment payment = e.Parameter as Payment ?? _activePayment ?? new Payment
             {
                 Method = PaymentMethod.Cash,
                 TotalDueUsd = App.CartServiceInstance.TotalUsd > 0 ? App.CartServiceInstance.TotalUsd : 5.00m,
@@ -39,6 +42,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 IsFullyPaid = true,
                 CompletedAt = DateTime.Now
             };
+
+            _activePayment = payment;
 
             INavigationService navigationService = App.MainWindowInstance?.NavigationService
                 ?? new NavigationService(Frame);
@@ -52,20 +57,35 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             RenderDetails();
             StartAutoReturnTimer();
 
+            bool alreadyPrinted = payment.IsReceiptPrinted || _printedTransactions.Contains(payment.TransactionId);
+
             bool isPrinterAvailable = HardwareStatusManager.Instance.IsPrinterAvailable;
             if (isPrinterAvailable)
             {
-                try
+                if (!alreadyPrinted)
                 {
-                    ViewModel.PrintReceipt();
+                    try
+                    {
+                        bool printed = ViewModel.PrintReceipt();
+                        if (printed)
+                        {
+                            _printedTransactions.Add(payment.TransactionId);
+                        }
+                        PrinterSuccessBanner.Visibility = Visibility.Visible;
+                        PrinterWarningBanner.Visibility = Visibility.Collapsed;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[WARN] Receipt print failed: {ex.Message}");
+                        PrinterSuccessBanner.Visibility = Visibility.Collapsed;
+                        PrinterWarningBanner.Visibility = Visibility.Visible;
+                    }
+                }
+                else
+                {
+                    // Already printed earlier; keep success banner visible without reprinting physical paper
                     PrinterSuccessBanner.Visibility = Visibility.Visible;
                     PrinterWarningBanner.Visibility = Visibility.Collapsed;
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[WARN] Receipt print failed: {ex.Message}");
-                    PrinterSuccessBanner.Visibility = Visibility.Collapsed;
-                    PrinterWarningBanner.Visibility = Visibility.Visible;
                 }
             }
             else

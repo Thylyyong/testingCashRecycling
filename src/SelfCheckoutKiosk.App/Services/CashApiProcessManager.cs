@@ -275,7 +275,7 @@ public static class CashApiProcessManager
 
             // If TCP connected, verify HTTP response
             using var client = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
-            
+
             string[] probeEndpoints = { "/", "/swagger/index.html", "/api/health", "/api/cashdevice/status" };
             foreach (var ep in probeEndpoints)
             {
@@ -317,14 +317,19 @@ public static class CashApiProcessManager
         string[] searchDirs =
         {
             baseDir,
+            Path.Combine(baseDir, "CashAPI"),
+            Path.Combine(baseDir, "..", "CashAPI"),
             Path.Combine(baseDir, ".."),
             Path.Combine(baseDir, "..", "CashDevice-RestAPI"),
             Path.Combine(baseDir, "CashDevice-RestAPI"),
             Path.Combine(baseDir, "..", "CashDeviceSimulator-API"),
             Path.Combine(baseDir, "CashDeviceSimulator-API"),
             currentDir,
+            Path.Combine(currentDir, "CashAPI"),
             Path.Combine(currentDir, "CashDevice-RestAPI"),
             Path.Combine(currentDir, "CashDeviceSimulator-API"),
+            Path.Combine(currentDir, "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
+            Path.Combine(baseDir, "..", "..", "..", "..", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
             Path.Combine(userProfile, "Desktop", "CA", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0 1", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
             Path.Combine(userProfile, "Desktop", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
             Path.Combine(userProfile, "Downloads", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),

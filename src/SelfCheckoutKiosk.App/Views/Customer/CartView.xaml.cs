@@ -71,21 +71,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void CartView_Loaded(object sender, RoutedEventArgs e)
         {
-            if (App.MainWindowInstance?.Content is UIElement root)
-            {
-                root.AddHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler, true);
-            }
-            else
-            {
-                this.AddHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler, true);
-            }
-
-            if (App.BarcodeScannerInstance != null)
-            {
-                App.BarcodeScannerInstance.OnBarcodeScanned -= Scanner_OnBarcodeScanned;
-                App.BarcodeScannerInstance.OnBarcodeScanned += Scanner_OnBarcodeScanned;
-            }
-
             RefreshNetworkStatusUI();
             RefreshCurrencyLabel();
             UpdateCartStateUI();
@@ -93,19 +78,6 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void CartView_Unloaded(object sender, RoutedEventArgs e)
         {
-            if (App.MainWindowInstance?.Content is UIElement root)
-            {
-                root.RemoveHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler);
-            }
-            else
-            {
-                this.RemoveHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler);
-            }
-
-            if (App.BarcodeScannerInstance != null)
-            {
-                App.BarcodeScannerInstance.OnBarcodeScanned -= Scanner_OnBarcodeScanned;
-            }
         }
 
         private void Scanner_OnBarcodeScanned(object? sender, SelfCheckoutKiosk.Core.Abstractions.BarcodeScannedEventArgs e)
@@ -197,7 +169,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             return '\0';
         }
 
-        private async Task ProcessScannedBarcodeAsync(string sku)
+        public async Task ProcessScannedBarcodeAsync(string sku)
         {
             if (string.IsNullOrWhiteSpace(sku)) return;
 
@@ -214,6 +186,18 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             if (questionMarks > 0 && (double)questionMarks / cleanedSku.Length > 0.15)
             {
                 Debug.WriteLine($"[CartView] Discarded corrupted binary scan data: '{cleanedSku}'");
+                return;
+            }
+
+            if (_scanBehavior == ScanBehavior.PriceCheck && _activePriceResultPanel != null)
+            {
+                RenderPriceCheckResult(_activePriceResultPanel, cleanedSku);
+                return;
+            }
+
+            if (_scanBehavior == ScanBehavior.Blocked)
+            {
+                Debug.WriteLine("[CartView] Scan ignored: current dialog blocks scanning.");
                 return;
             }
 
@@ -719,7 +703,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             });
 
             var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
-                "6-Digit PIN",
+                Localizer.GetString("SixDigitPin"),
                 onClear: () =>
                 {
                     resultPanel.Children.Clear();
@@ -1252,24 +1236,27 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             string placeholder,
             Action? onClear = null)
         {
-            var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
+            var isKm = LocalizationService.Instance.CurrentLanguage == "km";
+            var font = isKm
+                ? (FontFamily)Application.Current.Resources["KhmerFont"]
+                : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
             string enteredCode = string.Empty;
 
             var entryBox = new TextBox
             {
                 PlaceholderText = placeholder,
-                FontSize = 24,
+                FontSize = isKm ? 18 : 24,
                 FontWeight = FontWeights.Bold,
                 TextAlignment = TextAlignment.Center,
                 Height = 52,
-                CharacterSpacing = 100,
+                CharacterSpacing = isKm ? 0 : 100,
                 IsReadOnly = true,
                 Margin = new Thickness(0, 0, 0, 8),
                 CornerRadius = new CornerRadius(8),
                 BorderBrush = (Brush)Application.Current.Resources["CardBorderBrush"],
                 BorderThickness = new Thickness(1.5),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                FontFamily = globalFont
+                FontFamily = font
             };
 
             void AppendDigit(string digit)
@@ -1277,6 +1264,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 if (enteredCode.Length < 16)
                 {
                     enteredCode += digit;
+                    entryBox.CharacterSpacing = 100;
+                    entryBox.FontSize = 24;
                     entryBox.Text = enteredCode;
                 }
             }
@@ -1284,6 +1273,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             void ClearAll()
             {
                 enteredCode = string.Empty;
+                entryBox.CharacterSpacing = isKm ? 0 : 100;
+                entryBox.FontSize = isKm ? 18 : 24;
                 entryBox.Text = string.Empty;
                 onClear?.Invoke();
             }
@@ -1293,6 +1284,11 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 if (enteredCode.Length > 0)
                 {
                     enteredCode = enteredCode.Substring(0, enteredCode.Length - 1);
+                    if (enteredCode.Length == 0)
+                    {
+                        entryBox.CharacterSpacing = isKm ? 0 : 100;
+                        entryBox.FontSize = isKm ? 18 : 24;
+                    }
                     entryBox.Text = enteredCode;
                 }
             }
@@ -1316,7 +1312,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 {
                     Content = content,
                     Style = style,
-                    FontFamily = globalFont
+                    FontFamily = font
                 };
                 btn.Click += (s, args) =>
                 {
@@ -1338,7 +1334,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 }
             }
 
-            var clearBtn = MakeKeyButton("Clear", ClearAll, isDanger: true);
+            var clearBtn = MakeKeyButton(Localizer.GetString("Clear"), ClearAll, isDanger: true);
             Grid.SetRow(clearBtn, 3); Grid.SetColumn(clearBtn, 0); keypadGrid.Children.Add(clearBtn);
 
             var zeroBtn = MakeKeyButton("0", () => AppendDigit("0"));

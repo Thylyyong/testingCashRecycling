@@ -177,23 +177,30 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
 
         HardwareDevices.Clear();
 
-        string activePort = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_COM_PORT") ?? "COM5";
+        string cashPort = hw.CashDevicePort != null
+            ? $"Port 5000 / {hw.CashDevicePort}"
+            : (hw.IsCashAvailable ? "Port 5000 / Auto" : "None");
+
         HardwareDevices.Add(new HardwareDeviceStatus
         {
             Name = "Cash Recycler",
             DeviceType = "Cash & Note Validator",
             IsConnected = hw.IsCashAvailable,
-            PortOrInterface = hw.IsCashAvailable ? $"REST API • Port 5000 / {activePort}" : hw.CashStatusReason,
+            PortOrInterface = hw.IsCashAvailable ? $"REST API • {cashPort}" : hw.CashStatusReason,
             FirmwareVersion = "v1.6.1-RC.4",
             Glyph = "\uE825"
         });
+
+        string scannerPortInfo = hw.ScannerPort != null
+            ? (hw.ScannerPort == "USB-HID" ? "USB Keyboard Wedge (HID)" : $"USB-COM Serial ({hw.ScannerPort}) • 9600 Baud")
+            : (hw.IsScannerAvailable ? "USB POS & Keyboard Wedge Ready" : "Disconnected");
 
         HardwareDevices.Add(new HardwareDeviceStatus
         {
             Name = "Barcode Scanner",
             DeviceType = "Datalogic 2D Imager & EAN-13",
             IsConnected = hw.IsScannerAvailable,
-            PortOrInterface = hw.IsScannerAvailable ? "USB-COM Serial (COM4) • 9600 Baud" : "Disconnected (COM4)",
+            PortOrInterface = scannerPortInfo,
             FirmwareVersion = "v1.8.0",
             Glyph = "\uEC5A"
         });

@@ -18,10 +18,7 @@ if not exist "%~dp0..\license.token" (
 
 :: 2. Launch Cash Device API Simulator / Bridge if present
 echo [2/3] Checking Cash Device API Daemon...
-if exist "%~dp0..\dist\SelfCheckoutKiosk-Portable\CashDeviceSimulator-API\CashDeviceSimulator.exe" (
-    start "Cash Device API Daemon" /min "%~dp0..\dist\SelfCheckoutKiosk-Portable\CashDeviceSimulator-API\CashDeviceSimulator.exe"
-    timeout /t 2 /nobreak >nul
-) else if exist "%~dp0..\tools\CashDeviceSimulator\bin\Debug\net10.0\CashDeviceSimulator.exe" (
+if exist "%~dp0..\tools\CashDeviceSimulator\bin\Debug\net10.0\CashDeviceSimulator.exe" (
     start "Cash Device API Daemon" /min "%~dp0..\tools\CashDeviceSimulator\bin\Debug\net10.0\CashDeviceSimulator.exe"
     timeout /t 2 /nobreak >nul
 ) else (
@@ -32,13 +29,8 @@ if exist "%~dp0..\dist\SelfCheckoutKiosk-Portable\CashDeviceSimulator-API\CashDe
 
 :: 3. Launch Self-Checkout Kiosk WinUI 3 Application
 echo [3/3] Launching Self-Checkout Kiosk WinUI 3 Application...
-if exist "%~dp0..\dist\SelfCheckoutKiosk-Portable\KioskApp\SelfCheckoutKiosk.App.exe" (
-    cd /d "%~dp0..\dist\SelfCheckoutKiosk-Portable\KioskApp"
-    start "" "%~dp0..\dist\SelfCheckoutKiosk-Portable\KioskApp\SelfCheckoutKiosk.App.exe"
-) else (
-    cd /d "%~dp0..\src\SelfCheckoutKiosk.App"
-    start "" dotnet run --project "%~dp0..\src\SelfCheckoutKiosk.App\SelfCheckoutKiosk.App.csproj" -p:WindowsPackageType=None
-)
+cd /d "%~dp0..\src\SelfCheckoutKiosk.App"
+start "" dotnet run --project "%~dp0..\src\SelfCheckoutKiosk.App\SelfCheckoutKiosk.App.csproj" -p:WindowsPackageType=None
 
 echo.
 echo [SUCCESS] Self-Checkout Kiosk launched!

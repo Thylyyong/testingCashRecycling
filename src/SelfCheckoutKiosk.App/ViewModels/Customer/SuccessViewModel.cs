@@ -54,9 +54,17 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             Payment = payment ?? throw new ArgumentNullException(nameof(payment));
         }
 
-        public void PrintReceipt()
+        public bool PrintReceipt()
         {
+            if (Payment.IsReceiptPrinted)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SuccessViewModel] Receipt for transaction {Payment.TransactionId} already printed. Skipping reprint.");
+                return false;
+            }
+
             _printerService.Print(Payment);
+            Payment.IsReceiptPrinted = true;
+            return true;
         }
 
         // Formatted specifically for authentic 80mm (79.5mm) thermal paper receipts (48 columns)

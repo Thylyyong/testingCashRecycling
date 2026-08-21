@@ -349,7 +349,7 @@
             <!-- STORE HOURS -->
             <StackPanel x:Name="StoreHoursStack" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                 <FontIcon x:Name="StoreHoursIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE823;" FontSize="16" Foreground="{StaticResource TextMutedBrush}"/>
-                <TextBlock x:Name="StoreHoursText" Text="{x:Bind ViewModel.StoreHours, Mode=OneWay}" FontSize="14" Foreground="{StaticResource TextMutedBrush}"/>
+                <TextBlock x:Name="StoreHoursText" Text="{x:Bind Localizer.GetString('OpenUntil'), Mode=OneWay}" FontSize="14" Foreground="{StaticResource TextMutedBrush}"/>
             </StackPanel>
 
             <!-- HELP BUTTON -->

@@ -273,7 +273,7 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Cash Recycler Vault Breakdown" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center" Margin="0"/>
+                                    <TextBlock Grid.Column="0" Text="Bill Acceptor/Validator Vault Breakdown" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center" Margin="0"/>
                                     <!-- Reset Vault Button -->
                                     <Button
                                         x:Name="ResetVaultButton"

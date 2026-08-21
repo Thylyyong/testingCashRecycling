@@ -55,6 +55,7 @@ namespace SelfCheckoutKiosk.App.Models
         public decimal ChangeDueUsd { get; set; }
         public decimal ExchangeRate { get; set; }
         public bool IsFullyPaid { get; set; }
+        public bool IsReceiptPrinted { get; set; }
 
         public List<PaymentAttempt> Attempts { get; set; } = new();
         public List<CartItemSnapshot> Items { get; set; } = new();

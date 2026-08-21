@@ -17,8 +17,11 @@
 | **WP-04** | [Generic Bill Acceptor & ITL Hardware Stabilization](#wp-04-generic-bill-acceptor--itl-hardware-stabilization) | `P0` | 🟡 `IN PROGRESS` | ITL NV200/NV11, simulator & validator |
 | **WP-05** | [Architecture Interaction Flow & Component Remarks](#wp-05-architecture-interaction-flow--component-remarks) | `P1` | 🔴 `TODO` | In-depth code remarks & lifecycle mapping |
 | **WP-06** | [Project Structure Optimization & Dead Code Removal](#wp-06-project-structure-optimization--dead-code-removal) | `P1` | 🟢 `COMPLETED` | Safe cleanup, unused tools & structure pruning |
-| **WP-07** | [Standalone Production Packaging & Installer Suite](#wp-07-standalone-production-packaging--installer-suite) | `P0` | 🟢 `COMPLETED` | Release distribution, installer engine, PRI resource bundling, license generator |
+| **WP-07** | [Development Runtime Tools & License Generator](#wp-07-development-runtime-tools--license-generator) | `P1` | 🟢 `COMPLETED` | Standalone CLI tools, DevLicenseTokenGenerator, and quickstart helpers |
 | **WP-08** | [Admin Diagnostics & Age-Restricted Approval Workflow](#wp-08-admin-diagnostics--age-restricted-approval-workflow) | `P0` | 🟢 `COMPLETED` | Vault breakdown, receipt reprint, age approval modal, store branding & persistence |
+| **WP-09** | [Peripheral & Workflow Stabilization (Scan 2x, Khmer Hours, Single-Print)](#wp-09-peripheral--workflow-stabilization-scan-2x-khmer-hours-single-print) | `P0` | 🟢 `COMPLETED` | Barcode scan deduplication, Khmer 'Open until' localization, SuccessView single-print guarantee |
+| **WP-10** | [Standalone Unpackaged Portable Distribution (`dist/SelfCheckoutKiosk`)](#wp-10-standalone-unpackaged-portable-distribution-distselfcheckoutkiosk) | `P0` | 🟢 `COMPLETED` | Unpackaged self-contained publish, isolated `CashAPI/` subfolder, 1-click launcher, and Debug/Release validation |
+| **WP-11** | [Dynamic COM Port Auto-Probe & Multi-Device Hardware Discovery](#wp-11-dynamic-com-port-auto-probe--multi-device-hardware-discovery) | `P0` | 🟢 `COMPLETED` | Serial scanner all-COM sweep, Cash Recycler dynamic port allocation, Admin Diagnostics live port reflect |
 
 ---
 
@@ -120,22 +123,15 @@
 
 ---
 
-### WP-07: Standalone Production Packaging & Installer Suite
-**Objective:** Provide complete, self-contained Windows x64 release distributions in `dist/` supporting both portable unpackaged execution and a 1-click administrative installer.
+### WP-07: Development Runtime Tools & License Generator
+**Objective:** Provide essential developer runtime utilities, fast development launchers, and node-locked cryptographic license generation for local execution.
 
-- [x] **7.1 Portable Unpackaged Version (`dist/SelfCheckoutKiosk-Portable`):**
-  - Zero-installation folder running directly in-place from any directory or USB drive.
-  - Bundles self-contained `SelfCheckoutKiosk.App.exe`, `CashDeviceSimulator.exe`, and single-file `GenerateLicense.exe`.
-  - Includes `Start-Kiosk-With-API.bat` launcher with automatic node-locked license generation.
-- [x] **7.2 Administrative Installer Suite (`dist/SelfCheckoutKiosk-Installer`):**
-  - 1-Click interactive/silent installer engine (`Install.bat` / `Setup.bat` / `Installer.ps1`).
-  - Automatically provisions target directory (`C:\SelfCheckoutKiosk`), inspects machine hardware ID, generates valid `license.token`, opens firewall ports (`5055`/`5000`), creates Desktop/Start Menu shortcuts, and generates `Uninstall.bat`.
-- [x] **7.3 WinUI 3 XAML Resource Index (PRI) Bundling Fix:**
-  - Resolved `XamlParseException` during `MainWindow.InitializeComponent()` by explicitly bundling `resources.pri` and `SelfCheckoutKiosk.App.pri` into published output folders.
-- [x] **7.4 Release Mode Build Conflict Resolution:**
-  - Fixed `NETSDK1152` duplicate `license.token` collision in `SelfCheckoutKiosk.App.csproj` and set explicit `x64` / `win-x64` platform defaults.
-- [x] **7.5 Interactive & CLI License Generator (`GenerateLicense.exe`):**
-  - Supports current machine auto-detection, remote hardware ID generation, token inspection, and automatic synchronization across target directories.
+- [x] **7.1 Dev License Token Generator (`tools/DevLicenseTokenGenerator`):**
+  - Standalone single-file CLI utility supporting local hardware ID binding, token inspection, and automatic synchronization across development folders.
+- [x] **7.2 Fast Development Launchers (`scripts/QuickStart-Kiosk.bat` & `scripts/Generate-License.bat`):**
+  - Automatic license check and node-locked token generation on fresh environments.
+- [x] **7.3 Packaging & Installer Cleanup:**
+  - Pruned complex packaging scripts and installer suites to maintain a clean source repository focused on direct runtime and visual studio execution.
 
 ---
 
@@ -171,6 +167,55 @@
 
 ---
 
+### WP-09: Peripheral & Workflow Stabilization (Scan 2x, Khmer Hours, Single-Print)
+**Objective:** Resolve double-quantity additions on barcode scans, localize store hours ("Open until") in Khmer (`km`), and enforce single-print execution on `SuccessView` during admin navigation cycles.
+
+- [x] **9.1 Barcode Scan Deduplication:**
+  - Centralized scan processing inside `App.HandleBarcodeScannedInternal` with a 400ms debounce guard against hardware bounce.
+  - Removed duplicate root-level keyboard event handler (`_dialogScanKeyHandler`) and duplicate serial scanner subscription (`Scanner_OnBarcodeScanned`) in `CartView`.
+  - Delegated `CartView.ProcessScannedBarcodeAsync` as the single pipeline for cart-level scanning (handling age restriction approval, price check mode, not-found dialogs, and single-item addition).
+- [x] **9.2 Khmer Store Hours Localization:**
+  - Bound `StoreHoursText` in `HomeView.xaml` to `{x:Bind Localizer.GetString('OpenUntil'), Mode=OneWay}`.
+  - Synchronized `km.json` (`"OpenUntil": "បើករហូតដល់ 10:00 PM"`) and `en.json` (`"OpenUntil": "Open until 10:00 PM"`), with fallback handling in `HomeViewModel.StoreHours`.
+- [x] **9.3 SuccessView Single-Print Guarantee:**
+  - Added `IsReceiptPrinted` state on `Payment` model.
+  - Checked `Payment.IsReceiptPrinted` and tracked processed transaction IDs in `SuccessView.xaml.cs` and `SuccessViewModel.cs` to prevent reprinting when attendants navigate to Admin mode and return back to `SuccessView`.
+
+---
+
+### WP-10: Standalone Unpackaged Portable Distribution (`dist/SelfCheckoutKiosk`)
+**Objective:** Provide a clean, standalone unpackaged release distribution in `dist/SelfCheckoutKiosk` that executes identically to F5 development debugging (running both the WinUI 3 touch application and the Cash API background daemon), keeps Cash API files neatly isolated inside a `CashAPI/` subfolder, and establishes a strict continuous test matrix.
+
+- [x] **10.1 Unpackaged Publish Pipeline:**
+  - Published `SelfCheckoutKiosk.App` self-contained unpackaged win-x64 binaries into `dist/SelfCheckoutKiosk`.
+  - Copied compiled resource indexes (`resources.pri`, `SelfCheckoutKiosk.App.pri`) and bundled `Assets/` and `Config/` into the package root.
+- [x] **10.2 Isolated `CashAPI/` Subfolder:**
+  - Placed all Cash Device REST API executables, DLLs, and simulator binaries into `dist/SelfCheckoutKiosk/CashAPI/` to prevent root clutter.
+  - Configured `CashApiProcessManager` to automatically discover and manage the daemon lifecycle inside `CashAPI/`.
+- [x] **10.3 1-Click Launcher & Offline Licensing:**
+  - Included `Start-Kiosk.bat` and `LicenseGenerator/GenerateLicense.exe` with a pre-generated machine `license.token`.
+- [x] **10.4 Continuous Build & Test Verification Protocol:**
+  - Established standard testing protocol: **Always test Debug build, Debug tests (98/98), Release build, and Release tests (98/98)** on any codebase modifications.
+
+---
+
+### WP-11: Dynamic COM Port Auto-Probe & Multi-Device Hardware Discovery
+**Objective:** Eliminate static COM port assumptions (`COM4`, `COM5`), dynamically probe all system COM ports (Registry and Win32 PnP) for serial barcode scanners and ITL cash recyclers, prevent port locking collisions, and continuously monitor plug/unplug events every 2 seconds.
+
+- [x] **11.1 Continuous Serial Barcode Scanner Auto-Probe:**
+  - Implemented `App.ProbeAndConnectBarcodeScannerAsync` scanning all candidate COM ports from `SerialPort.GetPortNames()` and registry `HARDWARE\DEVICEMAP\SERIALCOMM`.
+  - Added collision protection: automatically excludes the COM port claimed by the active Cash Recycler.
+  - Added continuous 2-second polling in `StartContinuousHardwareMonitor` to detect when a scanner is plugged into any USB port after startup.
+- [x] **11.2 Multi-Device Cash Recycler Dynamic Port Discovery:**
+  - Diagnosed and resolved multi-machine COM port numbering variations (Windows dynamic PnP USB-Serial assignment).
+  - Ensured `GetPrioritizedComPorts()` prioritizes real USB-serial hardware while filtering out virtual Bluetooth ports.
+  - Documented driver requirements (Innovative Technology USB-SSP driver) for multi-device deployments.
+- [x] **11.3 Dynamic Admin Diagnostics Port Display:**
+  - Updated `HardwareStatusManager` to expose `ScannerPort` and `CashDevicePort`.
+  - Updated `AdminDiagnosticsViewModel` to dynamically render detected port names (e.g. `Port 5000 / COM5`, `USB-COM Serial (COM4) • 9600 Baud`, or `USB Keyboard Wedge (HID)`) instead of hardcoded strings.
+
+---
+
 ## 📈 Execution Sequence
 
 ```mermaid
@@ -179,6 +224,9 @@ graph TD
     B --> C["WP-03: Thermal Receipt Printer & Supermarket Template"]
     C --> D["WP-04: Bill Acceptor & ITL REST Bridge"]
     D --> E["WP-06: Project Structure Optimization & Root Clean"]
-    E --> F["WP-07: Standalone Packaging & Installer Suite"]
+    E --> F["WP-07: Dev Runtime Tools & Licensing"]
     F --> G["WP-08: Admin Diagnostics, Age Approval & Store Branding"]
+    G --> H["WP-09: Peripheral & Workflow Stabilization"]
+    H --> I["WP-10: Standalone Unpackaged Portable Distribution"]
+    I --> J["WP-11: Dynamic COM Port Auto-Probe & Multi-Device Discovery"]
 ```

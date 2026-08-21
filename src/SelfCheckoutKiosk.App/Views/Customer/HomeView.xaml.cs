@@ -290,11 +290,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         // Centralized method to update font, flag, and dropdown label on load or switch.
         private void SyncLanguageUI(string langCode)
         {
+            var font = langCode == "km"
+                ? (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["KhmerFont"]
+                : new Microsoft.UI.Xaml.Media.FontFamily("Segoe UI");
+
             if (langCode == "km")
             {
                 CurrentLanguageText.Text = "ភាសាខ្មែរ";
-                CurrentLanguageText.FontFamily =
-                    (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["KhmerFont"];
+                CurrentLanguageText.FontFamily = font;
 
                 CurrentLanguageFlag.Source = new BitmapImage(
                     new Uri("ms-appx:///Assets/Images/Flag/km-flag.png"));
@@ -302,12 +305,20 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             else
             {
                 CurrentLanguageText.Text = "English";
-                CurrentLanguageText.FontFamily =
-                    new Microsoft.UI.Xaml.Media.FontFamily("Segoe UI");
+                CurrentLanguageText.FontFamily = font;
 
                 CurrentLanguageFlag.Source = new BitmapImage(
                     new Uri("ms-appx:///Assets/Images/Flag/en-flag.png"));
             }
+
+            if (StoreHoursText != null) StoreHoursText.FontFamily = font;
+            if (HelpButtonText != null) HelpButtonText.FontFamily = font;
+            if (WelcomeTitleText != null) WelcomeTitleText.FontFamily = font;
+            if (WelcomeSubheadingText != null) WelcomeSubheadingText.FontFamily = font;
+            if (ScanTitleText != null) ScanTitleText.FontFamily = font;
+            if (ScanSubtitleText != null) ScanSubtitleText.FontFamily = font;
+            if (PaymentTitleText != null) PaymentTitleText.FontFamily = font;
+            if (PaymentSubtitleText != null) PaymentSubtitleText.FontFamily = font;
         }
 
         private void ScanIcon_Loaded(object sender, RoutedEventArgs e)

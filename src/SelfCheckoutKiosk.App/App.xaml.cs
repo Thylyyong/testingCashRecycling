@@ -385,39 +385,8 @@ public partial class App : Application
             HardwareStatusManager.Instance.SetServerOnline(isServerReachable, isServerReachable ? "Online (Central Server)" : "Offline (Local DB Only)");
             HardwareStatusManager.Instance.SetQrAvailability(true, "Online");
 
-            // Initialize scanner (multi-mode: auto-probe COM serial ports + global USB-HID wedge)
-            string? scannerComPortEnv = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_SCANNER_COM_PORT");
-            var availablePorts = System.IO.Ports.SerialPort.GetPortNames();
-            string[] scannerCandidatePorts = !string.IsNullOrWhiteSpace(scannerComPortEnv) && scannerComPortEnv != "AUTO"
-                ? new[] { scannerComPortEnv }
-                : availablePorts.Where(p => !string.Equals(p, connectedPort, StringComparison.OrdinalIgnoreCase)).ToArray();
-
-            bool serialScannerConnected = false;
-            foreach (var sPort in scannerCandidatePorts)
-            {
-                try
-                {
-                    var scanner = new DatalogicBarcodeScanner(sPort, 9600);
-                    await scanner.ConnectAsync();
-                    if (scanner.IsConnected)
-                    {
-                        BarcodeScannerInstance = scanner;
-                        BarcodeScannerInstance.OnBarcodeScanned += HandleBarcodeScanned;
-                        HardwareStatusManager.Instance.SetScannerAvailability(true, $"Serial Scanner Online ({sPort})");
-                        DiagnosticLogger.Log($"[Hardware Init] ✅ Serial Barcode Scanner CONNECTED on {sPort}!");
-                        serialScannerConnected = true;
-                        break;
-                    }
-                }
-                catch { }
-            }
-
-            if (!serialScannerConnected)
-            {
-                // USB-HID Keyboard Wedge is always active globally via MainWindow
-                HardwareStatusManager.Instance.SetScannerAvailability(true, "USB Barcode Scanner Ready (HID Wedge)");
-                DiagnosticLogger.Log("[Hardware Init] Barcode Scanner ready in USB-HID Wedge mode.");
-            }
+            // Initialize scanner (multi-mode: auto-probe ALL COM serial ports + global USB-HID wedge fallback)
+            await ProbeAndConnectBarcodeScannerAsync(connectedPort);
 
             // Initialize receipt printer (multi-vendor auto-discovery or configured device)
             string printerNameEnv = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_PRINTER_NAME")
@@ -632,7 +601,7 @@ public partial class App : Application
 
                                     CashRecyclerInstance = newRecycler;
                                     PaymentServiceInstance?.AttachCashRecycler(newRecycler);
-                                    HardwareStatusManager.Instance.SetCashAvailability(true, $"Physical Cash Recycler Online ({port})");
+                                    HardwareStatusManager.Instance.SetCashAvailability(true, $"Physical Cash Recycler Online ({port})", port);
                                     reconnected = true;
                                     break;
                                 }
@@ -644,10 +613,17 @@ public partial class App : Application
 
                             if (!reconnected)
                             {
-                                HardwareStatusManager.Instance.SetCashAvailability(false, "Offline / No Cash Machine Connected");
+                                HardwareStatusManager.Instance.SetCashAvailability(false, "Offline / No Cash Machine Connected", null);
                             }
                         }
                     }
+
+                    // Barcode Scanner Real-time Continuous COM Probe & Status Check
+                    string? currentCashPort = (CashRecyclerInstance is VendorXCashRecycler cr && cr.IsConnected)
+                        ? HardwareStatusManager.Instance.CashDevicePort
+                        : null;
+
+                    await ProbeAndConnectBarcodeScannerAsync(currentCashPort);
 
                     // Receipt Printer Real-time Health Probe
                     if (ReceiptPrinterInstance is EpsonReceiptPrinter epsonPrinter)
@@ -672,7 +648,7 @@ public partial class App : Application
                 {
                     if (HardwareStatusManager.Instance.IsCashAvailable)
                     {
-                        HardwareStatusManager.Instance.SetCashAvailability(false, "Cash Machine Offline / Disconnected");
+                        HardwareStatusManager.Instance.SetCashAvailability(false, "Cash Machine Offline / Disconnected", null);
                         DiagnosticLogger.LogError($"[Hardware Monitor] Cash machine connection lost: {ex.Message}", ex);
                     }
                 }
@@ -680,13 +656,80 @@ public partial class App : Application
         });
     }
 
+    public static async Task<bool> ProbeAndConnectBarcodeScannerAsync(string? excludePort = null)
+    {
+        string? scannerComPortEnv = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_SCANNER_COM_PORT");
+
+        // If explicitly configured for HID wedge only
+        if (string.Equals(scannerComPortEnv, "HID", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(scannerComPortEnv, "WEDGE", StringComparison.OrdinalIgnoreCase))
+        {
+            HardwareStatusManager.Instance.SetScannerAvailability(true, "USB Barcode Scanner Ready (HID Wedge)", "USB-HID");
+            return true;
+        }
+
+        // If already connected on an open serial COM port and that port is not claimed by cash recycler
+        if (BarcodeScannerInstance is DatalogicBarcodeScanner activeScanner && activeScanner.IsConnected)
+        {
+            if (!string.Equals(activeScanner.ComPort, excludePort, StringComparison.OrdinalIgnoreCase))
+            {
+                HardwareStatusManager.Instance.SetScannerAvailability(true, $"Serial Scanner Online ({activeScanner.ComPort})", activeScanner.ComPort);
+                return true;
+            }
+            else
+            {
+                // Port conflict with cash recycler — disconnect scanner from this port
+                try { await activeScanner.DisconnectAsync(); } catch { }
+            }
+        }
+
+        var allSystemPorts = GetPrioritizedComPorts();
+        var candidatePorts = !string.IsNullOrWhiteSpace(scannerComPortEnv) && scannerComPortEnv != "AUTO"
+            ? new[] { scannerComPortEnv }
+            : allSystemPorts.Where(p => !string.Equals(p, excludePort, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        foreach (var sPort in candidatePorts)
+        {
+            try
+            {
+                var scanner = new DatalogicBarcodeScanner(sPort, 9600);
+                await scanner.ConnectAsync();
+                if (scanner.IsConnected)
+                {
+                    if (BarcodeScannerInstance != null && !ReferenceEquals(BarcodeScannerInstance, scanner))
+                    {
+                        try { await BarcodeScannerInstance.DisconnectAsync(); } catch { }
+                    }
+
+                    BarcodeScannerInstance = scanner;
+                    BarcodeScannerInstance.OnBarcodeScanned += HandleBarcodeScanned;
+                    HardwareStatusManager.Instance.SetScannerAvailability(true, $"Serial Scanner Online ({sPort})", sPort);
+                    DiagnosticLogger.Log($"[Scanner Monitor] ✅ Serial Barcode Scanner CONNECTED on {sPort}!");
+                    return true;
+                }
+            }
+            catch
+            {
+                // Port in use, busy, or not a serial scanner — continue probing next port
+            }
+        }
+
+        // Fallback: USB-HID keyboard wedge is always active globally via MainWindow
+        HardwareStatusManager.Instance.SetScannerAvailability(true, "USB Barcode Scanner Ready (HID Wedge)", "USB-HID");
+        return true;
+    }
+
+    private static string? _lastScannedBarcode;
+    private static DateTimeOffset _lastScannedTime = DateTimeOffset.MinValue;
+    private static readonly object _scanSyncLock = new();
+
     public static void DispatchWedgeBarcode(string barcode)
     {
         if (string.IsNullOrWhiteSpace(barcode)) return;
         HandleBarcodeScannedInternal(barcode);
     }
 
-    private void HandleBarcodeScanned(object? sender, BarcodeScannedEventArgs e)
+    private static void HandleBarcodeScanned(object? sender, BarcodeScannedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(e.RawBarcode)) return;
         HandleBarcodeScannedInternal(e.RawBarcode);
@@ -694,6 +737,7 @@ public partial class App : Application
 
     private static void HandleBarcodeScannedInternal(string rawBarcode)
     {
+        if (string.IsNullOrWhiteSpace(rawBarcode)) return;
         string barcode = rawBarcode.Trim();
         if (barcode.Length < 3 || barcode.Length > 64 || barcode.Any(char.IsControl))
             return;
@@ -702,23 +746,48 @@ public partial class App : Application
         if (questionMarks > 0 && (double)questionMarks / barcode.Length > 0.15)
             return;
 
-        MainWindowInstance?.DispatcherQueue.TryEnqueue(() =>
+        lock (_scanSyncLock)
         {
-            var product = ProductServiceInstance.GetProductBySku(barcode);
-            if (product != null)
+            var now = DateTimeOffset.UtcNow;
+            if (string.Equals(_lastScannedBarcode, barcode, StringComparison.OrdinalIgnoreCase) &&
+                (now - _lastScannedTime).TotalMilliseconds < 400)
             {
-                CartServiceInstance.AddItem(product.Name, product.Sku, product.Price, 1);
-                Debug.WriteLine($"[SCANNER] Added {product.Name} to cart via barcode scan.");
+                Debug.WriteLine($"[SCANNER DEBOUNCE] Ignored rapid duplicate barcode read: {barcode}");
+                return;
+            }
+            _lastScannedBarcode = barcode;
+            _lastScannedTime = now;
+        }
 
-                var currentContent = MainWindowInstance?.MainRootFrame?.Content;
-                if (currentContent is Views.Customer.KioskBaseView)
+        MainWindowInstance?.DispatcherQueue.TryEnqueue(async () =>
+        {
+            var currentContent = MainWindowInstance?.MainRootFrame?.Content;
+
+            if (currentContent is Views.Customer.CartView cartView)
+            {
+                await cartView.ProcessScannedBarcodeAsync(barcode);
+            }
+            else if (currentContent is Views.Customer.KioskBaseView)
+            {
+                var product = ProductServiceInstance.GetProductBySku(barcode);
+                if (product != null)
                 {
+                    CartServiceInstance.AddItem(product.Name, product.Sku, product.Price, 1);
+                    Debug.WriteLine($"[SCANNER] Added {product.Name} to cart via barcode scan from Idle.");
                     MainWindowInstance?.NavigationService?.NavigateTo(typeof(Views.Customer.CartView));
                 }
+                else
+                {
+                    Debug.WriteLine($"[SCANNER] No product found for barcode: {barcode}");
+                }
+            }
+            else if (currentContent is Views.Admin.AdminLoginView adminLogin)
+            {
+                adminLogin.TryAuthenticateWithBarcode(barcode);
             }
             else
             {
-                Debug.WriteLine($"[SCANNER] No product found for barcode: {barcode}");
+                Debug.WriteLine($"[SCANNER] Scan received on view {currentContent?.GetType().Name} - ignored.");
             }
         });
     }

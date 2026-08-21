@@ -9,41 +9,29 @@ An offline-first, high-reliability touch kiosk system designed for supermarkets 
 
 ---
 
-## ⚡ Quick Start & Installation
+## ⚡ Quick Start & Development
 
-### Option 1: 1-Click Windows Installer (Recommended for Deployments)
-1. Run **[`scripts/Install-Kiosk.bat`](scripts/Install-Kiosk.bat)** (or use **`dist/SelfCheckoutKiosk-Installer/Install.bat`**) as **Administrator**.
-2. The installer will automatically:
-   - Deploy the WinUI 3 touch application and background daemons.
-   - Inspect this machine's hardware ID and generate a valid offline node-locked `license.token`.
-   - Configure Windows Firewall rules for peripheral communication (Ports 5055 & 5000).
-   - Create **Desktop** and **Start Menu** shortcuts.
-   - (Optional) Configure unattended auto-start on Windows boot.
-3. Launch the kiosk anytime via the **Desktop shortcut** or `Start-Kiosk-With-API.bat`.
+### 1. Launch via Helper Script
+Double-click **[`scripts/QuickStart-Kiosk.bat`](scripts/QuickStart-Kiosk.bat)**. It automatically ensures a license token exists, launches the Cash Device API bridge, and opens the kiosk WinUI 3 UI.
 
-### Option 2: Quick Start from Source (For Developers)
-Double-click **[`scripts/QuickStart-Kiosk.bat`](scripts/QuickStart-Kiosk.bat)**. It automatically ensures a license token exists, launches the Cash Device API bridge, and opens the kiosk UI.
-
-### Option 3: Command-Line PowerShell Installation
+### 2. Run via .NET CLI
 ```powershell
-# Interactive install to default directory (C:\SelfCheckoutKiosk)
-.\scripts\Install-Kiosk.ps1
+# 1. Generate local dev license token
+scripts\Generate-License.bat
 
-# Unattended silent install to custom path with auto-start enabled
-.\scripts\Install-Kiosk.ps1 -InstallPath "C:\MyKiosk" -Silent -AutoStartKiosk
+# 2. Run WinUI 3 application
+dotnet run --project src\SelfCheckoutKiosk.App\SelfCheckoutKiosk.App.csproj -p:WindowsPackageType=None
 ```
+
+### 3. Standalone Packaging Guide
+See **[`PACKAGING_GUIDE.md`](PACKAGING_GUIDE.md)** for instructions on generating the portable `dist/SelfCheckoutKiosk/` release with the isolated `CashAPI/` subfolder.
 
 ---
 
 ## 📦 Project Structure
 
 ```
-├── dist/                                     # Standalone Distribution Packages
-│   ├── SelfCheckoutKiosk-Portable/           # Portable unpackaged version
-│   └── SelfCheckoutKiosk-Installer/          # Windows installer package
-├── scripts/                                  # Build, Deploy & Automation Scripts
-│   ├── Build-DeploymentPackage.bat / .ps1    # Compiles Release portable & installer packages
-│   ├── Install-Kiosk.bat / .ps1              # System installer engine
+├── scripts/                                  # Development & Automation Scripts
 │   ├── QuickStart-Kiosk.bat                  # Fast development launcher
 │   └── Generate-License.bat                  # Standalone node-locked machine license generator
 ├── src/
@@ -88,26 +76,6 @@ The system uses ECDSA P-256 / SHA-256 cryptographic signatures tied to the physi
    ```
 2. The generated `license.token` is placed in the application root and automatically validated on startup with zero internet access required.
 3. If hardware components change, run `scripts\Generate-License.bat` again to refresh the node lock.
-
----
-
-## 🛠️ Building a Standalone Distribution Package
-
-To build and package both the **Portable** and **Installer** Release distributions:
-
-1. Run **[`scripts/Build-DeploymentPackage.bat`](scripts/Build-DeploymentPackage.bat)**.
-2. The standalone packages will be generated at:
-   - `dist/SelfCheckoutKiosk-Portable/` (Unpackaged version)
-   - `dist/SelfCheckoutKiosk-Installer/` (Installer package)
-
----
-
-## 🗑️ Uninstallation
-
-To remove the installed kiosk from a system:
-1. Open the installation folder (e.g. `C:\SelfCheckoutKiosk`).
-2. Run **`Uninstall.bat`** as administrator.
-3. Desktop and Start Menu shortcuts, firewall rules, and startup keys will be cleanly removed.
 
 ---
 

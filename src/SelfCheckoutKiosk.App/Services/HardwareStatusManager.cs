@@ -240,10 +240,40 @@ public sealed class HardwareStatusManager : INotifyPropertyChanged
         }
     }
 
-    public void SetCashAvailability(bool isAvailable, string? reason = null)
+    private string? _cashDevicePort;
+    private string? _scannerPort;
+
+    public string? CashDevicePort
+    {
+        get => _cashDevicePort;
+        private set
+        {
+            if (_cashDevicePort != value)
+            {
+                _cashDevicePort = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string? ScannerPort
+    {
+        get => _scannerPort;
+        private set
+        {
+            if (_scannerPort != value)
+            {
+                _scannerPort = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public void SetCashAvailability(bool isAvailable, string? reason = null, string? port = null)
     {
         IsCashAvailable = isAvailable;
         CashStatusReason = reason ?? (isAvailable ? "Online" : "Unavailable");
+        CashDevicePort = port;
     }
 
     public void SetQrAvailability(bool isAvailable, string? reason = null)
@@ -291,10 +321,11 @@ public sealed class HardwareStatusManager : INotifyPropertyChanged
         }
     }
 
-    public void SetScannerAvailability(bool isAvailable, string? reason = null)
+    public void SetScannerAvailability(bool isAvailable, string? reason = null, string? port = null)
     {
         IsScannerAvailable = isAvailable;
         ScannerStatusReason = reason ?? (isAvailable ? "USB POS & Keyboard Wedge Active" : "Disconnected");
+        ScannerPort = port;
     }
 
     public string PrinterStatusReason

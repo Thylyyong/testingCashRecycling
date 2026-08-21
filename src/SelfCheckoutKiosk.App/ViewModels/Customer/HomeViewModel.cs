@@ -17,7 +17,17 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
         public string CompanyName => Branding.CompanyName;
         public string Tagline => Branding.Tagline;
         public string LogoUri => Branding.LogoUri;
-        public string StoreHours => Branding.StoreHours;
+        public string StoreHours
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(Branding.StoreHours) && Branding.StoreHours != "Open until 10:00 PM" && Branding.StoreHours != "Open until 9:00 PM")
+                {
+                    return Branding.StoreHours;
+                }
+                return LocalizationService.Instance.GetString("OpenUntil");
+            }
+        }
 
         public HomeViewModel(INavigationService navigationService)
         {

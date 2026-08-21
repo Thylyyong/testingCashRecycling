@@ -27,8 +27,11 @@ public sealed class DatalogicBarcodeScanner : IBarcodeScanner, IAsyncDisposable
 {
     private SerialPort?          _port;
     private CancellationTokenSource? _cts;
-    private readonly string      _comPort;
-    private readonly int         _baudRate;
+    private readonly string _comPort;
+    private readonly int _baudRate;
+
+    public string ComPort => _comPort;
+    public int BaudRate => _baudRate;
 
     /// <summary>True once <see cref="ConnectAsync"/> succeeds and the port is open.</summary>
     public bool IsConnected => _port?.IsOpen == true;
