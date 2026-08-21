@@ -53,7 +53,7 @@
 | 🟢 | `HIGH` | **REST-Bridge Cash Recycler Adapter** | `Hal.Vendor.ItlRestCashRecycler` communicates with local HTTP REST daemon (`http://localhost:5055/`) for ITL NV200/NV11 hardware. | [ItlRestCashRecycler.cs](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/src/SelfCheckoutKiosk.Hal.Vendor.ItlRestCashRecycler/ItlRestCashRecycler.cs) |
 | 🟢 | `HIGH` | **Tailscale Sync Worker** | Background worker (`IHostedService`) pushing `SyncStatus = Pending` transactions over secure VPN overlay to central server with idempotent GUID ack. | [TailscaleSyncWorker.cs](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/src/SelfCheckoutKiosk.Infrastructure/Sync/TailscaleSyncWorker.cs) |
 | 🟢 | `HIGH` | **Physical Scanner Driver (Datalogic)** | Virtual COM/Serial port scanner driver with binary noise filtering (`IsValidBarcodeString`), hardware port verification, and keyboard-wedge input support. | [DatalogicBarcodeScanner.cs](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/src/SelfCheckoutKiosk.Hal.Vendor.DatalogicScanner/DatalogicBarcodeScanner.cs) |
-| 🟡 | `MEDIUM` | **Physical Thermal Printer Driver (Epson m30)** | Direct ESC/POS byte stream over USB/TCP for physical printer output (basic print service in place; native ESC/POS command pipeline to finalize). | `SelfCheckoutKiosk.Hal.Vendor.EpsonM30` / [ReceiptPrinterService.cs](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/src/SelfCheckoutKiosk.App/Services/ReceiptPrinterService.cs) |
+| 🟢 | `HIGH` | **Physical Thermal Printer Driver (Epson m30 / Multi-Vendor)** | Win32 RAW Spooler (`winspool.drv`) bypasses GDI and targets specific receipt printers; multi-vendor discovery (`PrinterDiscovery`), real-time PnP USB plug/unplug hardware detection, continuous health monitoring, 48-col 80mm ($79.5 \pm 0.5\text{ mm}$) supermarket template, and Kanji/Chinese mode cancellation (`FS .`). | [EpsonReceiptPrinter.cs](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/src/SelfCheckoutKiosk.Hal.Vendor.EpsonM30/EpsonReceiptPrinter.cs) · [WinSpoolRawPrinter.cs](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/src/SelfCheckoutKiosk.Hal.Vendor.EpsonM30/WinSpoolRawPrinter.cs) · [PrinterDiscovery.cs](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/src/SelfCheckoutKiosk.Hal.Vendor.EpsonM30/PrinterDiscovery.cs) |
 | 🟡 | `MEDIUM` | **Physical Cash Device SDK Validation** | Validating binary SDK vendor DLLs on live kiosk hardware vs local REST simulator. | Awaiting target deployment machine |
 
 ---
@@ -69,6 +69,7 @@
 | 🟢 | `HIGH` | **License Lockout Handling** | Hard stop on startup if license validation fails, rendering non-bypassable lockout overlay. **Bugfix:** `ShowLicenseLockout` now navigates `RootFrame` to a blank `Page` first, triggering `KioskBaseView.Unloaded` so the `MediaPlayer` is paused and cleared — stops video audio leaking under the overlay. | [MainWindow.xaml.cs](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/src/SelfCheckoutKiosk.App/MainWindow.xaml.cs) |
 | 🟡 | `MEDIUM` | **Presentation ↔ App XAML Binding Consolidation** | Ensure all WinUI 3 views fully bind against the ratified headless `Presentation.ViewModels` contracts rather than legacy App-internal viewmodels. | In progress |
 | 🟢 | `HIGH` | **Dynamic Media & Branding Sync & Persistence** | Live store logo, company name, tagline, and store hours integration between `MediaBrandingView` and `HomeView`; JSON persistence across app restarts. | [MediaBrandingService.cs](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/src/SelfCheckoutKiosk.App/Services/MediaBrandingService.cs) |
+| 🟢 | `HIGH` | **Standalone Deployment & Distribution Package** | Complete self-contained Windows x64 release folder with standalone `KioskApp`, smart-fallback REST API `CashDeviceSimulator.exe` (ports 5000/5055), single-file `GenerateLicense.exe`, 100% bundled assets/i18n, and directory-pinned 1-click launchers. | [dist/SelfCheckoutKiosk-Package](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/dist/SelfCheckoutKiosk-Package) |
 | 🟡 | `LOW` | **Attract Slideshow Rotation & Crossfade** | Idle slideshow overlay with crossfade timer and instant tap-to-dismiss (structure present in `HomeViewModel`/`MediaBrandingService`, full crossfade storyboard refinement). | [winui3-implementation-plan.md](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/docs/implementation/winui3-implementation-plan.md) |
 
 ---
@@ -103,15 +104,14 @@
 | :--- | :---: | :---: | :---: | :--- |
 | **`SelfCheckoutKiosk.Core.Tests`** | net10.0 | 🟢 **PASS** | **54 / 54** | DualCurrency (inc. KHR Round-Up), RegexRouter, State Machine, LowFloat, AuditLog, Licensing |
 | **`SelfCheckoutKiosk.Infrastructure.Tests`** | net10.0 | 🟢 **PASS** | **8 / 8** | SQLite/SQLCipher DB, Seeding, Hardware ID, Sync Worker |
-| **`SelfCheckoutKiosk.Integration.Tests`** | net10.0 | 🟢 **PASS** | **26 / 26** | Composition Seam, End-to-End Scan-to-Dispense, License Lockout |
+| **`SelfCheckoutKiosk.Integration.Tests`** | net10.0 | 🟢 **PASS** | **27 / 27** | Composition Seam, End-to-End Scan-to-Dispense, License Lockout, Supermarket Receipt Format |
 | **`SelfCheckoutKiosk.Presentation.Tests`** | net10.0 | 🟢 **PASS** | **9 / 9** | Headless MVVM ViewModels, Navigation, Cart line updates |
-| **Total Test Suite** | | 🟢 **PASS** | **97 / 97** | **100% Passing (0 failures, 0 skipped)** |
-
----
+| **Total Test Suite** | | 🟢 **PASS** | **98 / 98** | **100% Passing (0 failures, 0 skipped)** |
 
 ## 📋 Recommended Next Actions (Sprint Priorities)
 
-1. 🟡 **Physical Peripheral Integration:** Test and finalize serial COM scanner (`Datalogic`) and ESC/POS thermal printer (`Epson m30`) on real hardware.
-2. 🟡 **ViewModel Bridge Consolidation:** Complete the unification of WinUI XAML view bindings to headless `Presentation.ViewModels`.
-3. 🔴 **Supermarket Gap Features (Sprint 1+):** Begin scoping `ICardPaymentTerminal` (Card/EMV payment terminal) and PLU produce lookup.
-4. 🟡 **WP-05 Architecture Remarks:** Add XML doc comments and lifecycle flow diagram for cross-cutting component interactions.
+1. 🟢 **Physical Receipt Printer Integration:** Completed & verified with Win32 RAW Spooler, multi-vendor discovery, real-time PnP status detection, and 80mm padded supermarket template.
+2. 🟡 **Physical Serial COM Scanner (Datalogic):** Test and finalize serial COM barcode scanner with binary noise filtering on kiosk machine.
+3. 🟡 **ViewModel Bridge Consolidation:** Complete the unification of WinUI XAML view bindings to headless `Presentation.ViewModels`.
+4. 🔴 **Supermarket Gap Features (Sprint 1+):** Begin scoping `ICardPaymentTerminal` (Card/EMV payment terminal) and PLU produce lookup.
+5. 🟡 **WP-05 Architecture Remarks:** Add XML doc comments and lifecycle flow diagram for cross-cutting component interactions.

@@ -14,5 +14,6 @@
     <ProjectReference Include="..\..\src\SelfCheckoutKiosk.Core\SelfCheckoutKiosk.Core.csproj" />
     <ProjectReference Include="..\..\src\SelfCheckoutKiosk.Infrastructure\SelfCheckoutKiosk.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX\SelfCheckoutKiosk.Hal.Vendor.CashRecyclerX.csproj" />
+    <ProjectReference Include="..\..\src\SelfCheckoutKiosk.Hal.Vendor.EpsonM30\SelfCheckoutKiosk.Hal.Vendor.EpsonM30.csproj" />
   </ItemGroup>
 </Project>

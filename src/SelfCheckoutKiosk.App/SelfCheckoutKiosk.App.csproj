@@ -25,28 +25,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- Guarantees i18n JSON files are copied to BOTH debug bin and publish output -->
-		<Content Include="Assets\i18n\*.json">
+		<!-- Guarantees all assets, configs, fonts, images, logos, flags, videos, and i18n are copied to publish output -->
+		<Content Include="Assets\**\*.*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</Content>
 
-		<Content Include="Config\*.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-		</Content>
-
-		<Content Include="Assets\Fonts\*.*">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-		</Content>
-
-		<Content Include="Assets\Videos\*.*">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-		</Content>
-
-		<Content Include="Assets\Images\Banner\*.*">
+		<Content Include="Config\**\*.*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</Content>

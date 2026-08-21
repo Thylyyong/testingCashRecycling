@@ -55,12 +55,48 @@ if (!string.IsNullOrEmpty(outputDirectory))
 
 File.WriteAllText(outputPath, JsonSerializer.Serialize(signedToken));
 
-Console.WriteLine($"Hardware id : {hardwareId}");
-Console.WriteLine($"Tier        : {payload.Tier} (max {payload.MaxKiosks} kiosks, AI {(payload.AiEnabled ? "enabled" : "disabled")})");
-Console.WriteLine($"Expires     : {payload.ExpiresAtUtc:u}");
-Console.WriteLine($"Wrote       : {Path.GetFullPath(outputPath)}");
-Console.WriteLine();
-Console.WriteLine("Copy/point this file next to SelfCheckoutKiosk.App.exe (same folder as the");
-Console.WriteLine("built binary) as 'license.token', or pass --output pointing straight at that");
-Console.WriteLine("folder next time, e.g.:");
-Console.WriteLine("  dotnet run --project tools/DevLicenseTokenGenerator -- --output \"src/SelfCheckoutKiosk.App/bin/x64/Debug/net10.0-windows10.0.19041.0/win-x64/license.token\"");
+Console.ForegroundColor = ConsoleColor.Green;
+Console.WriteLine("=================================================================");
+Console.WriteLine("        SELF-CHECKOUT KIOSK - OFFLINE LICENSE GENERATOR          ");
+Console.WriteLine("=================================================================");
+Console.ResetColor();
+Console.WriteLine($"Hardware ID  : {hardwareId}");
+Console.WriteLine($"License Tier : {payload.Tier} (Max Kiosks: {payload.MaxKiosks}, AI: {(payload.AiEnabled ? "Enabled" : "Disabled")})");
+Console.WriteLine($"Expires UTC  : {payload.ExpiresAtUtc:yyyy-MM-dd HH:mm:ss} UTC");
+Console.WriteLine($"Primary File : {Path.GetFullPath(outputPath)}");
+
+// Also automatically copy to neighboring KioskApp folder if present in deployment package
+string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+string[] potentialKioskPaths = [
+    Path.Combine(baseDir, "..", "KioskApp", "license.token"),
+    Path.Combine(baseDir, "KioskApp", "license.token"),
+    Path.Combine(baseDir, "..", "..", "src", "SelfCheckoutKiosk.App", "license.token")
+];
+
+foreach (var path in potentialKioskPaths)
+{
+    try
+    {
+        string? targetDir = Path.GetDirectoryName(Path.GetFullPath(path));
+        if (Directory.Exists(targetDir))
+        {
+            File.WriteAllText(path, JsonSerializer.Serialize(signedToken));
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"Auto-Copied  : {Path.GetFullPath(path)}");
+            Console.ResetColor();
+        }
+    }
+    catch { }
+}
+
+Console.WriteLine("=================================================================");
+Console.ForegroundColor = ConsoleColor.Green;
+Console.WriteLine("SUCCESS: License token is ready for use on this machine!");
+Console.ResetColor();
+
+if (!Console.IsInputRedirected)
+{
+    Console.WriteLine();
+    Console.WriteLine("Press any key to close this window...");
+    try { Console.ReadKey(); } catch { }
+}

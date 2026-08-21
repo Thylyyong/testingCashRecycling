@@ -57,9 +57,19 @@ namespace SelfCheckoutKiosk.App.Models
         public bool IsFullyPaid { get; set; }
 
         public List<PaymentAttempt> Attempts { get; set; } = new();
+        public List<CartItemSnapshot> Items { get; set; } = new();
 
         public decimal TotalDueKhr => TotalDueUsd * ExchangeRate;
         public decimal TotalPaidKhr => TotalPaidUsd * ExchangeRate;
         public decimal ChangeDueKhr => ChangeDueUsd * ExchangeRate;
+    }
+
+    public class CartItemSnapshot
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public int Quantity { get; set; } = 1;
+        public decimal UnitPrice { get; set; }
+        public decimal LineTotal => UnitPrice * Quantity;
     }
 }

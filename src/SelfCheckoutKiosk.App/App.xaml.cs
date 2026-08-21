@@ -39,6 +39,25 @@ public partial class App : Application
 
     public App()
     {
+        this.UnhandledException += (s, e) =>
+        {
+            try
+            {
+                string crashLog = Path.Combine(AppContext.BaseDirectory, "startup_crash.log");
+                File.AppendAllText(crashLog, $"[{DateTime.UtcNow:O}] UnhandledException: {e.Message}\n{e.Exception}\n\n");
+            }
+            catch { }
+        };
+        AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+        {
+            try
+            {
+                string crashLog = Path.Combine(AppContext.BaseDirectory, "startup_crash.log");
+                File.AppendAllText(crashLog, $"[{DateTime.UtcNow:O}] AppDomain Exception: {e.ExceptionObject}\n\n");
+            }
+            catch { }
+        };
+
         InitializeComponent();
     }
 
@@ -79,6 +98,12 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
+            try
+            {
+                string crashLog = Path.Combine(AppContext.BaseDirectory, "startup_crash.log");
+                File.AppendAllText(crashLog, $"[{DateTime.UtcNow:O}] OnLaunched Startup Crash: {ex}\n\n");
+            }
+            catch { }
             Debug.WriteLine($"[App Startup Crash] {ex}");
         }
     }
@@ -344,16 +369,37 @@ public partial class App : Application
                 HardwareStatusManager.Instance.SetScannerAvailability(false);
             }
 
-            // Initialize receipt printer
-            ReceiptPrinterInstance = new EpsonReceiptPrinter("USB001");
+            // Initialize receipt printer (multi-vendor auto-discovery or configured device)
+            string printerNameEnv = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_PRINTER_NAME")
+                ?? testConfig?.PrinterDevice?.Name
+                ?? "AUTO";
+            string printerPortEnv = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_PRINTER_PORT")
+                ?? testConfig?.PrinterDevice?.Port
+                ?? "AUTO";
+
+            var bestPrinter = PrinterDiscovery.FindBestReceiptPrinter(printerNameEnv, printerPortEnv);
+            string targetSpecifier = bestPrinter != null ? bestPrinter.Name : printerNameEnv;
+
+            var epsonPrinter = new EpsonReceiptPrinter(targetSpecifier);
+            ReceiptPrinterInstance = epsonPrinter;
             try
             {
                 await ReceiptPrinterInstance.ConnectAsync();
-                HardwareStatusManager.Instance.SetPrinterAvailability(ReceiptPrinterInstance.IsConnected);
+                string statusDesc = epsonPrinter.IsConnected
+                    ? $"{epsonPrinter.PrinterName} ({epsonPrinter.PortName}) • RAW ESC/POS"
+                    : (bestPrinter != null ? $"Printer '{bestPrinter.Name}' unreachable" : "No POS thermal printer detected");
+
+                HardwareStatusManager.Instance.SetPrinterAvailability(
+                    epsonPrinter.IsConnected,
+                    statusDesc,
+                    epsonPrinter.PrinterName);
+
+                DiagnosticLogger.Log($"[Printer Init] Receipt Printer {(epsonPrinter.IsConnected ? "CONNECTED" : "OFFLINE")}: {statusDesc}");
             }
-            catch
+            catch (Exception pEx)
             {
-                HardwareStatusManager.Instance.SetPrinterAvailability(false);
+                HardwareStatusManager.Instance.SetPrinterAvailability(false, $"Initialization error: {pEx.Message}", "Receipt Printer");
+                DiagnosticLogger.LogError($"[Printer Init] Receipt printer connect exception: {pEx.Message}", pEx);
             }
 
             // 5. Connect Payment and Printer services to real hardware and db factory
@@ -499,6 +545,25 @@ public partial class App : Application
                             {
                                 HardwareStatusManager.Instance.SetCashAvailability(false, "Offline / No Cash Machine Connected");
                             }
+                        }
+                    }
+
+                    // Receipt Printer Real-time Health Probe
+                    if (ReceiptPrinterInstance is EpsonReceiptPrinter epsonPrinter)
+                    {
+                        var pStatus = epsonPrinter.CheckHealth();
+                        if (pStatus.IsOnline != HardwareStatusManager.Instance.IsPrinterAvailable)
+                        {
+                            string desc = pStatus.IsOnline
+                                ? $"{epsonPrinter.PrinterName} ({epsonPrinter.PortName}) • RAW ESC/POS"
+                                : pStatus.Reason;
+
+                            HardwareStatusManager.Instance.SetPrinterAvailability(
+                                pStatus.IsOnline,
+                                desc,
+                                epsonPrinter.PrinterName);
+
+                            DiagnosticLogger.Log($"[Hardware Monitor] Printer state changed -> {(pStatus.IsOnline ? "ONLINE" : "OFFLINE")} ({desc})");
                         }
                     }
                 }

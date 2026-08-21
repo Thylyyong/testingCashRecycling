@@ -22,6 +22,9 @@ public sealed record KioskTestPackageConfiguration
     [JsonPropertyName("cashDevice")]
     public KioskTestCashDeviceConfiguration CashDevice { get; init; } = new();
 
+    [JsonPropertyName("printerDevice")]
+    public KioskTestPrinterDeviceConfiguration PrinterDevice { get; init; } = new();
+
     public static KioskTestPackageConfiguration? TryLoad(string applicationBasePath)
     {
         string[] candidatePaths =
@@ -95,3 +98,16 @@ public sealed record KioskTestCashDeviceConfiguration
     [JsonPropertyName("maximumPollFailures")]
     public int MaximumPollFailures { get; init; } = 3;
 }
+
+public sealed record KioskTestPrinterDeviceConfiguration
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = "AUTO";
+
+    [JsonPropertyName("port")]
+    public string Port { get; init; } = "AUTO";
+
+    [JsonPropertyName("paperWidthCols")]
+    public int PaperWidthCols { get; init; } = 40;
+}
+

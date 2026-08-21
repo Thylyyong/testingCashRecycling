@@ -143,20 +143,20 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
 
     public bool IsCashRecyclerConnected => HardwareStatusManager.Instance.IsCashAvailable;
     public string CashRecyclerStatusText => IsCashRecyclerConnected ? "Connected" : "Disconnected";
-    public Microsoft.UI.Xaml.Media.SolidColorBrush CashRecyclerStatusColor => IsCashRecyclerConnected 
-        ? new(Windows.UI.Color.FromArgb(255, 34, 197, 94)) 
+    public Microsoft.UI.Xaml.Media.SolidColorBrush CashRecyclerStatusColor => IsCashRecyclerConnected
+        ? new(Windows.UI.Color.FromArgb(255, 34, 197, 94))
         : new(Windows.UI.Color.FromArgb(255, 239, 68, 68));
 
     public bool IsBarcodeScannerConnected => HardwareStatusManager.Instance.IsScannerAvailable;
     public string BarcodeScannerStatusText => IsBarcodeScannerConnected ? "Connected" : "Disconnected";
-    public Microsoft.UI.Xaml.Media.SolidColorBrush BarcodeScannerStatusColor => IsBarcodeScannerConnected 
-        ? new(Windows.UI.Color.FromArgb(255, 34, 197, 94)) 
+    public Microsoft.UI.Xaml.Media.SolidColorBrush BarcodeScannerStatusColor => IsBarcodeScannerConnected
+        ? new(Windows.UI.Color.FromArgb(255, 34, 197, 94))
         : new(Windows.UI.Color.FromArgb(255, 239, 68, 68));
 
     public bool IsReceiptPrinterConnected => HardwareStatusManager.Instance.IsPrinterAvailable;
     public string ReceiptPrinterStatusText => IsReceiptPrinterConnected ? "Connected" : "Disconnected";
-    public Microsoft.UI.Xaml.Media.SolidColorBrush ReceiptPrinterStatusColor => IsReceiptPrinterConnected 
-        ? new(Windows.UI.Color.FromArgb(255, 34, 197, 94)) 
+    public Microsoft.UI.Xaml.Media.SolidColorBrush ReceiptPrinterStatusColor => IsReceiptPrinterConnected
+        ? new(Windows.UI.Color.FromArgb(255, 34, 197, 94))
         : new(Windows.UI.Color.FromArgb(255, 239, 68, 68));
 
     public void RefreshDiagnostics()
@@ -200,11 +200,11 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
 
         HardwareDevices.Add(new HardwareDeviceStatus
         {
-            Name = "Receipt Printer",
-            DeviceType = "Epson TM-m30 Thermal 80mm",
+            Name = hw.PrinterDeviceName,
+            DeviceType = "ESC/POS Thermal Receipt Printer",
             IsConnected = hw.IsPrinterAvailable,
-            PortOrInterface = "USB001 / Raw ESC-POS",
-            FirmwareVersion = "Epson M30-II",
+            PortOrInterface = hw.PrinterStatusReason,
+            FirmwareVersion = "Direct RAW Spooler",
             Glyph = "\uE749"
         });
 
@@ -243,20 +243,29 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
 
     public async Task ReprintLastReceiptAsync()
     {
+        if (!HardwareStatusManager.Instance.IsPrinterAvailable)
+        {
+            IsStatusSuccess = false;
+            StatusMessage = "Receipt printer is offline or disconnected.";
+            return;
+        }
+
         IsStatusSuccess = true;
         StatusMessage = "Sending reprint command to thermal printer...";
 
-        await Task.Delay(500);
+        await Task.Delay(400);
 
         try
         {
             App.ReceiptPrinterServiceInstance.ReprintLastReceipt();
-            StatusMessage = "Receipt reprinted successfully!";
+            StatusMessage = "Receipt print signal sent successfully!";
+            IsStatusSuccess = true;
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[Reprint Error] {ex.Message}");
-            StatusMessage = "Reprint signal sent (Simulated hardware dispatch).";
+            StatusMessage = $"Print error: {ex.Message}";
+            IsStatusSuccess = false;
         }
     }
 

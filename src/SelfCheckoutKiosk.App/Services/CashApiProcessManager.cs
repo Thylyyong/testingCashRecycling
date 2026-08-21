@@ -264,7 +264,9 @@ public static class CashApiProcessManager
             @"F:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0",
             @"D:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0",
             Path.Combine(currentDir, "tools", "CashDeviceSimulator", "bin", "Debug", "net10.0"),
-            Path.Combine(currentDir, "tools", "CashDeviceSimulator", "bin", "Release", "net10.0"),
+            Path.Combine(baseDir, "..", "CashDeviceSimulator-API"),
+            Path.Combine(baseDir, "CashDeviceSimulator-API"),
+            Path.Combine(currentDir, "CashDeviceSimulator-API"),
             Path.Combine(baseDir, "..", "..", "..", "..", "tools", "CashDeviceSimulator", "bin", "Debug", "net10.0"),
             Path.Combine(baseDir, "..", "..", "..", "..", "tools", "CashDeviceSimulator", "bin", "Release", "net10.0")
         };

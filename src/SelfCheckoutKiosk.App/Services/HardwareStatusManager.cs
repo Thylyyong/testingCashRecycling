@@ -28,6 +28,8 @@ public sealed class HardwareStatusManager : INotifyPropertyChanged
     private string _qrStatusReason = "Offline";
     private string _serverStatusReason = "Offline";
     private string _scannerStatusReason = "USB POS & Keyboard Wedge Active";
+    private string _printerStatusReason = "Offline / Disconnected";
+    private string _printerDeviceName = "Receipt Printer";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -295,9 +297,40 @@ public sealed class HardwareStatusManager : INotifyPropertyChanged
         ScannerStatusReason = reason ?? (isAvailable ? "USB POS & Keyboard Wedge Active" : "Disconnected");
     }
 
-    public void SetPrinterAvailability(bool isAvailable)
+    public string PrinterStatusReason
+    {
+        get => _printerStatusReason;
+        private set
+        {
+            if (_printerStatusReason != value)
+            {
+                _printerStatusReason = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string PrinterDeviceName
+    {
+        get => _printerDeviceName;
+        private set
+        {
+            if (_printerDeviceName != value)
+            {
+                _printerDeviceName = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public void SetPrinterAvailability(bool isAvailable, string? reason = null, string? deviceName = null)
     {
         IsPrinterAvailable = isAvailable;
+        PrinterStatusReason = reason ?? (isAvailable ? "Online" : "Offline / Disconnected");
+        if (!string.IsNullOrWhiteSpace(deviceName))
+        {
+            PrinterDeviceName = deviceName;
+        }
     }
 
     public void SetLicenseStatus(bool isValid, string tier = "Enterprise", string expiry = "Valid")

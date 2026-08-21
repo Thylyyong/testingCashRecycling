@@ -59,40 +59,116 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             _printerService.Print(Payment);
         }
 
-        // Formatted specifically for authentic thermal paper receipts
+        // Formatted specifically for authentic 80mm (79.5mm) thermal paper receipts (48 columns)
         public string BuildVirtualReceiptText()
         {
-            var lines = new System.Text.StringBuilder();
-            lines.AppendLine("         SELF-CHECKOUT KIOSK          ");
-            lines.AppendLine("     AUTHENTIC FOOD & BEVERAGES       ");
-            lines.AppendLine("        Phnom Penh, Cambodia          ");
-            lines.AppendLine(new string('=', 38));
-            lines.AppendLine($"Order: {TransactionId,-16} Type: DINE_IN");
-            lines.AppendLine($"Date : {CompletedAtText,-16} Cashier: Kiosk");
-            lines.AppendLine(new string('-', 38));
-            lines.AppendLine("QTY & ITEM                      AMOUNT");
-            lines.AppendLine(new string('-', 38));
-            lines.AppendLine($"1x Order Total                 ${Payment.TotalDueUsd,7:F2}");
-            lines.AppendLine(new string('-', 38));
-            lines.AppendLine($"SUBTOTAL:                      ${Payment.TotalDueUsd,7:F2}");
-            lines.AppendLine(new string('-', 38));
-            lines.AppendLine($"TOTAL (USD):                   ${Payment.TotalDueUsd,7:F2}");
-            lines.AppendLine($"                        {Payment.TotalDueKhr,10:N0} KHR");
-            lines.AppendLine($"PAID:                          ${Payment.TotalPaidUsd,7:F2}");
+            const int width = 48;
 
-            if (HasChangeDue)
+            var lines = new System.Text.StringBuilder();
+            string divider = new string('-', width);
+            string doubleDivider = new string('=', width);
+
+            string storeName = "SUPERMARKET EXPRESS";
+            string storeTagline = "AUTHENTIC FOOD & GROCERY";
+            string storeAddress = "Phnom Penh, Cambodia";
+
+            try
             {
-                lines.AppendLine($"CHANGE:                        {Payment.ChangeDueKhr,10:N0} KHR");
+                var branding = MediaBrandingService.Instance.Branding;
+                if (!string.IsNullOrWhiteSpace(branding.CompanyName)) storeName = branding.CompanyName;
+                if (!string.IsNullOrWhiteSpace(branding.Tagline)) storeTagline = branding.Tagline;
+            }
+            catch { }
+
+            lines.AppendLine(FormatCenter(storeName, width));
+            lines.AppendLine(FormatCenter(storeTagline, width));
+            lines.AppendLine(FormatCenter(storeAddress, width));
+            lines.AppendLine(doubleDivider);
+
+            lines.AppendLine(FormatRow($"Receipt: {TransactionId}", "Type: KIOSK_POS", width));
+            lines.AppendLine(FormatRow($"Date: {Payment.CompletedAt:yyyy-MM-dd HH:mm}", "Cashier: Kiosk #01", width));
+            lines.AppendLine(divider);
+
+            lines.AppendLine(FormatRow("QTY & ITEM", "AMOUNT", width));
+            lines.AppendLine(divider);
+
+            int totalItems = 0;
+            int totalPcs = 0;
+
+            if (Payment.Items != null && Payment.Items.Count > 0)
+            {
+                foreach (var item in Payment.Items)
+                {
+                    totalItems++;
+                    totalPcs += Math.Max(1, item.Quantity);
+
+                    string name = item.Name.Trim();
+                    if (name.Length > width) name = name.Substring(0, width - 1);
+                    lines.AppendLine(name);
+
+                    string skuPrefix = !string.IsNullOrWhiteSpace(item.Sku) ? $"{item.Sku} " : "";
+                    string calcStr = $"{skuPrefix}{item.Quantity}x ${item.UnitPrice:F2}";
+                    string lineTotalStr = $"${item.LineTotal:F2}";
+                    lines.AppendLine("  " + FormatRow(calcStr, lineTotalStr, width - 2));
+                }
+            }
+            else
+            {
+                totalItems = 1;
+                totalPcs = 1;
+                lines.AppendLine("1x Grocery Basket Total");
+                lines.AppendLine("  " + FormatRow($"1x ${Payment.TotalDueUsd:F2}", $"${Payment.TotalDueUsd:F2}", width - 2));
             }
 
-            lines.AppendLine(new string('-', 38));
-            lines.AppendLine($"PAYMENT METHOD:                 {MethodLabel.ToUpperInvariant()}");
-            lines.AppendLine(new string('=', 38));
-            lines.AppendLine("      THANK YOU FOR YOUR VISIT!       ");
-            lines.AppendLine("          Please Come Again           ");
-            lines.AppendLine("         Powered by Kiosk POS         ");
+            lines.AppendLine(divider);
+            lines.AppendLine(FormatRow($"TOTAL ITEMS: {totalItems}", $"({totalPcs} pcs)", width));
+            lines.AppendLine(divider);
+
+            lines.AppendLine(FormatRow("TOTAL DUE (USD):", $"${Payment.TotalDueUsd:F2}", width));
+            lines.AppendLine(FormatRow("TOTAL DUE (KHR):", $"{Payment.TotalDueKhr:N0} KHR", width));
+            lines.AppendLine(divider);
+
+            decimal paidAmount = Payment.TotalPaidUsd > 0 ? Payment.TotalPaidUsd : Payment.TotalDueUsd;
+            lines.AppendLine(FormatRow($"PAID ({MethodLabel.ToUpperInvariant()}):", $"${paidAmount:F2}", width));
+
+            lines.AppendLine(doubleDivider);
+            lines.AppendLine(FormatRow("Payment Method:", MethodLabel.ToUpperInvariant(), width));
+            lines.AppendLine(FormatRow("Exchange Rate:", $"1 USD = {Payment.ExchangeRate:N0} KHR", width));
+            lines.AppendLine(FormatRow("Payment Status:", "PAID & COMPLETED", width));
+            lines.AppendLine(divider);
+
+            lines.AppendLine(FormatCenter("THANK YOU FOR SHOPPING WITH US!", width));
+            lines.AppendLine(FormatCenter("PLEASE KEEP THIS RECEIPT", width));
+            lines.AppendLine(FormatCenter("HAVE A WONDERFUL DAY!", width));
+            lines.AppendLine(doubleDivider);
 
             return lines.ToString();
+        }
+
+        private static string FormatRow(string left, string right, int width = 46)
+        {
+            left ??= string.Empty;
+            right ??= string.Empty;
+
+            if (left.Length + right.Length >= width)
+            {
+                int maxLeft = Math.Max(1, width - right.Length - 1);
+                if (left.Length > maxLeft)
+                {
+                    left = left.Substring(0, maxLeft);
+                }
+            }
+
+            int spaces = Math.Max(1, width - left.Length - right.Length);
+            return left + new string(' ', spaces) + right;
+        }
+
+        private static string FormatCenter(string text, int width = 46)
+        {
+            text ??= string.Empty;
+            if (text.Length >= width) return text.Substring(0, width);
+            int leftPad = Math.Max(0, (width - text.Length) / 2);
+            return new string(' ', leftPad) + text;
         }
 
         public void ReturnHome()

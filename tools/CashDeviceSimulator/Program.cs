@@ -9,6 +9,19 @@ builder.Logging.AddSimpleConsole(o =>
     o.TimestampFormat = "HH:mm:ss.fff ";
 });
 
+int targetPort = 5000;
+if (args.Length > 0 && int.TryParse(args[0], out int customPort))
+{
+    targetPort = customPort;
+}
+else if (IsPortInUse(5000))
+{
+    targetPort = 5055;
+    Console.WriteLine($"[CashDeviceSimulator] Port 5000 is already in use, binding to http://localhost:{targetPort} ...");
+}
+
+builder.WebHost.UseUrls($"http://localhost:{targetPort}");
+
 var app = builder.Build();
 var state = new DeviceState();
 
@@ -219,7 +232,7 @@ app.MapPost("/api/device/dispense", (DispenseRequestDto? request, ILogger<Progra
 app.MapGet("/api/simulator/insert", (int value, string? currency, ILogger<Program> log) =>
 {
     string curr = string.IsNullOrWhiteSpace(currency) ? "USD" : currency.ToUpperInvariant();
-    
+
     // ITL Raw dataset reports denominations scaled by 100:
     // USD $1 -> 100, USD $5 -> 500
     // KHR 100 -> 10000, KHR 10,000 -> 1000000
@@ -324,7 +337,22 @@ Console.WriteLine("   [GET]  /                                -> Interactive Web
 Console.WriteLine("================================================================================");
 Console.WriteLine("Ready for SelfCheckoutKiosk connection.\n");
 
-app.Run("http://localhost:5000");
+app.Run();
+
+static bool IsPortInUse(int port)
+{
+    try
+    {
+        using var tcpListener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, port);
+        tcpListener.Start();
+        tcpListener.Stop();
+        return false;
+    }
+    catch
+    {
+        return true;
+    }
+}
 
 namespace SelfCheckoutKiosk.Tools.CashDeviceSimulator
 {

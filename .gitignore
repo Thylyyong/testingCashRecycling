@@ -6,12 +6,17 @@ obj/
 *.user
 .vs/
 publish/
+dist/
 artifacts/
+*.log
+
 ## AOT native intermediates
 *.o
 *.exports
+
 ## Local-only verification source (never commit)
 nuget.verify.config
+
 ## Secrets — NEVER commit provisioning material
 deploy/Provisioning/*.key
 deploy/Provisioning/*.pfx

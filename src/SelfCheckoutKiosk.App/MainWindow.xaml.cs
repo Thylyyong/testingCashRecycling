@@ -12,6 +12,7 @@ using SelfCheckoutKiosk.App.Views.Admin;
 using SelfCheckoutKiosk.App.Services;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -41,7 +42,7 @@ namespace SelfCheckoutKiosk.App
 
         // Fields for vertical 9:16 aspect ratio window hooking
         private IntPtr _hwnd;
-        private Win32SubClassDelegate _wndProcDelegate;
+        private Win32SubClassDelegate? _wndProcDelegate;
         private IntPtr _oldWndProc;
 
         private delegate IntPtr Win32SubClassDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
@@ -78,13 +79,25 @@ namespace SelfCheckoutKiosk.App
             var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
             var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(windowHandle);
             var appWindow = AppWindow.GetFromWindowId(windowId);
-            appWindow.SetIcon("Assets/Logo/ca.ico");
 
-            // Setup vertical 9:16 aspect ratio window sizing hook
-            _hwnd = WindowNative.GetWindowHandle(this);
-            _wndProcDelegate = new Win32SubClassDelegate(CustomWndProc);
-            IntPtr ptrWndProc = Marshal.GetFunctionPointerForDelegate(_wndProcDelegate);
-            _oldWndProc = SetWindowLongPtr(_hwnd, GWL_WNDPROC, ptrWndProc);
+            string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Logo", "ca.ico");
+            if (File.Exists(iconPath))
+            {
+                appWindow.SetIcon(iconPath);
+            }
+
+            try
+            {
+                // Setup vertical 9:16 aspect ratio window sizing hook
+                _hwnd = WindowNative.GetWindowHandle(this);
+                _wndProcDelegate = new Win32SubClassDelegate(CustomWndProc);
+                IntPtr ptrWndProc = Marshal.GetFunctionPointerForDelegate(_wndProcDelegate);
+                _oldWndProc = SetWindowLongPtr(_hwnd, GWL_WNDPROC, ptrWndProc);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Window SubClass Warning] {ex.Message}");
+            }
 
             // Configure window mode based on option flag
             if (_startInFullScreen)
@@ -191,28 +204,28 @@ namespace SelfCheckoutKiosk.App
                     currentPageType == typeof(AdminDiagnosticsView) ||
                     currentPageType == typeof(MediaBrandingView))
                 {
-                    NavigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromBottom);
+                    NavigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromLeft);
                 }
                 else
                 {
                     NavigationService.NavigateTo(
                         typeof(AdminLoginView),
                         null,
-                        SlideNavigationTransitionEffect.FromBottom
+                        SlideNavigationTransitionEffect.FromRight
                     );
                 }
                 e.Handled = true;
             }
 
             // Ctrl + Shift + Backspace -> Welcome Page
-            if (ctrl && shift && e.Key == VirtualKey.Back)
-            {
-                NavigationService.NavigateTo(
-                    typeof(KioskBaseView),
-                    null,
-                    new SuppressNavigationTransitionInfo()
-                );
-            }
+            //if (ctrl && shift && e.Key == VirtualKey.Back)
+            //{
+            //    NavigationService.NavigateTo(
+            //        typeof(KioskBaseView),
+            //        null,
+            //        new SuppressNavigationTransitionInfo()
+            //    );
+            //}
         }
 
         public void ShowLicenseLockout(string? details = null)

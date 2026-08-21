@@ -16,6 +16,7 @@
          Tests projects, just not named "*Tests". -->
     <IsAotCompatible>false</IsAotCompatible>
     <Platforms>AnyCPU;x64</Platforms>
+    <AssemblyName>GenerateLicense</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\SelfCheckoutKiosk.Domain\SelfCheckoutKiosk.Domain.csproj" />

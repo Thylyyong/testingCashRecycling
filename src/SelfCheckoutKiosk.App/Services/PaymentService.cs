@@ -467,7 +467,14 @@ public class PaymentService : IPaymentService
             ChangeDueUsd = overpaymentUsd,
             ExchangeRate = ExchangeRate,
             IsFullyPaid = true,
-            CompletedAt = DateTime.Now
+            CompletedAt = DateTime.Now,
+            Items = App.CartServiceInstance?.Items?.Select(i => new Models.CartItemSnapshot
+            {
+                Name = i.Name,
+                Sku = i.Sku,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice
+            }).ToList() ?? new List<Models.CartItemSnapshot>()
         };
 
         // Persist transaction to local SQLite database with SyncStatus.Pending
