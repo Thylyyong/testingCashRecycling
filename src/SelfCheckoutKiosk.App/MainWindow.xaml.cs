@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.Views;
 using SelfCheckoutKiosk.App.Views.Admin;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
 using System;
 using System.Collections.Generic;
@@ -241,15 +242,11 @@ namespace SelfCheckoutKiosk.App
                     currentPageType == typeof(AdminDiagnosticsView) ||
                     currentPageType == typeof(MediaBrandingView))
                 {
-                    NavigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromLeft);
+                    AppRouter.BackToCustomer();
                 }
                 else
                 {
-                    NavigationService.NavigateTo(
-                        typeof(AdminLoginView),
-                        null,
-                        SlideNavigationTransitionEffect.FromRight
-                    );
+                    AppRouter.ToAdmin(SlideNavigationTransitionEffect.FromLeft);
                 }
                 e.Handled = true;
             }

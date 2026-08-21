@@ -1,7 +1,7 @@
 using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
-using SelfCheckoutKiosk.App.Views.Customer;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -150,12 +150,12 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         public void ProceedToHome()
         {
-            NavigationService.NavigateTo(typeof(HomeView), null, SlideNavigationTransitionEffect.FromLeft);
+            NavigationService.NavigateTo(KioskRoute.Home, SlideNavigationTransitionEffect.FromLeft);
         }
 
         public void ProceedToPaymentSelection()
         {
-            NavigationService.NavigateTo(typeof(PaymentSelectionView), null, SlideNavigationTransitionEffect.FromRight);
+            NavigationService.NavigateTo(KioskRoute.PaymentSelection, SlideNavigationTransitionEffect.FromRight);
         }
 
         protected void OnPropertyChanged(string name) =>

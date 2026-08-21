@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.UI.Xaml;
 using SelfCheckoutKiosk.App.Diagnostics;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.Views.Customer;
 using SelfCheckoutKiosk.Core.Abstractions;
@@ -88,7 +89,7 @@ public partial class App : Application
             };
 
             // Navigate to KioskBaseView immediately so the UI is rendered without blank delay
-            mainWindow.NavigationService.NavigateTo(typeof(KioskBaseView));
+            AppRouter.ToAttract();
 
             _window.Activate();
             DiagnosticLogger.Log("[Bootstrap] Main window activated and UI visible.");
@@ -213,7 +214,7 @@ public partial class App : Application
             MainWindowInstance?.HideLicenseLockout();
             MainWindowInstance?.DispatcherQueue.TryEnqueue(() =>
             {
-                MainWindowInstance.NavigationService.NavigateTo(typeof(KioskBaseView));
+                AppRouter.ToAttract();
             });
 
             // 4. Initialize Hardware Adapters — Auto-start Cash API / Simulator if needed
@@ -774,7 +775,7 @@ public partial class App : Application
                 {
                     CartServiceInstance.AddItem(product.Name, product.Sku, product.Price, 1);
                     Debug.WriteLine($"[SCANNER] Added {product.Name} to cart via barcode scan from Idle.");
-                    MainWindowInstance?.NavigationService?.NavigateTo(typeof(Views.Customer.CartView));
+                    AppRouter.ToCart();
                 }
                 else
                 {
@@ -1046,11 +1047,7 @@ public partial class App : Application
                 {
                     dialog.Hide();
                     tcs.TrySetResult(true);
-                    MainWindowInstance.NavigationService.NavigateTo(
-                        typeof(Views.Admin.AdminLoginView),
-                        null,
-                        Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromBottom
-                    );
+                    AppRouter.ToAdmin();
                 };
                 container.Children.Add(adminBtn);
 

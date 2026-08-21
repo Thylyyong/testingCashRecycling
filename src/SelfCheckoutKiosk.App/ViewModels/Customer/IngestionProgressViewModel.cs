@@ -1,7 +1,7 @@
 using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
-using SelfCheckoutKiosk.App.Views.Customer;
 using SelfCheckoutKiosk.Core.Abstractions;
 using System;
 using System.Collections.ObjectModel;
@@ -70,13 +70,13 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             if (payment == null) return;
 
             _cartService.ClearCart();
-            NavigationService.NavigateTo(typeof(SuccessView), payment, SlideNavigationTransitionEffect.FromRight);
+            NavigationService.NavigateTo(KioskRoute.Success, payment, SlideNavigationTransitionEffect.FromRight);
         }
 
         public void NavigateBackToPaymentSelection()
         {
             if (!CanNavigateBack) return;
-            NavigationService.NavigateTo(typeof(PaymentSelectionView), null, SlideNavigationTransitionEffect.FromLeft);
+            NavigationService.NavigateTo(KioskRoute.PaymentSelection, SlideNavigationTransitionEffect.FromLeft);
         }
 
         private void OnPaymentServicePropertyChanged(object? sender, PropertyChangedEventArgs e) => RaiseAllChanged();

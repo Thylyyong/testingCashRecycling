@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using SelfCheckoutKiosk.Core.Abstractions;
@@ -237,11 +238,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
-            App.MainWindowInstance?.NavigationService.NavigateTo(
-                typeof(Views.Admin.AdminLoginView),
-                null,
-                Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromBottom
-            );
+            AppRouter.ToAdmin();
         }
     }
 }

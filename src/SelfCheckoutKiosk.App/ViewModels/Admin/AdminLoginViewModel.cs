@@ -1,9 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media.Animation;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
-using SelfCheckoutKiosk.App.Views;
-using SelfCheckoutKiosk.App.Views.Admin;
-using SelfCheckoutKiosk.App.Views.Customer;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -137,11 +135,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
             if (_enteredPin == DefaultAdminPin || _enteredPin == "88888888" || _enteredPin.Length == RequiredPinLength)
             {
                 Debug.WriteLine("[Admin Login] Authentication successful.");
-                _navigationService.NavigateTo(
-                    typeof(AdminDiagnosticsView),
-                    null,
-                    SlideNavigationTransitionEffect.FromRight
-                );
+                _navigationService.NavigateTo(KioskRoute.AdminDiagnostics, SlideNavigationTransitionEffect.FromLeft);
                 return true;
             }
             else
@@ -155,7 +149,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
         public void ReturnToCustomerMode()
         {
             ClearPin();
-            _navigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromBottom);
+            _navigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromRight);
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

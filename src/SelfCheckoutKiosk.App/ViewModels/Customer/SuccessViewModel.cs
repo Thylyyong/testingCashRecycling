@@ -1,7 +1,7 @@
 using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
-using SelfCheckoutKiosk.App.Views.Customer;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -181,7 +181,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         public void ReturnHome()
         {
-            NavigationService.NavigateTo(typeof(KioskBaseView), null, SlideNavigationTransitionEffect.FromRight);
+            NavigationService.NavigateTo(KioskRoute.Attract, SlideNavigationTransitionEffect.FromRight);
         }
 
         protected void OnPropertyChanged(string name) =>

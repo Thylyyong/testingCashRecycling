@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
@@ -310,11 +311,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             adminBtn.Click += (s, e) =>
             {
                 dialog.Hide();
-                App.MainWindowInstance?.NavigationService.NavigateTo(
-                    typeof(Views.Admin.AdminLoginView),
-                    null,
-                    SlideNavigationTransitionEffect.FromBottom
-                );
+                AppRouter.ToAdmin();
             };
             container.Children.Add(adminBtn);
 
@@ -369,11 +366,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
-            App.MainWindowInstance?.NavigationService.NavigateTo(
-                typeof(Views.Admin.AdminLoginView),
-                null,
-                SlideNavigationTransitionEffect.FromBottom
-            );
+            AppRouter.ToAdmin();
         }
 
         private void RefreshNetworkStatusUI()

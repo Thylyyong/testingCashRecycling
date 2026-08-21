@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
@@ -329,11 +330,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
-            App.MainWindowInstance?.NavigationService.NavigateTo(
-                typeof(Views.Admin.AdminLoginView),
-                null,
-                Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromBottom
-            );
+            AppRouter.ToAdmin();
         }
 
         private void PaymentIcon_Loaded(object sender, RoutedEventArgs e)

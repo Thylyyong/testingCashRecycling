@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
@@ -185,19 +186,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
             else
             {
-                var nav = App.MainWindowInstance?.NavigationService ?? new NavigationService(Frame);
-                nav.NavigateTo(typeof(KioskBaseView), null, Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromRight);
+                AppRouter.ToAttract(Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromRight);
             }
         }
 
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
             StopAutoReturnTimer();
-            App.MainWindowInstance?.NavigationService.NavigateTo(
-                typeof(Views.Admin.AdminLoginView),
-                null,
-                Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromBottom
-            );
+            AppRouter.ToAdmin();
         }
     }
 }

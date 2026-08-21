@@ -1,8 +1,7 @@
 using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
-using SelfCheckoutKiosk.App.Views.Admin;
-using SelfCheckoutKiosk.App.Views.Customer;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -99,20 +98,12 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
 
         public void NavigateBackToDiagnostics()
         {
-            _navigationService.NavigateTo(
-                typeof(AdminDiagnosticsView),
-                null,
-                new SuppressNavigationTransitionInfo()
-            );
+            _navigationService.NavigateTo(KioskRoute.AdminDiagnostics, null, new SuppressNavigationTransitionInfo());
         }
 
         public void ExitToCustomerMode()
         {
-            _navigationService.NavigateTo(
-                typeof(KioskBaseView),
-                null,
-                new SuppressNavigationTransitionInfo()
-            );
+            _navigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromRight);
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

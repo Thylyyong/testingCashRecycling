@@ -1,8 +1,7 @@
 using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
-using SelfCheckoutKiosk.App.Views.Admin;
-using SelfCheckoutKiosk.App.Views.Customer;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -296,16 +295,12 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
 
     public void NavigateBackToCustomer()
     {
-        _navigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromLeft);
+        _navigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromRight);
     }
 
     public void NavigateToMediaBranding()
     {
-        _navigationService.NavigateTo(
-            typeof(MediaBrandingView),
-            null,
-            SlideNavigationTransitionEffect.FromRight
-        );
+        _navigationService.NavigateTo(KioskRoute.MediaBranding, SlideNavigationTransitionEffect.FromRight);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

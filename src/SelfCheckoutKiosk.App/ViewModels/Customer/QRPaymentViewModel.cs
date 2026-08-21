@@ -3,8 +3,8 @@ using System.ComponentModel;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
 using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
-using SelfCheckoutKiosk.App.Views.Customer;
 
 namespace SelfCheckoutKiosk.App.ViewModels.Customer
 {
@@ -112,12 +112,12 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             var payment = _paymentService.ConfirmPayment(PaymentMethod.KHQR);
 
             _cartService.ClearCart();
-            NavigationService.NavigateTo(typeof(SuccessView), payment, SlideNavigationTransitionEffect.FromRight);
+            NavigationService.NavigateTo(KioskRoute.Success, payment, SlideNavigationTransitionEffect.FromRight);
         }
 
         public void NavigateBackToPaymentSelection()
         {
-            NavigationService.NavigateTo(typeof(PaymentSelectionView), null, SlideNavigationTransitionEffect.FromLeft);
+            NavigationService.NavigateTo(KioskRoute.PaymentSelection, SlideNavigationTransitionEffect.FromLeft);
         }
 
         private void OnPaymentServicePropertyChanged(object? sender, PropertyChangedEventArgs e) => RaiseAllChanged();

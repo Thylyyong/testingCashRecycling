@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.Models;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using SelfCheckoutKiosk.Core.Abstractions;
@@ -162,11 +163,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                         catch { }
 
                         // Navigate to KHQR payment carrying the remaining balance
-                        ViewModel.NavigationService.NavigateTo(
-                            typeof(QRPaymentView),
-                            null,
-                            Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromRight
-                        );
+                        AppRouter.ToQRPayment();
                     }
                 });
             }
@@ -377,11 +374,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
-            App.MainWindowInstance?.NavigationService.NavigateTo(
-                typeof(Views.Admin.AdminLoginView),
-                null,
-                Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromBottom
-            );
+            AppRouter.ToAdmin();
         }
     }
 }

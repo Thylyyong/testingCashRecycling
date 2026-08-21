@@ -23,6 +23,7 @@
 | **WP-10** | [Standalone Unpackaged Portable Distribution (`dist/SelfCheckoutKiosk`)](#wp-10-standalone-unpackaged-portable-distribution-distselfcheckoutkiosk) | `P0` | 🟢 `COMPLETED` | Unpackaged self-contained publish, isolated `CashAPI/` subfolder, 1-click launcher, and Debug/Release validation |
 | **WP-11** | [Dynamic COM Port Auto-Probe & Multi-Device Hardware Discovery](#wp-11-dynamic-com-port-auto-probe--multi-device-hardware-discovery) | `P0` | 🟢 `COMPLETED` | Serial scanner all-COM sweep, Cash Recycler dynamic port allocation, Admin Diagnostics live port reflect |
 | **WP-12** | [Universal Admin Button Navigation Across All Customer Views](#wp-12-universal-admin-button-navigation-across-all-customer-views) | `P1` | 🟢 `COMPLETED` | HomeView, CartView, PaymentSelectionView, PaymentOptionView, QRPaymentView, IngestionProgressView, SuccessView |
+| **WP-13** | [Centralized Global Router & Route Registry (`AppRouter`)](#wp-13-centralized-global-router--route-registry-approuter) | `P1` | 🟢 `COMPLETED` | `KioskRoute`, `AppRoutes`, `AppRouter`, unified transition matrix, zero-boilerplate 1-line navigation |
 
 ---
 
@@ -234,6 +235,35 @@
 
 ---
 
+### WP-13: Centralized Global Router & Route Registry (`AppRouter`)
+**Objective:** Replace repetitive, low-level WinUI `Frame.Navigate(typeof(Page), ...)` calls across all code-behinds and viewmodels with a unified, strongly typed Angular-style route table (`KioskRoute` + `AppRoutes` + `AppRouter`).
+
+- [x] **13.1 Strongly Typed Route Definitions (`KioskRoute.cs`):**
+  - Created `KioskRoute` enum covering all customer and admin views (`Attract`, `Home`, `Cart`, `PaymentSelection`, `PaymentOptions`, `QRPayment`, `CashIngestion`, `Success`, `AdminLogin`, `AdminDiagnostics`, `MediaBranding`).
+- [x] **13.2 Centralized Route Table & Transition Matrix (`AppRoutes.cs`):**
+  - Mapped routes to WinUI `Page` types and standardized transition directions:
+    - **Customer forward / drill-down:** `SlideNavigationTransitionEffect.FromRight`
+    - **Customer return / back:** `SlideNavigationTransitionEffect.FromLeft`
+    - **Admin login entry:** `SlideNavigationTransitionEffect.FromBottom`
+    - **Admin return / cancel:** `SlideNavigationTransitionEffect.FromLeft` / `FromBottom`
+- [x] **13.3 Global Static Navigator (`AppRouter.cs`):**
+  - Provides 1-line clean semantic navigation:
+    - `AppRouter.ToAdmin()`
+    - `AppRouter.ToHome()`
+    - `AppRouter.ToCart()`
+    - `AppRouter.ToPaymentSelection()`
+    - `AppRouter.ToPaymentOptions()`
+    - `AppRouter.ToQRPayment()`
+    - `AppRouter.ToCashIngestion()`
+    - `AppRouter.ToSuccess()`
+    - `AppRouter.ToAttract()`
+    - `AppRouter.BackToCustomer()`
+    - `AppRouter.GoBack()`
+- [x] **13.4 Extended `INavigationService` Contract:**
+  - Added `NavigateTo(KioskRoute, ...)` overloads to `INavigationService` and `NavigationService` for dependency injection and unit test compatibility.
+
+---
+
 ## 📈 Execution Sequence
 
 ```mermaid
@@ -248,4 +278,5 @@ graph TD
     H --> I["WP-10: Standalone Unpackaged Portable Distribution"]
     I --> J["WP-11: Dynamic COM Port Auto-Probe & Multi-Device Discovery"]
     J --> K["WP-12: Universal Admin Button Navigation"]
+    K --> L["WP-13: Centralized Global Router & AppRoutes"]
 ```

@@ -1,6 +1,6 @@
 using Microsoft.UI.Xaml.Media.Animation;
+using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
-using SelfCheckoutKiosk.App.Views.Customer;
 
 namespace SelfCheckoutKiosk.App.ViewModels.Customer
 {
@@ -15,19 +15,12 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
 
         public void ProceedToKioskBaseView()
         {
-            NavigationService.NavigateTo(
-                typeof(KioskBaseView),
-                null,
-                SlideNavigationTransitionEffect.FromLeft);
+            NavigationService.NavigateTo(KioskRoute.Attract, SlideNavigationTransitionEffect.FromLeft);
         }
         
         public void GoBack()
         {
-            NavigationService.NavigateTo(
-                typeof(HomeView),
-                null,
-                SlideNavigationTransitionEffect.FromLeft
-            );
+            NavigationService.NavigateTo(KioskRoute.Home, SlideNavigationTransitionEffect.FromLeft);
         }
     }
 }

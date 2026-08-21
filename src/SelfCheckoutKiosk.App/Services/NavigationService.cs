@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SelfCheckoutKiosk.App.Navigation;
 
 namespace SelfCheckoutKiosk.App.Services
 {
@@ -20,6 +21,23 @@ namespace SelfCheckoutKiosk.App.Services
             Type pageType,
             object? parameter,
             SlideNavigationTransitionEffect effect
+        );
+
+        bool NavigateTo(
+            KioskRoute route,
+            object? parameter = null,
+            SlideNavigationTransitionEffect? effect = null
+        );
+
+        bool NavigateTo(
+            KioskRoute route,
+            SlideNavigationTransitionEffect effect
+        );
+
+        bool NavigateTo(
+            KioskRoute route,
+            object? parameter,
+            NavigationTransitionInfo? transitionInfo
         );
 
         bool GoBack(NavigationTransitionInfo? transitionInfo = null);
@@ -87,6 +105,32 @@ namespace SelfCheckoutKiosk.App.Services
             );
         }
 
+        public bool NavigateTo(
+            KioskRoute route,
+            object? parameter = null,
+            SlideNavigationTransitionEffect? effect = null)
+        {
+            var pageType = AppRoutes.GetPageType(route);
+            var transition = effect ?? AppRoutes.GetDefaultTransition(route);
+            return NavigateTo(pageType, parameter, transition);
+        }
+
+        public bool NavigateTo(
+            KioskRoute route,
+            SlideNavigationTransitionEffect effect)
+        {
+            return NavigateTo(route, null, effect);
+        }
+
+        public bool NavigateTo(
+            KioskRoute route,
+            object? parameter,
+            NavigationTransitionInfo? transitionInfo)
+        {
+            var pageType = AppRoutes.GetPageType(route);
+            return NavigateTo(pageType, parameter, transitionInfo);
+        }
+
         public bool GoBack(
             NavigationTransitionInfo? transitionInfo = null)
         {
@@ -141,8 +185,7 @@ namespace SelfCheckoutKiosk.App.Services
             }
 
             return NavigateTo(
-                typeof(Views.Customer.KioskBaseView),
-                null,
+                KioskRoute.Attract,
                 effect
             );
         }
