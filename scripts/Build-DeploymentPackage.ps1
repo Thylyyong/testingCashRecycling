@@ -1,338 +1,348 @@
 <#
 .SYNOPSIS
-    Builds and packages both the Standalone Portable (Unpackaged) and Installer versions
-    of the Self-Checkout Kiosk System in Release mode under dist/.
+    Builds and packages SelfCheckoutKiosk into two clean distributions:
+      dist\SelfCheckoutKiosk-Portable   - copy anywhere, double-click Start-Kiosk.bat
+      dist\SelfCheckoutKiosk-Installer  - run Install.bat as admin
+
+.DESCRIPTION
+    - Clears dist\ completely before each build
+    - Publishes self-contained win-x64 KioskApp
+    - Publishes CashDeviceSimulator and drops it inside app\ (next to the .exe)
+      so the kiosk finds it automatically, exactly like pressing F5 in the IDE
+    - Auto-generates a universal license.token (no hardware locking, works everywhere)
+    - Creates a minimal Start-Kiosk.bat: cd into app\, launch the .exe, done
+    - The app itself manages starting/stopping CashDeviceSimulator in the background
+    - Writes a plain-text deployment README
 #>
 
 [CmdletBinding()]
 param(
     [string]$Configuration = 'Release',
-    [string]$Runtime = 'win-x64'
+    [string]$Runtime       = 'win-x64'
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-function Write-Step {
-    param([string]$Message)
-    Write-Host ">> $Message" -ForegroundColor Cyan
-}
+function Write-Step { param([string]$Msg) Write-Host ""; Write-Host ">> $Msg" -ForegroundColor Cyan }
+function Write-Ok   { param([string]$Msg) Write-Host "   [OK] $Msg" -ForegroundColor Green }
+function Write-Warn { param([string]$Msg) Write-Host "   [!!] $Msg" -ForegroundColor Yellow }
 
-$repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$distRoot = Join-Path $repoRoot "dist"
+$repoRoot    = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+$distRoot    = Join-Path $repoRoot "dist"
 $portableDir = Join-Path $distRoot "SelfCheckoutKiosk-Portable"
 $installerDir = Join-Path $distRoot "SelfCheckoutKiosk-Installer"
-$legacyPackageDir = Join-Path $distRoot "SelfCheckoutKiosk-Package"
-
-Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host "       SELF-CHECKOUT KIOSK - FULL RELEASE PACKAGING PIPELINE     " -ForegroundColor Yellow
-Write-Host "       Target: $Configuration | Runtime: $Runtime                " -ForegroundColor Cyan
-Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host ""
-
-# 1. Stop any running kiosk or daemon processes before packaging
-Write-Step "Stopping any active kiosk or simulator instances..."
-Get-Process SelfCheckoutKiosk*, CashDeviceSimulator*, GenerateLicense* -ErrorAction SilentlyContinue |
-    Stop-Process -Force -ErrorAction SilentlyContinue
-Start-Sleep -Milliseconds 500
-
-# 2. Clean previous dist staging
-Write-Step "Cleaning dist staging directories..."
-foreach ($dir in @($portableDir, $installerDir, $legacyPackageDir)) {
-    if (Test-Path $dir) {
-        Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    [IO.Directory]::CreateDirectory($dir) | Out-Null
-}
 
 $appProj = Join-Path $repoRoot "src\SelfCheckoutKiosk.App\SelfCheckoutKiosk.App.csproj"
 $simProj = Join-Path $repoRoot "tools\CashDeviceSimulator\CashDeviceSimulator.csproj"
 $licProj = Join-Path $repoRoot "tools\DevLicenseTokenGenerator\DevLicenseTokenGenerator.csproj"
 
-# 2. Publish KioskApp (Self-Contained WinUI 3 Release)
-Write-Step "Publishing SelfCheckoutKiosk.App (Self-Contained $Configuration)..."
-$kioskAppDest = Join-Path $portableDir "KioskApp"
-& dotnet publish $appProj -c $Configuration -r $Runtime --self-contained `
+Write-Host ""
+Write-Host "=================================================================" -ForegroundColor Cyan
+Write-Host "   SELF-CHECKOUT KIOSK -- RELEASE PACKAGING" -ForegroundColor Yellow
+Write-Host "   Config: $Configuration | Runtime: $Runtime" -ForegroundColor Cyan
+Write-Host "=================================================================" -ForegroundColor Cyan
+
+# ─── STEP 1: Kill any running processes, wipe dist\ completely ───────────────
+Write-Step "Killing running instances and clearing dist\ ..."
+Get-Process SelfCheckoutKiosk*, CashDeviceSimulator*, GenerateLicense* -ErrorAction SilentlyContinue |
+    Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 500
+
+if (Test-Path $distRoot) {
+    Remove-Item -LiteralPath $distRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+[IO.Directory]::CreateDirectory($portableDir) | Out-Null
+[IO.Directory]::CreateDirectory($installerDir) | Out-Null
+Write-Ok "dist\ cleared and recreated fresh"
+
+# ─── STEP 2: Publish KioskApp ────────────────────────────────────────────────
+Write-Step "Publishing SelfCheckoutKiosk.App (self-contained $Configuration)..."
+$appDest = Join-Path $portableDir "app"
+& dotnet publish $appProj `
+    -c $Configuration -r $Runtime --self-contained `
     -p:Platform=x64 `
     -p:WindowsPackageType=None `
     -p:PublishTrimmed=false `
-    -o $kioskAppDest
+    -o $appDest
 
-if ($LASTEXITCODE -ne 0) { throw "Failed to publish KioskApp." }
+if ($LASTEXITCODE -ne 0) { throw "KioskApp publish failed." }
 
-# Ensure WinUI 3 PRI resource files (SelfCheckoutKiosk.App.pri and resources.pri) are bundled in the publish root
-$appBinDir = Join-Path $repoRoot "src\SelfCheckoutKiosk.App\bin\x64\$Configuration\net10.0-windows10.0.19041.0\win-x64"
+# Ensure WinUI 3 PRI resource index is present
+$appBinDir    = Join-Path $repoRoot "src\SelfCheckoutKiosk.App\bin\x64\$Configuration\net10.0-windows10.0.19041.0\win-x64"
 $appPriSource = Join-Path $appBinDir "SelfCheckoutKiosk.App.pri"
 if (-not (Test-Path $appPriSource)) {
     $appPriSource = Join-Path $repoRoot "src\SelfCheckoutKiosk.App\bin\x64\$Configuration\net10.0-windows10.0.19041.0\SelfCheckoutKiosk.App.pri"
 }
 if (Test-Path $appPriSource) {
-    Copy-Item -LiteralPath $appPriSource -Destination (Join-Path $kioskAppDest "SelfCheckoutKiosk.App.pri") -Force
-    Copy-Item -LiteralPath $appPriSource -Destination (Join-Path $kioskAppDest "resources.pri") -Force
-    Write-Host "      [OK] Bundled WinUI 3 XAML Resource Index (resources.pri)" -ForegroundColor Green
+    Copy-Item -LiteralPath $appPriSource -Destination (Join-Path $appDest "SelfCheckoutKiosk.App.pri") -Force
+    Copy-Item -LiteralPath $appPriSource -Destination (Join-Path $appDest "resources.pri") -Force
+    Write-Ok "WinUI 3 resources.pri bundled"
 }
+Write-Ok "KioskApp published to app\"
 
-# 3. Publish Cash Device API Daemon
-Write-Step "Publishing CashDeviceSimulator API Daemon..."
-$cashApiDest = Join-Path $portableDir "CashDeviceSimulator-API"
-& dotnet publish $simProj -c $Configuration -r $Runtime --self-contained `
+# ─── STEP 3: Publish CashDeviceSimulator, drop it inside app\ ────────────────
+#
+#  The simulator is the FALLBACK for machines without physical hardware.
+#  The real ITL CashDevice-RestAPI is bundled separately in Step 3b below.
+#
+Write-Step "Publishing CashDeviceSimulator (fallback for testing)..."
+$simStage = Join-Path $env:TEMP ("CashSimStage_" + [guid]::NewGuid().ToString("N"))
+[IO.Directory]::CreateDirectory($simStage) | Out-Null
+& dotnet publish $simProj `
+    -c $Configuration -r $Runtime --self-contained `
     -p:Platform=x64 `
     -p:PublishSingleFile=true `
     -p:PublishTrimmed=false `
-    -o $cashApiDest
+    -o $simStage
 
-if ($LASTEXITCODE -ne 0) { throw "Failed to publish CashDeviceSimulator." }
+if ($LASTEXITCODE -ne 0) { throw "CashDeviceSimulator publish failed." }
 
-# 4. Publish License Generator Tool
-Write-Step "Publishing License Generator CLI and Interactive Tool..."
-$licGenDest = Join-Path $portableDir "LicenseGenerator"
-& dotnet publish $licProj -c $Configuration -r $Runtime --self-contained `
+$simExe = Join-Path $simStage "CashDeviceSimulator.exe"
+if (Test-Path $simExe) {
+    Copy-Item -LiteralPath $simExe -Destination (Join-Path $appDest "CashDeviceSimulator.exe") -Force
+    Write-Ok "CashDeviceSimulator.exe placed inside app\ (simulator fallback)"
+} else {
+    Write-Warn "CashDeviceSimulator.exe not found -- cash will fall back to dotnet run"
+}
+Remove-Item -LiteralPath $simStage -Recurse -Force -ErrorAction SilentlyContinue
+
+# ─── STEP 3b: Bundle real ITL CashDevice-RestAPI if available ────────────────
+#
+#  Searches well-known locations for the real ITL REST API package.
+#  When found, copies the entire folder into app\ so the published release
+#  behaves identically to pressing F5 on the dev machine with hardware.
+#
+#  CashApiProcessManager priority:  CashDevice-RestAPI.exe  >  CashDeviceSimulator.exe
+#  So dropping it into app\ is all that's needed — no config required.
+#
+Write-Step "Looking for real ITL CashDevice-RestAPI to bundle..."
+$userProfile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+$itlSearchPaths = @(
+    (Join-Path $userProfile "Desktop\CA\CashDevice-REST-API-V1.6.1-RC.4-Net8.0 1\CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
+    (Join-Path $userProfile "Desktop\CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
+    (Join-Path $userProfile "Downloads\CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
+    "C:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0",
+    "F:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0",
+    "D:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0"
+)
+
+$itlApiFound = $false
+foreach ($itlPath in $itlSearchPaths) {
+    $itlExe = Join-Path $itlPath "CashDevice-RestAPI.exe"
+    if (Test-Path $itlExe) {
+        Write-Host "   Found ITL API at: $itlPath" -ForegroundColor Cyan
+        # Copy the entire ITL API folder contents into app\
+        # The exe and all its DLLs/configs go side-by-side with SelfCheckoutKiosk.App.exe
+        Copy-Item -Path "$itlPath\*" -Destination $appDest -Recurse -Force
+        Write-Ok "Real ITL CashDevice-RestAPI bundled into app\ -- physical hardware ENABLED"
+        $itlApiFound = $true
+        break
+    }
+}
+
+if (-not $itlApiFound) {
+    Write-Warn "ITL CashDevice-RestAPI not found on this machine -- only simulator will be available"
+    Write-Host "   To enable real hardware: copy CashDevice-RestAPI folder contents into app\" -ForegroundColor Gray
+}
+
+
+
+# ─── STEP 4: Auto-generate universal license.token ───────────────────────────
+#
+#  Generates with HardwareId="*" -- works on every machine, no node-locking.
+#  Copies into app\ (so the kiosk finds it on startup) and into the portable
+#  root (backup / reference copy).
+#
+Write-Step "Generating universal license.token..."
+$licStage = Join-Path $env:TEMP ("LicStage_" + [guid]::NewGuid().ToString("N"))
+[IO.Directory]::CreateDirectory($licStage) | Out-Null
+& dotnet publish $licProj `
+    -c $Configuration -r $Runtime --self-contained `
     -p:Platform=x64 `
     -p:PublishSingleFile=true `
     -p:PublishTrimmed=false `
-    -o $licGenDest
+    -o $licStage
 
-if ($LASTEXITCODE -ne 0) { throw "Failed to publish License Generator." }
+$licExe   = Join-Path $licStage "GenerateLicense.exe"
+$licToken = Join-Path $portableDir "license.token"
 
-# 5. Create Standalone / Portable Launchers & Docs in Portable Dir
-Write-Step "Assembling Portable package launchers and documents..."
-
-$startKioskWithApiBat = @'
-@echo off
-setlocal enabledelayedexpansion
-title Self-Checkout Kiosk Launcher
-cd /d "%~dp0"
-
-echo =================================================================
-echo        STARTING SELF-CHECKOUT KIOSK (PORTABLE MODE)              
-echo =================================================================
-echo.
-
-:: 1. Ensure node-locked license exists
-if not exist "%~dp0KioskApp\license.token" (
-    echo [SETUP] Generating node-locked license token for this device...
-    if exist "%~dp0LicenseGenerator\GenerateLicense.exe" (
-        "%~dp0LicenseGenerator\GenerateLicense.exe" --output "%~dp0KioskApp\license.token"
-    )
-    echo.
-)
-
-:: 2. Launch Cash Device REST API Daemon
-if exist "%~dp0CashDeviceSimulator-API\CashDeviceSimulator.exe" (
-    echo [1/2] Starting Cash Device REST API Daemon (Port 5055/5000)...
-    start "Cash Device API Daemon" /min "%~dp0CashDeviceSimulator-API\CashDeviceSimulator.exe"
-    timeout /t 2 /nobreak >nul
-)
-
-:: 3. Launch SelfCheckout Kiosk UI Application
-echo [2/2] Launching Self-Checkout Kiosk Application (Windows x64)...
-cd /d "%~dp0KioskApp"
-start "" "%~dp0KioskApp\SelfCheckoutKiosk.App.exe"
-
-echo.
-echo [INFO] Self-Checkout Kiosk has launched successfully!
-'@
-[IO.File]::WriteAllText((Join-Path $portableDir "Start-Kiosk-With-API.bat"), $startKioskWithApiBat)
-
-$startKioskBat = @'
-@echo off
-title Start Self-Checkout Kiosk
-cd /d "%~dp0KioskApp"
-start "" "%~dp0KioskApp\SelfCheckoutKiosk.App.exe"
-'@
-[IO.File]::WriteAllText((Join-Path $portableDir "Start-Kiosk.bat"), $startKioskBat)
-
-$startCashApiBat = @'
-@echo off
-title Start Cash Device API Daemon
-cd /d "%~dp0CashDeviceSimulator-API"
-"%~dp0CashDeviceSimulator-API\CashDeviceSimulator.exe"
-'@
-[IO.File]::WriteAllText((Join-Path $portableDir "Start-CashDevice-API.bat"), $startCashApiBat)
-
-$genLicenseBat = @'
-@echo off
-title Generate Machine License
-cd /d "%~dp0"
-"%~dp0LicenseGenerator\GenerateLicense.exe" --output "%~dp0KioskApp\license.token"
-'@
-[IO.File]::WriteAllText((Join-Path $portableDir "Generate-License-For-This-Device.bat"), $genLicenseBat)
-
-# Copy License and Readme to Portable package
-if (Test-Path (Join-Path $repoRoot "LICENSE")) {
-    Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSE") -Destination (Join-Path $portableDir "LICENSE.txt") -Force
-}
-if (Test-Path (Join-Path $repoRoot "README.md")) {
-    Copy-Item -LiteralPath (Join-Path $repoRoot "README.md") -Destination (Join-Path $portableDir "README.txt") -Force
+if ($LASTEXITCODE -eq 0 -and (Test-Path $licExe)) {
+    & $licExe --universal --quiet --output $licToken 2>&1 | Out-Null
+    if (Test-Path $licToken) {
+        Copy-Item -LiteralPath $licToken -Destination (Join-Path $appDest "license.token") -Force
+        Write-Ok "Universal license.token generated and placed in app\ and portable root"
+    } else {
+        Write-Warn "GenerateLicense.exe ran but produced no file -- kiosk will auto-unlock at runtime"
+    }
+    Remove-Item -LiteralPath $licStage -Recurse -Force -ErrorAction SilentlyContinue
+} else {
+    Write-Warn "License generator build failed -- kiosk will auto-unlock at runtime"
+    if (Test-Path $licStage) { Remove-Item -LiteralPath $licStage -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
-# Also sync to legacy package folder for backward compatibility
-Copy-Item -Path (Join-Path $portableDir "*") -Destination $legacyPackageDir -Recurse -Force
+# ─── STEP 5: Write Start-Kiosk.bat ───────────────────────────────────────────
+#
+#  Three lines. Identical to pressing F5:
+#    1. cd into app\ (sets AppContext.BaseDirectory correctly)
+#    2. launch SelfCheckoutKiosk.App.exe
+#  The app automatically starts CashDeviceSimulator.exe in the background
+#  via CashApiProcessManager.EnsureCashApiRunningAsync(). No bat script
+#  needs to manage the API process.
+#
+Write-Step "Writing Start-Kiosk.bat..."
+$startBat = '@echo off' + "`r`n" +
+            'cd /d "%~dp0app"' + "`r`n" +
+            'start "" "SelfCheckoutKiosk.App.exe"' + "`r`n"
+[IO.File]::WriteAllText((Join-Path $portableDir "Start-Kiosk.bat"), $startBat)
+Write-Ok "Start-Kiosk.bat written (3 lines, same behaviour as F5)"
 
-# 6. Build the Installer Package in dist/SelfCheckoutKiosk-Installer
+# ─── STEP 6: Write README-DEPLOYMENT.txt ─────────────────────────────────────
+Write-Step "Writing README-DEPLOYMENT.txt..."
+$readme = @'
+SELF-CHECKOUT KIOSK V2 -- DEPLOYMENT GUIDE
+===========================================
+
+QUICK START (PORTABLE)
+-----------------------
+1. Copy the whole "SelfCheckoutKiosk-Portable" folder to any
+   Windows 10/11 x64 PC (USB drive, network share, etc.)
+2. Double-click  Start-Kiosk.bat
+   Done.
+
+What happens when you double-click Start-Kiosk.bat:
+  - Changes directory into app\
+  - Launches SelfCheckoutKiosk.App.exe
+  - The app checks for a cash API on port 5000. If nothing is running:
+      * If CashDevice-RestAPI.exe is in app\   -> starts real ITL API  (HARDWARE)
+      * Otherwise CashDeviceSimulator.exe      -> starts simulator     (TESTING)
+  - When you close the kiosk window the cash API shuts down too
+  This is exactly the same as pressing F5 in Visual Studio.
+
+LICENSE
+--------
+A pre-generated universal license.token is already included.
+It works on every machine -- no action needed, no hardware locking.
+
+FOLDER STRUCTURE
+-----------------
+SelfCheckoutKiosk-Portable\
+  app\                          <- Everything the kiosk needs
+    SelfCheckoutKiosk.App.exe   <- Main kiosk (WinUI 3)
+    CashDeviceSimulator.exe     <- Cash REST API fallback (simulator/testing)
+    license.token               <- Universal license (ready to go)
+    Assets\                     <- Images, fonts, media
+    ...                         <- Runtime DLLs
+  Start-Kiosk.bat               <- Double-click to launch
+  license.token                 <- Backup copy of the license
+  README-DEPLOYMENT.txt         <- This file
+
+REAL PHYSICAL CASH MACHINE (ITL NV200 / NV400 / SmartPayout)
+--------------------------------------------------------------
+  The app AUTOMATICALLY uses real hardware if CashDevice-RestAPI.exe
+  is placed inside app\. The simulator is only used as a fallback.
+
+  To activate real hardware:
+  1. Copy CashDevice-RestAPI.exe (from your ITL SDK package) into app\
+  2. Connect the USB-Serial cable for the cash machine
+  3. Double-click Start-Kiosk.bat as normal
+
+  Priority order (first found wins):
+    app\CashDevice-RestAPI.exe    <- REAL HARDWARE (use this for production)
+    app\CashDeviceSimulator.exe   <- Simulator fallback (testing only)
+
+  NOTE: CashDevice-RestAPI.exe is NOT included in this package because
+  it is proprietary ITL hardware software. Get it from your ITL SDK.
+
+DEPLOYING TO ANOTHER PC
+-------------------------
+  1. Copy SelfCheckoutKiosk-Portable to the target machine
+  2. Double-click Start-Kiosk.bat
+  No reinstallation, no license regeneration needed.
+
+INSTALLER EDITION
+------------------
+  Run Install.bat as Administrator.
+  Default install path: C:\SelfCheckoutKiosk
+  Creates a Desktop shortcut automatically.
+
+LOGS
+-----
+  app\startup_crash.log    <- Startup / crash errors
+  app\hardware_audit.log   <- Cash and hardware audit trail
+'@
+[IO.File]::WriteAllText((Join-Path $portableDir "README-DEPLOYMENT.txt"), $readme)
+Write-Ok "README-DEPLOYMENT.txt written"
+
+# ─── STEP 7: Assemble Installer ──────────────────────────────────────────────
 Write-Step "Assembling Installer package..."
-$installerPackagePayload = Join-Path $installerDir "Package"
-[IO.Directory]::CreateDirectory($installerPackagePayload) | Out-Null
-Copy-Item -Path (Join-Path $portableDir "*") -Destination $installerPackagePayload -Recurse -Force
 
-# Copy installer engine & launchers into installer root
-$installerBat = @'
-@echo off
-setlocal enabledelayedexpansion
-title Self-Checkout Kiosk V2 — Installer
-cd /d "%~dp0"
+# Installer payload = everything in portable
+$installerPayload = Join-Path $installerDir "payload"
+Copy-Item -Path "$portableDir\*" -Destination $installerPayload -Recurse -Force
 
-net session >nul 2>&1
-if %errorLevel% neq 0 (
-    echo =================================================================
-    echo    REQUESTING ADMINISTRATOR PRIVILEGES FOR INSTALLATION...
-    echo =================================================================
-    powershell -Command "Start-Process cmd -ArgumentList '/c `\"%~dp0Install.bat`\"' -Verb RunAs"
-    exit /b
-)
+# Install.bat -- self-elevates then calls Installer.ps1
+$installBat = '@echo off' + "`r`n" +
+              'net session >nul 2>&1' + "`r`n" +
+              'if %errorLevel% neq 0 (' + "`r`n" +
+              '    powershell -Command "Start-Process cmd -ArgumentList ''/c \"%~f0\"'' -Verb RunAs"' + "`r`n" +
+              '    exit /b' + "`r`n" +
+              ')' + "`r`n" +
+              'powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Installer.ps1"' + "`r`n" +
+              'pause' + "`r`n"
+[IO.File]::WriteAllText((Join-Path $installerDir "Install.bat"), $installBat)
 
-echo =================================================================
-echo        SELF-CHECKOUT KIOSK SYSTEM V2 — WINDOWS INSTALLER         
-echo =================================================================
-echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Installer.ps1"
-echo.
-pause
+# Installer.ps1 -- copies payload, adds firewall rule, creates Desktop shortcut
+$installPs1 = @'
+param([string]$InstallPath = "C:\SelfCheckoutKiosk")
+$ErrorActionPreference = "Stop"
+$payload = Join-Path $PSScriptRoot "payload"
+
+Write-Host "Installing Self-Checkout Kiosk to $InstallPath ..." -ForegroundColor Cyan
+
+if (-not (Test-Path $InstallPath)) { [IO.Directory]::CreateDirectory($InstallPath) | Out-Null }
+Copy-Item -Path "$payload\*" -Destination $InstallPath -Recurse -Force
+Write-Host "  [OK] Files copied" -ForegroundColor Green
+
+try {
+    netsh advfirewall firewall add rule `
+        name="SelfCheckout CashAPI 5000" dir=in action=allow `
+        protocol=TCP localport=5000 profile=any | Out-Null
+    Write-Host "  [OK] Firewall rule added for port 5000" -ForegroundColor Green
+} catch {}
+
+try {
+    $shell = New-Object -ComObject WScript.Shell
+    $lnkPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "Self-Checkout Kiosk.lnk"
+    $lnk = $shell.CreateShortcut($lnkPath)
+    $lnk.TargetPath       = Join-Path $InstallPath "Start-Kiosk.bat"
+    $lnk.WorkingDirectory = $InstallPath
+    $lnk.Description      = "Self-Checkout Kiosk"
+    $lnk.Save()
+    Write-Host "  [OK] Desktop shortcut -> $lnkPath" -ForegroundColor Green
+} catch {}
+
+Write-Host ""
+Write-Host "Installation complete!" -ForegroundColor Green
+Write-Host "Run: $InstallPath\Start-Kiosk.bat" -ForegroundColor White
 '@
-[IO.File]::WriteAllText((Join-Path $installerDir "Install.bat"), $installerBat)
-[IO.File]::WriteAllText((Join-Path $installerDir "Setup.bat"), $installerBat)
-
-# Copy scripts/Install-Kiosk.ps1 logic into installerDir/Installer.ps1
-$installerEngineScript = @'
-[CmdletBinding()]
-param(
-    [string]$InstallPath = 'C:\SelfCheckoutKiosk',
-    [switch]$Silent,
-    [switch]$AutoStartKiosk,
-    [switch]$NoShortcuts,
-    [switch]$NoFirewall
-)
-
-Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host "         SELF-CHECKOUT KIOSK SYSTEM V2 - INSTALLER               " -ForegroundColor Yellow
-Write-Host "         Windows 10 / 11 x64 Offline-First Standalone            " -ForegroundColor Cyan
-Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host ""
-
-$payloadDir = Join-Path $PSScriptRoot "Package"
-if (-not (Test-Path $payloadDir)) {
-    throw "Installer payload package directory missing: $payloadDir"
-}
-
-if (-not $Silent) {
-    Write-Host "Default Installation Directory: $InstallPath" -ForegroundColor White
-    $userPath = Read-Host "Press ENTER to accept or enter custom installation directory"
-    if (-not [string]::IsNullOrWhiteSpace($userPath)) {
-        $InstallPath = $userPath.Trim()
-    }
-    Write-Host ""
-}
-
-$InstallPath = [IO.Path]::GetFullPath($InstallPath)
-Write-Host "[1/5] Preparing installation target: $InstallPath" -ForegroundColor Cyan
-if (-not (Test-Path $InstallPath)) {
-    [IO.Directory]::CreateDirectory($InstallPath) | Out-Null
-}
-
-Write-Host "[2/5] Copying application files..." -ForegroundColor Cyan
-Copy-Item -Path (Join-Path $payloadDir "*") -Destination $InstallPath -Recurse -Force
-
-Write-Host "[3/5] Generating node-locked license token for this machine..." -ForegroundColor Cyan
-$generatorExe = Join-Path $InstallPath "LicenseGenerator\GenerateLicense.exe"
-$targetLicenseToken = Join-Path $InstallPath "KioskApp\license.token"
-if (Test-Path $generatorExe) {
-    try {
-        & $generatorExe --output $targetLicenseToken | Out-Null
-        if (Test-Path $targetLicenseToken) {
-            Copy-Item -LiteralPath $targetLicenseToken -Destination (Join-Path $InstallPath "license.token") -Force
-            Write-Host "      [OK] License token activated for this machine." -ForegroundColor Green
-        }
-    } catch {
-        Write-Host "      [WARNING] License token auto-generation warning: $_" -ForegroundColor Yellow
-    }
-}
-
-Write-Host "[4/5] Creating Desktop and Start Menu shortcuts..." -ForegroundColor Cyan
-if (-not $NoShortcuts) {
-    $wscriptShell = New-Object -ComObject WScript.Shell
-    $appIconPath = Join-Path $InstallPath "KioskApp\Assets\Logo\ca.ico"
-    if (-not (Test-Path $appIconPath)) {
-        $appIconPath = Join-Path $InstallPath "KioskApp\SelfCheckoutKiosk.App.exe"
-    }
-
-    # Desktop Shortcut
-    $desktopFolder = [Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)
-    $desktopShortcutPath = Join-Path $desktopFolder "Self-Checkout Kiosk.lnk"
-    $shortcut = $wscriptShell.CreateShortcut($desktopShortcutPath)
-    $shortcut.TargetPath = Join-Path $InstallPath "Start-Kiosk-With-API.bat"
-    $shortcut.WorkingDirectory = $InstallPath
-    $shortcut.IconLocation = "$appIconPath,0"
-    $shortcut.Description = "Launch Self-Checkout Kiosk with Cash API Bridge"
-    $shortcut.Save()
-    Write-Host "      [OK] Desktop shortcut created: $desktopShortcutPath" -ForegroundColor Green
-
-    # Start Menu
-    $startMenuPrograms = [Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)
-    $kioskStartFolder = Join-Path $startMenuPrograms "Self-Checkout Kiosk"
-    if (-not (Test-Path $kioskStartFolder)) { [IO.Directory]::CreateDirectory($kioskStartFolder) | Out-Null }
-
-    $smMain = $wscriptShell.CreateShortcut((Join-Path $kioskStartFolder "Self-Checkout Kiosk.lnk"))
-    $smMain.TargetPath = Join-Path $InstallPath "Start-Kiosk-With-API.bat"
-    $smMain.WorkingDirectory = $InstallPath
-    $smMain.IconLocation = "$appIconPath,0"
-    $smMain.Description = "Launch Self-Checkout Kiosk"
-    $smMain.Save()
-
-    $smLicense = $wscriptShell.CreateShortcut((Join-Path $kioskStartFolder "Regenerate Machine License.lnk"))
-    $smLicense.TargetPath = (Join-Path $InstallPath "LicenseGenerator\GenerateLicense.exe")
-    $smLicense.WorkingDirectory = (Join-Path $InstallPath "LicenseGenerator")
-    $smLicense.Description = "Generate or refresh node-locked license token"
-    $smLicense.Save()
-
-    Write-Host "      [OK] Start Menu folder created: $kioskStartFolder" -ForegroundColor Green
-}
-
-Write-Host "[5/5] Configuring Windows Firewall..." -ForegroundColor Cyan
-if (-not $NoFirewall) {
-    try {
-        netsh advfirewall firewall add rule name="SelfCheckout CashAPI (Port 5055)" dir=in action=allow protocol=TCP localport=5055 profile=any | Out-Null
-        netsh advfirewall firewall add rule name="SelfCheckout CashAPI (Port 5000)" dir=in action=allow protocol=TCP localport=5000 profile=any | Out-Null
-        Write-Host "      [OK] Firewall rules configured." -ForegroundColor Green
-    } catch {}
-}
-
-Write-Host ""
-Write-Host "=================================================================" -ForegroundColor Green
-Write-Host "       INSTALLATION COMPLETED SUCCESSFULLY!                      " -ForegroundColor Green
-Write-Host "=================================================================" -ForegroundColor Green
-Write-Host "Application Directory : $InstallPath" -ForegroundColor White
-Write-Host "Main Launcher         : $InstallPath\Start-Kiosk-With-API.bat" -ForegroundColor White
-Write-Host ""
-'@
-[IO.File]::WriteAllText((Join-Path $installerDir "Installer.ps1"), $installerEngineScript)
+[IO.File]::WriteAllText((Join-Path $installerDir "Installer.ps1"), $installPs1)
 
 if (Test-Path (Join-Path $repoRoot "LICENSE")) {
     Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSE") -Destination (Join-Path $installerDir "LICENSE.txt") -Force
 }
-if (Test-Path (Join-Path $repoRoot "README.md")) {
-    Copy-Item -LiteralPath (Join-Path $repoRoot "README.md") -Destination (Join-Path $installerDir "README.txt") -Force
-}
+Write-Ok "Installer package assembled"
 
+# ─── DONE ─────────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Green
-Write-Host "       PACKAGING COMPLETED SUCCESSFULLY!                         " -ForegroundColor Green
+Write-Host "   PACKAGING COMPLETE" -ForegroundColor Green
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "1. Portable (Unpackaged) Version:" -ForegroundColor Yellow
-Write-Host "   Path: $portableDir" -ForegroundColor White
-Write-Host "   Usage: Copy folder anywhere and run 'Start-Kiosk-With-API.bat'" -ForegroundColor Gray
+Write-Host "PORTABLE : $portableDir" -ForegroundColor Yellow
+Write-Host "           -> double-click Start-Kiosk.bat" -ForegroundColor Gray
 Write-Host ""
-Write-Host "2. Installer Version:" -ForegroundColor Yellow
-Write-Host "   Path: $installerDir" -ForegroundColor White
-Write-Host "   Usage: Run 'Install.bat' or 'Setup.bat' as Administrator" -ForegroundColor Gray
+Write-Host "INSTALLER: $installerDir" -ForegroundColor Yellow
+Write-Host "           -> run Install.bat as Administrator" -ForegroundColor Gray
 Write-Host ""
+

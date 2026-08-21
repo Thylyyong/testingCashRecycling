@@ -163,7 +163,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Customer
             return left + new string(' ', spaces) + right;
         }
 
-        private static string FormatCenter(string text, int width = 46)
+        private static string FormatCenter(string text, int width = 48)
         {
             text ??= string.Empty;
             if (text.Length >= width) return text.Substring(0, width);

@@ -8,13 +8,14 @@ const string devPrivateKeyPkcs8Base64 =
     "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgLwr4Bk3wyGHDa6rTUxHHmNPGd35S5w5IvFvSkanylB+hRANCAASryF6RMBz+hO0eAo1luGoQxjOw7Dz0NxWrBcQADIcK4nSyEMHyJKKsxfqlfc9tcRuJfk6XXIHmdOeIvM4CoRKu";
 
 string outputPath = "license.token";
-string? targetHardwareId = null;
+string? targetHardwareId = "*"; // Default to universal wildcard for seamless deployment
 LicenseTier tier = LicenseTier.Enterprise;
-int validityYears = 5;
+int validityYears = 10;
 bool aiEnabled = true;
 int maxKiosks = 100;
 bool quiet = false;
 string? inspectPath = null;
+bool interactive = false;
 
 // Parse CLI args
 for (int i = 0; i < args.Length; i++)
@@ -24,6 +25,10 @@ for (int i = 0; i < args.Length; i++)
         outputPath = args[++i];
     else if ((arg is "--hardware-id" or "-h" or "--hwid") && i + 1 < args.Length)
         targetHardwareId = args[++i];
+    else if (arg is "--node-lock" or "-n")
+        targetHardwareId = new HardwareIdProvider().GetHardwareId();
+    else if (arg is "--universal" or "-u")
+        targetHardwareId = "*";
     else if ((arg is "--tier" or "-t") && i + 1 < args.Length)
     {
         if (Enum.TryParse<LicenseTier>(args[++i], true, out var parsedTier))
@@ -35,6 +40,8 @@ for (int i = 0; i < args.Length; i++)
         inspectPath = args[++i];
     else if (arg is "--quiet" or "-q" or "--silent")
         quiet = true;
+    else if (arg is "--menu" or "-m")
+        interactive = true;
 }
 
 if (!string.IsNullOrEmpty(inspectPath))
@@ -43,14 +50,13 @@ if (!string.IsNullOrEmpty(inspectPath))
     return;
 }
 
-// If no arguments and running in an interactive terminal, show the menu
-if (args.Length == 0 && !Console.IsInputRedirected)
+if (interactive)
 {
     ShowInteractiveMenu();
     return;
 }
 
-// Otherwise execute standard generation
+// Otherwise execute standard universal generation directly
 GenerateLicense(targetHardwareId, outputPath, tier, validityYears, maxKiosks, aiEnabled, quiet);
 
 void ShowInteractiveMenu()
@@ -170,13 +176,21 @@ void GenerateLicense(string? hwid, string outPath, LicenseTier licTier, int year
         Console.WriteLine($"Output File  : {Path.GetFullPath(outPath)}");
     }
 
-    // Auto-copy to standard sibling app folders if they exist
+    // Auto-copy to standard sibling and parent app folders if they exist
     string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+    string currentDir = Directory.GetCurrentDirectory();
     string[] potentialKioskPaths = [
         Path.Combine(baseDir, "..", "KioskApp", "license.token"),
         Path.Combine(baseDir, "KioskApp", "license.token"),
+        Path.Combine(baseDir, "..", "license.token"),
+        Path.Combine(baseDir, "license.token"),
         Path.Combine(baseDir, "..", "..", "src", "SelfCheckoutKiosk.App", "license.token"),
-        Path.Combine(Directory.GetCurrentDirectory(), "dist", "SelfCheckoutKiosk-Package", "KioskApp", "license.token")
+        Path.Combine(currentDir, "dist", "SelfCheckoutKiosk-Portable", "KioskApp", "license.token"),
+        Path.Combine(currentDir, "dist", "SelfCheckoutKiosk-Portable", "license.token"),
+        Path.Combine(currentDir, "dist", "SelfCheckoutKiosk-Package", "KioskApp", "license.token"),
+        Path.Combine(currentDir, "dist", "SelfCheckoutKiosk-Package", "license.token"),
+        Path.Combine(currentDir, "KioskApp", "license.token"),
+        Path.Combine(currentDir, "license.token")
     ];
 
     foreach (var path in potentialKioskPaths)

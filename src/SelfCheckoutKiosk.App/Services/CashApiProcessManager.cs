@@ -248,53 +248,75 @@ public static class CashApiProcessManager
             return envPath;
         }
 
-        // 2. Common directory candidates for real ITL SDK CashDevice-RestAPI.exe
+        // 2. Search directories — real ITL hardware API always takes priority over simulator.
+        //    Two separate passes: first looking for CashDevice-RestAPI.exe (physical hardware),
+        //    then falling back to CashDeviceSimulator.exe (no hardware / testing).
         string baseDir = AppContext.BaseDirectory;
         string currentDir = Directory.GetCurrentDirectory();
         string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-        string[] potentialDirs =
+        // Ordered list of directories to search. Same list is used for both passes.
+        string[] searchDirs =
         {
+            // Highest priority: right next to the .exe (deployed app\ folder or debug bin)
+            baseDir,
+            Path.Combine(baseDir, ".."),
+            // Standard portable layout siblings
+            Path.Combine(baseDir, "..", "CashDevice-RestAPI"),
+            Path.Combine(baseDir, "CashDevice-RestAPI"),
+            Path.Combine(baseDir, "..", "CashDeviceSimulator-API"),
+            Path.Combine(baseDir, "CashDeviceSimulator-API"),
+            // Current working directory
+            currentDir,
+            Path.Combine(currentDir, "CashDevice-RestAPI"),
+            Path.Combine(currentDir, "CashDeviceSimulator-API"),
+            // Developer desktop / download locations for the real ITL SDK
             Path.Combine(userProfile, "Desktop", "CA", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0 1", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
             Path.Combine(userProfile, "Desktop", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
             Path.Combine(userProfile, "Downloads", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
-            baseDir,
-            currentDir,
             @"C:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0",
             @"F:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0",
             @"D:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0",
+            // Dev build outputs (IDE / CI)
+            Path.Combine(currentDir, "tools", "CashDeviceSimulator", "bin", "Release", "net10.0", "win-x64"),
             Path.Combine(currentDir, "tools", "CashDeviceSimulator", "bin", "Debug", "net10.0"),
-            Path.Combine(baseDir, "..", "CashDeviceSimulator-API"),
-            Path.Combine(baseDir, "CashDeviceSimulator-API"),
-            Path.Combine(currentDir, "CashDeviceSimulator-API"),
+            Path.Combine(baseDir, "..", "..", "..", "..", "tools", "CashDeviceSimulator", "bin", "Release", "net10.0", "win-x64"),
             Path.Combine(baseDir, "..", "..", "..", "..", "tools", "CashDeviceSimulator", "bin", "Debug", "net10.0"),
             Path.Combine(baseDir, "..", "..", "..", "..", "tools", "CashDeviceSimulator", "bin", "Release", "net10.0")
         };
 
-        // Check for real ITL hardware server executable first
-        foreach (var dir in potentialDirs)
+        // PASS 1 — Look for real ITL CashDevice-RestAPI.exe (physical hardware support).
+        //           Must happen before the simulator check so a physically connected
+        //           ITL machine (NV200 / NV400 / SmartPayout) is always preferred.
+        foreach (var dir in searchDirs)
         {
-            if (Directory.Exists(dir))
+            try
             {
+                if (!Directory.Exists(dir)) continue;
                 string realExe = Path.Combine(dir, "CashDevice-RestAPI.exe");
                 if (File.Exists(realExe))
                 {
-                    return realExe;
+                    Console.WriteLine($"[CashApiProcessManager] Found real ITL API: {realExe}");
+                    return Path.GetFullPath(realExe);
                 }
             }
+            catch { }
         }
 
-        // Fallback to simulator executable if real ITL SDK is not installed
-        foreach (var dir in potentialDirs)
+        // PASS 2 — Fall back to the simulator (no physical hardware / testing).
+        foreach (var dir in searchDirs)
         {
-            if (Directory.Exists(dir))
+            try
             {
+                if (!Directory.Exists(dir)) continue;
                 string simExe = Path.Combine(dir, "CashDeviceSimulator.exe");
                 if (File.Exists(simExe))
                 {
-                    return simExe;
+                    Console.WriteLine($"[CashApiProcessManager] No real ITL API found, using simulator: {simExe}");
+                    return Path.GetFullPath(simExe);
                 }
             }
+            catch { }
         }
 
         return null;

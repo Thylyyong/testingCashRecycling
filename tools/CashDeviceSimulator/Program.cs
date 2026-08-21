@@ -20,7 +20,7 @@ else if (IsPortInUse(5000))
     Console.WriteLine($"[CashDeviceSimulator] Port 5000 is already in use, binding to http://localhost:{targetPort} ...");
 }
 
-builder.WebHost.UseUrls($"http://localhost:{targetPort}");
+builder.WebHost.UseUrls($"http://127.0.0.1:{targetPort}", $"http://localhost:{targetPort}");
 
 var app = builder.Build();
 var state = new DeviceState();
