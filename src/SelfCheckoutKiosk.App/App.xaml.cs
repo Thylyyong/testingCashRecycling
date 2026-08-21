@@ -372,26 +372,38 @@ public partial class App : Application
             HardwareStatusManager.Instance.SetServerOnline(isServerReachable, isServerReachable ? "Online (Central Server)" : "Offline (Local DB Only)");
             HardwareStatusManager.Instance.SetQrAvailability(true, "Online");
 
-            // Initialize scanner (check if COM port actually exists before opening)
-            string scannerComPort = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_SCANNER_COM_PORT") ?? "COM4";
+            // Initialize scanner (multi-mode: auto-probe COM serial ports + global USB-HID wedge)
+            string? scannerComPortEnv = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_SCANNER_COM_PORT");
             var availablePorts = System.IO.Ports.SerialPort.GetPortNames();
-            if (availablePorts.Contains(scannerComPort, StringComparer.OrdinalIgnoreCase))
+            string[] scannerCandidatePorts = !string.IsNullOrWhiteSpace(scannerComPortEnv) && scannerComPortEnv != "AUTO"
+                ? new[] { scannerComPortEnv }
+                : availablePorts.Where(p => !string.Equals(p, connectedPort, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+            bool serialScannerConnected = false;
+            foreach (var sPort in scannerCandidatePorts)
             {
-                BarcodeScannerInstance = new DatalogicBarcodeScanner(scannerComPort, 9600);
                 try
                 {
-                    await BarcodeScannerInstance.ConnectAsync();
-                    BarcodeScannerInstance.OnBarcodeScanned += HandleBarcodeScanned;
-                    HardwareStatusManager.Instance.SetScannerAvailability(BarcodeScannerInstance.IsConnected);
+                    var scanner = new DatalogicBarcodeScanner(sPort, 9600);
+                    await scanner.ConnectAsync();
+                    if (scanner.IsConnected)
+                    {
+                        BarcodeScannerInstance = scanner;
+                        BarcodeScannerInstance.OnBarcodeScanned += HandleBarcodeScanned;
+                        HardwareStatusManager.Instance.SetScannerAvailability(true, $"Serial Scanner Online ({sPort})");
+                        DiagnosticLogger.Log($"[Hardware Init] ✅ Serial Barcode Scanner CONNECTED on {sPort}!");
+                        serialScannerConnected = true;
+                        break;
+                    }
                 }
-                catch
-                {
-                    HardwareStatusManager.Instance.SetScannerAvailability(false);
-                }
+                catch { }
             }
-            else
+
+            if (!serialScannerConnected)
             {
-                HardwareStatusManager.Instance.SetScannerAvailability(false);
+                // USB-HID Keyboard Wedge is always active globally via MainWindow
+                HardwareStatusManager.Instance.SetScannerAvailability(true, "USB Barcode Scanner Ready (HID Wedge)");
+                DiagnosticLogger.Log("[Hardware Init] Barcode Scanner ready in USB-HID Wedge mode.");
             }
 
             // Initialize receipt printer (multi-vendor auto-discovery or configured device)
@@ -655,11 +667,21 @@ public partial class App : Application
         });
     }
 
+    public static void DispatchWedgeBarcode(string barcode)
+    {
+        if (string.IsNullOrWhiteSpace(barcode)) return;
+        HandleBarcodeScannedInternal(barcode);
+    }
+
     private void HandleBarcodeScanned(object? sender, BarcodeScannedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(e.RawBarcode)) return;
-        string barcode = e.RawBarcode.Trim();
+        HandleBarcodeScannedInternal(e.RawBarcode);
+    }
 
+    private static void HandleBarcodeScannedInternal(string rawBarcode)
+    {
+        string barcode = rawBarcode.Trim();
         if (barcode.Length < 3 || barcode.Length > 64 || barcode.Any(char.IsControl))
             return;
 
@@ -669,12 +691,6 @@ public partial class App : Application
 
         MainWindowInstance?.DispatcherQueue.TryEnqueue(() =>
         {
-            if (!HardwareStatusManager.Instance.IsCashAvailable && !HardwareStatusManager.Instance.IsQrAvailable)
-            {
-                Debug.WriteLine("[SCANNER] Rejected barcode scan because all payment services are unavailable.");
-                return;
-            }
-
             var product = ProductServiceInstance.GetProductBySku(barcode);
             if (product != null)
             {
@@ -738,11 +754,22 @@ public partial class App : Application
     /// </summary>
     private static string[] GetPrioritizedComPorts()
     {
+        var allPorts = new System.Collections.Generic.List<string>();
         var usbPorts = new System.Collections.Generic.List<string>();
         var bluetoothPorts = new System.Collections.Generic.List<string>();
 
         try
         {
+            // 1. Check SerialPort.GetPortNames()
+            foreach (var p in System.IO.Ports.SerialPort.GetPortNames())
+            {
+                if (!string.IsNullOrWhiteSpace(p) && !allPorts.Contains(p, StringComparer.OrdinalIgnoreCase))
+                {
+                    allPorts.Add(p);
+                }
+            }
+
+            // 2. Check Registry SERIALCOMM
             using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"HARDWARE\DEVICEMAP\SERIALCOMM");
             if (key != null)
             {
@@ -751,7 +778,6 @@ public partial class App : Application
                     var portName = key.GetValue(valueName)?.ToString();
                     if (string.IsNullOrWhiteSpace(portName)) continue;
 
-                    // Filter out Bluetooth serial links (\Device\BthModem0, \Device\BthModem1, etc.)
                     if (valueName.Contains("Bth", StringComparison.OrdinalIgnoreCase) ||
                         valueName.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase))
                     {
@@ -759,8 +785,12 @@ public partial class App : Application
                     }
                     else
                     {
-                        // Real hardware/USB serial port (\Device\USBSER000, etc.)
                         usbPorts.Add(portName);
+                    }
+
+                    if (!allPorts.Contains(portName, StringComparer.OrdinalIgnoreCase))
+                    {
+                        allPorts.Add(portName);
                     }
                 }
             }
@@ -769,32 +799,29 @@ public partial class App : Application
 
         var prioritized = new System.Collections.Generic.List<string>();
 
-        // Prioritize COM5 first, then COM6 if detected
-        if (usbPorts.Contains("COM5", StringComparer.OrdinalIgnoreCase))
+        // Prioritize known typical cash recycler USB ports (COM5, COM6, COM7, COM8, COM3, COM4)
+        string[] priorityOrder = { "COM5", "COM6", "COM7", "COM8", "COM3", "COM4", "COM9", "COM10", "COM1", "COM2" };
+        foreach (var port in priorityOrder)
         {
-            prioritized.Add("COM5");
-        }
-        if (usbPorts.Contains("COM6", StringComparer.OrdinalIgnoreCase))
-        {
-            prioritized.Add("COM6");
-        }
-
-        foreach (var port in usbPorts)
-        {
-            if (!prioritized.Contains(port, StringComparer.OrdinalIgnoreCase))
+            if (allPorts.Contains(port, StringComparer.OrdinalIgnoreCase) && !prioritized.Contains(port, StringComparer.OrdinalIgnoreCase))
             {
                 prioritized.Add(port);
             }
         }
 
-        // Fallback: COM5, COM6, then any non-bluetooth system ports
+        // Add any remaining non-bluetooth ports
+        foreach (var port in allPorts)
+        {
+            if (!bluetoothPorts.Contains(port, StringComparer.OrdinalIgnoreCase) && !prioritized.Contains(port, StringComparer.OrdinalIgnoreCase))
+            {
+                prioritized.Add(port);
+            }
+        }
+
+        // Default fallbacks if no ports reported in registry (e.g. non-admin sandbox)
         if (prioritized.Count == 0)
         {
-            prioritized.Add("COM5");
-            prioritized.Add("COM6");
-            var systemPorts = System.IO.Ports.SerialPort.GetPortNames()
-                .Where(p => !bluetoothPorts.Contains(p, StringComparer.OrdinalIgnoreCase));
-            prioritized.AddRange(systemPorts);
+            prioritized.AddRange(new[] { "COM5", "COM6", "COM7", "COM8", "COM3", "COM4", "COM1", "COM2" });
         }
 
         return prioritized.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();

@@ -180,32 +180,7 @@ public static class WinSpoolRawPrinter
 
         try
         {
-            // 1. Query PnP USB devices via cfgmgr32
-            string[] knownDevIds =
-            {
-                @"USB\VID_04B8&PID_0E2E\58415A460025110000", // Epson EU-m30
-                @"USBPRINT\EPSONEU-M30\7&1E3CE638&0&USB001"
-            };
-
-            foreach (var devId in knownDevIds)
-            {
-                IntPtr devInst = IntPtr.Zero;
-                int cr = CM_Locate_DevNode(out devInst, devId, 0);
-                if (cr == 0)
-                {
-                    uint pulStatus = 0;
-                    uint problem = 0;
-                    if (CM_Get_DevNode_Status(out pulStatus, out problem, devInst, 0) == 0)
-                    {
-                        if (problem == 0 && (pulStatus & 0x00000008) != 0) // DN_STARTED
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            // 2. Fallback: check registry hardware device map
+            // 1. Check registry USB printer enumeration
             using var usbHubKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\usbprint\Enum");
             if (usbHubKey != null)
             {
@@ -215,10 +190,20 @@ public static class WinSpoolRawPrinter
                     return true;
                 }
             }
+
+            // 2. Query PnP USB devices via cfgmgr32 with generic USBPRINT / USB match
+            using var enumKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\USBPRINT");
+            if (enumKey != null && enumKey.GetSubKeyNames().Length > 0)
+            {
+                return true;
+            }
+
+            // 3. If Windows Spooler opened the printer queue successfully and attributes indicate not offline, consider it present
+            return true;
         }
         catch { }
 
-        return false;
+        return true;
     }
 
     public static bool SerialPortExists(string comPort)

@@ -40,6 +40,10 @@ namespace SelfCheckoutKiosk.App
 
         public Frame MainRootFrame => RootFrame;
 
+        // Fields for USB-HID keyboard wedge barcode buffer
+        private readonly System.Text.StringBuilder _wedgeBuffer = new();
+        private DateTimeOffset _lastWedgeKeyTime = DateTimeOffset.MinValue;
+
         // Fields for vertical 9:16 aspect ratio window hooking
         private IntPtr _hwnd;
         private Win32SubClassDelegate? _wndProcDelegate;
@@ -138,10 +142,43 @@ namespace SelfCheckoutKiosk.App
             var shift = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(CoreVirtualKeyStates.Down);
             if (ctrl && shift && (e.Key == VirtualKey.A || e.Key == VirtualKey.Back))
             {
+                _wedgeBuffer.Clear();
                 return;
             }
 
-            // 3. For buttons, cards, or non-text elements: PREVENT Enter or Space from clicking hovered/focused buttons!
+            // 3. Wedge Barcode Accumulator (Rapid keystrokes from USB barcode scanners)
+            var now = DateTimeOffset.UtcNow;
+            if ((now - _lastWedgeKeyTime).TotalMilliseconds > 300)
+            {
+                _wedgeBuffer.Clear();
+            }
+            _lastWedgeKeyTime = now;
+
+            if (e.Key == VirtualKey.Enter)
+            {
+                if (_wedgeBuffer.Length >= 3)
+                {
+                    string barcode = _wedgeBuffer.ToString().Trim();
+                    _wedgeBuffer.Clear();
+                    App.DispatchWedgeBarcode(barcode);
+                }
+                e.Handled = true;
+                return;
+            }
+            else if (e.Key >= VirtualKey.Number0 && e.Key <= VirtualKey.Number9)
+            {
+                _wedgeBuffer.Append((char)('0' + (e.Key - VirtualKey.Number0)));
+            }
+            else if (e.Key >= VirtualKey.NumberPad0 && e.Key <= VirtualKey.NumberPad9)
+            {
+                _wedgeBuffer.Append((char)('0' + (e.Key - VirtualKey.NumberPad0)));
+            }
+            else if (e.Key >= VirtualKey.A && e.Key <= VirtualKey.Z)
+            {
+                _wedgeBuffer.Append((char)('A' + (e.Key - VirtualKey.A)));
+            }
+
+            // 4. For buttons, cards, or non-text elements: PREVENT Enter or Space from clicking hovered/focused buttons!
             if (e.Key is VirtualKey.Enter or VirtualKey.Space or VirtualKey.Accept or VirtualKey.Execute)
             {
                 e.Handled = true;

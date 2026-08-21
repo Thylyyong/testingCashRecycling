@@ -123,10 +123,17 @@ public static class CashApiProcessManager
             {
                 return candidateUrls[0];
             }
+        }
 
-            string? exePath = LocateCashApiExecutable();
-            if (!string.IsNullOrEmpty(exePath))
+        var candidates = GetCashApiExecutableCandidates();
+
+        foreach (var exePath in candidates)
+        {
+            lock (_lock)
             {
+                KillProcessSafely(_apiProcess);
+                _apiProcess = null;
+
                 try
                 {
                     var startInfo = new ProcessStartInfo
@@ -142,69 +149,108 @@ public static class CashApiProcessManager
                     if (_apiProcess != null)
                     {
                         AppDomain.CurrentDomain.ProcessExit += (_, _) => KillProcessSafely(_apiProcess);
-                        Console.WriteLine($"[CashApiProcessManager] Started Cash API process: {exePath} (PID: {_apiProcess.Id}, Background: {runInBackground})");
+                        Console.WriteLine($"[CashApiProcessManager] Attempting to launch Cash API: {exePath} (PID: {_apiProcess.Id}, Background: {runInBackground})");
                     }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[CashApiProcessManager] Failed to launch executable '{exePath}': {ex.Message}");
+                    _apiProcess = null;
                 }
             }
-            else
-            {
-                // Try dotnet run on CashDeviceSimulator project if available
-                string? projectPath = LocateSimulatorProject();
-                if (!string.IsNullOrEmpty(projectPath))
-                {
-                    try
-                    {
-                        var startInfo = new ProcessStartInfo
-                        {
-                            FileName = "dotnet",
-                            Arguments = $"run --project \"{projectPath}\"",
-                            WorkingDirectory = Path.GetDirectoryName(projectPath) ?? AppContext.BaseDirectory,
-                            UseShellExecute = !runInBackground,
-                            CreateNoWindow = runInBackground,
-                            WindowStyle = runInBackground ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal
-                        };
 
-                        _apiProcess = Process.Start(startInfo);
-                        if (_apiProcess != null)
-                        {
-                            AppDomain.CurrentDomain.ProcessExit += (_, _) => KillProcessSafely(_apiProcess);
-                            Console.WriteLine($"[CashApiProcessManager] Started CashDeviceSimulator (PID: {_apiProcess.Id}, Background: {runInBackground})");
-                        }
-                    }
-                    catch (Exception ex)
+            if (_apiProcess == null) continue;
+
+            // Wait up to 3.5s for this candidate to answer
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(3500));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+            while (!linkedCts.Token.IsCancellationRequested)
+            {
+                if (_apiProcess == null || _apiProcess.HasExited)
+                {
+                    Console.WriteLine($"[CashApiProcessManager] Executable '{exePath}' exited prematurely (exit code: {_apiProcess?.ExitCode}). Trying next candidate...");
+                    break;
+                }
+
+                foreach (var url in candidateUrls)
+                {
+                    if (await IsEndpointResponsiveAsync(url, linkedCts.Token))
                     {
-                        Console.WriteLine($"[CashApiProcessManager] Failed to launch simulator project: {ex.Message}");
+                        Console.WriteLine($"[CashApiProcessManager] Cash API is now online and reachable at {url} (via {Path.GetFileName(exePath)})");
+                        return url;
                     }
                 }
+
+                try
+                {
+                    await Task.Delay(150, linkedCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+
+            // If not responsive or exited, kill it and continue to next candidate
+            lock (_lock)
+            {
+                KillProcessSafely(_apiProcess);
+                _apiProcess = null;
             }
         }
 
-        // Wait for process to become responsive (cold-start can take up to 15s)
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-        while (!linkedCts.Token.IsCancellationRequested)
+        // Fallback: Try dotnet run on simulator project if available (development machine)
+        string? projectPath = LocateSimulatorProject();
+        if (!string.IsNullOrEmpty(projectPath))
         {
-            foreach (var url in candidateUrls)
+            lock (_lock)
             {
-                if (await IsEndpointResponsiveAsync(url, linkedCts.Token))
+                try
                 {
-                    Console.WriteLine($"[CashApiProcessManager] Cash API is now online and reachable at {url}");
-                    return url;
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = "dotnet",
+                        Arguments = $"run --project \"{projectPath}\"",
+                        WorkingDirectory = Path.GetDirectoryName(projectPath) ?? AppContext.BaseDirectory,
+                        UseShellExecute = !runInBackground,
+                        CreateNoWindow = runInBackground,
+                        WindowStyle = runInBackground ? ProcessWindowStyle.Hidden : ProcessWindowStyle.Normal
+                    };
+
+                    _apiProcess = Process.Start(startInfo);
+                    if (_apiProcess != null)
+                    {
+                        AppDomain.CurrentDomain.ProcessExit += (_, _) => KillProcessSafely(_apiProcess);
+                        Console.WriteLine($"[CashApiProcessManager] Started CashDeviceSimulator via dotnet run (PID: {_apiProcess.Id})");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[CashApiProcessManager] Failed to launch simulator project: {ex.Message}");
                 }
             }
 
-            try
+            if (_apiProcess != null)
             {
-                await Task.Delay(200, linkedCts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+                while (!linkedCts.Token.IsCancellationRequested)
+                {
+                    if (_apiProcess == null || _apiProcess.HasExited) break;
+
+                    foreach (var url in candidateUrls)
+                    {
+                        if (await IsEndpointResponsiveAsync(url, linkedCts.Token))
+                        {
+                            Console.WriteLine($"[CashApiProcessManager] Cash API is now online and reachable at {url}");
+                            return url;
+                        }
+                    }
+
+                    try { await Task.Delay(200, linkedCts.Token); } catch { break; }
+                }
             }
         }
 
@@ -239,45 +285,38 @@ public static class CashApiProcessManager
         }
     }
 
-    private static string? LocateCashApiExecutable()
+    private static List<string> GetCashApiExecutableCandidates()
     {
+        var candidates = new List<string>();
+
         // 1. Environment variable override
         string? envPath = Environment.GetEnvironmentVariable("SELFCHECKOUTKIOSK_ITL_EXE_PATH");
         if (!string.IsNullOrWhiteSpace(envPath) && File.Exists(envPath))
         {
-            return envPath;
+            candidates.Add(Path.GetFullPath(envPath));
         }
 
-        // 2. Search directories — real ITL hardware API always takes priority over simulator.
-        //    Two separate passes: first looking for CashDevice-RestAPI.exe (physical hardware),
-        //    then falling back to CashDeviceSimulator.exe (no hardware / testing).
         string baseDir = AppContext.BaseDirectory;
         string currentDir = Directory.GetCurrentDirectory();
         string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-        // Ordered list of directories to search. Same list is used for both passes.
         string[] searchDirs =
         {
-            // Highest priority: right next to the .exe (deployed app\ folder or debug bin)
             baseDir,
             Path.Combine(baseDir, ".."),
-            // Standard portable layout siblings
             Path.Combine(baseDir, "..", "CashDevice-RestAPI"),
             Path.Combine(baseDir, "CashDevice-RestAPI"),
             Path.Combine(baseDir, "..", "CashDeviceSimulator-API"),
             Path.Combine(baseDir, "CashDeviceSimulator-API"),
-            // Current working directory
             currentDir,
             Path.Combine(currentDir, "CashDevice-RestAPI"),
             Path.Combine(currentDir, "CashDeviceSimulator-API"),
-            // Developer desktop / download locations for the real ITL SDK
             Path.Combine(userProfile, "Desktop", "CA", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0 1", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
             Path.Combine(userProfile, "Desktop", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
             Path.Combine(userProfile, "Downloads", "CashDevice-REST-API-V1.6.1-RC.4-Net8.0"),
             @"C:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0",
             @"F:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0",
             @"D:\ITL device\ITL sdk package\CashDevice-REST-API-V1.6.1-RC.4-Net8.0",
-            // Dev build outputs (IDE / CI)
             Path.Combine(currentDir, "tools", "CashDeviceSimulator", "bin", "Release", "net10.0", "win-x64"),
             Path.Combine(currentDir, "tools", "CashDeviceSimulator", "bin", "Debug", "net10.0"),
             Path.Combine(baseDir, "..", "..", "..", "..", "tools", "CashDeviceSimulator", "bin", "Release", "net10.0", "win-x64"),
@@ -285,9 +324,7 @@ public static class CashApiProcessManager
             Path.Combine(baseDir, "..", "..", "..", "..", "tools", "CashDeviceSimulator", "bin", "Release", "net10.0")
         };
 
-        // PASS 1 — Look for real ITL CashDevice-RestAPI.exe (physical hardware support).
-        //           Must happen before the simulator check so a physically connected
-        //           ITL machine (NV200 / NV400 / SmartPayout) is always preferred.
+        // PASS 1: Real ITL CashDevice-RestAPI.exe (Physical Hardware)
         foreach (var dir in searchDirs)
         {
             try
@@ -296,14 +333,15 @@ public static class CashApiProcessManager
                 string realExe = Path.Combine(dir, "CashDevice-RestAPI.exe");
                 if (File.Exists(realExe))
                 {
-                    Console.WriteLine($"[CashApiProcessManager] Found real ITL API: {realExe}");
-                    return Path.GetFullPath(realExe);
+                    string full = Path.GetFullPath(realExe);
+                    if (!candidates.Contains(full, StringComparer.OrdinalIgnoreCase))
+                        candidates.Add(full);
                 }
             }
             catch { }
         }
 
-        // PASS 2 — Fall back to the simulator (no physical hardware / testing).
+        // PASS 2: Self-contained CashDeviceSimulator.exe (Guaranteed to run on any machine without runtime dependencies)
         foreach (var dir in searchDirs)
         {
             try
@@ -312,14 +350,15 @@ public static class CashApiProcessManager
                 string simExe = Path.Combine(dir, "CashDeviceSimulator.exe");
                 if (File.Exists(simExe))
                 {
-                    Console.WriteLine($"[CashApiProcessManager] No real ITL API found, using simulator: {simExe}");
-                    return Path.GetFullPath(simExe);
+                    string full = Path.GetFullPath(simExe);
+                    if (!candidates.Contains(full, StringComparer.OrdinalIgnoreCase))
+                        candidates.Add(full);
                 }
             }
             catch { }
         }
 
-        return null;
+        return candidates;
     }
 
     private static string? LocateSimulatorProject()

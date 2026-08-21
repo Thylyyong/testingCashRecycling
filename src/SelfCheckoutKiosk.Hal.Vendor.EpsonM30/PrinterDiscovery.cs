@@ -154,7 +154,14 @@ public static class PrinterDiscovery
 
         // 3. Auto-pick highest scoring POS receipt printer
         var bestPos = installed.FirstOrDefault(p => p.IsPosReceiptPrinter && p.PriorityScore > 0);
-        return bestPos;
+        if (bestPos != null) return bestPos;
+
+        // 4. Fallback: Any non-excluded printer on USB, COM, or Spool
+        var fallbackPrinter = installed.FirstOrDefault(p => p.PriorityScore >= 0);
+        if (fallbackPrinter != null) return fallbackPrinter;
+
+        // 5. Last resort: Return first installed printer if any exists
+        return installed.FirstOrDefault();
     }
 
     private static DiscoveredPrinter EvaluatePrinter(string name, string driver, string port)
