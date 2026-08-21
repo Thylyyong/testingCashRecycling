@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -82,11 +83,19 @@ namespace SelfCheckoutKiosk.App.Services
 
             if (transitionInfo != null)
             {
-                return frame.Navigate(
-                    pageType,
-                    parameter,
-                    transitionInfo
-                );
+                try
+                {
+                    return frame.Navigate(
+                        pageType,
+                        parameter,
+                        transitionInfo
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[NavigationService] Transition navigation fallback: {ex.Message}");
+                    return frame.Navigate(pageType, parameter);
+                }
             }
 
             return frame.Navigate(
@@ -148,7 +157,15 @@ namespace SelfCheckoutKiosk.App.Services
 
             if (transitionInfo != null)
             {
-                frame.GoBack(transitionInfo);
+                try
+                {
+                    frame.GoBack(transitionInfo);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[NavigationService] Transition GoBack fallback: {ex.Message}");
+                    frame.GoBack();
+                }
             }
             else
             {

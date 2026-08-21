@@ -215,8 +215,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 _wasManipulated = true;
                 _slideTimer.Stop();
                 TearDownVideoPlayer();
-                AppSound.Welcome();
                 ViewModel.ProceedToHome();
+                e.Handled = true;
             }
         }
 
