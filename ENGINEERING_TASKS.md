@@ -24,6 +24,8 @@
 | **WP-11** | [Dynamic COM Port Auto-Probe & Multi-Device Hardware Discovery](#wp-11-dynamic-com-port-auto-probe--multi-device-hardware-discovery) | `P0` | 🟢 `COMPLETED` | Serial scanner all-COM sweep, Cash Recycler dynamic port allocation, Admin Diagnostics live port reflect |
 | **WP-12** | [Universal Admin Button Navigation Across All Customer Views](#wp-12-universal-admin-button-navigation-across-all-customer-views) | `P1` | 🟢 `COMPLETED` | HomeView, CartView, PaymentSelectionView, PaymentOptionView, QRPaymentView, IngestionProgressView, SuccessView |
 | **WP-13** | [Centralized Global Router & Route Registry (`AppRouter`)](#wp-13-centralized-global-router--route-registry-approuter) | `P1` | 🟢 `COMPLETED` | `KioskRoute`, `AppRoutes`, `AppRouter`, unified transition matrix, zero-boilerplate 1-line navigation |
+| **WP-14** | [Vault Breakdown Persistence Across App Lifecycles](#wp-14-vault-breakdown-persistence-across-app-lifecycles) | `P0` | 🟢 `COMPLETED` | `VaultInventoryService`, cross-session JSON storage, manual attendant reset |
+| **WP-15** | [Physical Keyboard & Enter Support on Cart Dialogs](#wp-15-physical-keyboard--enter-support-on-cart-dialogs) | `P1` | 🟢 `COMPLETED` | Add Item Manually, Check Price, Recall Cart direct typing & Enter trigger |
 
 ---
 
@@ -264,6 +266,28 @@
 
 ---
 
+### WP-14: Vault Breakdown Persistence Across App Lifecycles
+**Objective:** Retain physical bill validator and cash recycler vault inventory counts across application restarts so that physical cash collection audits remain accurate until an attendant explicitly resets the vault.
+
+- [x] **14.1 JSON Persistence in `VaultInventoryService`:**
+  - Automatically loads and saves `_khrCounts` and `_usdCounts` to `vault_inventory.json` with thread safety.
+- [x] **14.2 Manual Attendant Reset Action:**
+  - `ResetVault()` clears all counts to zero and persists the reset state immediately upon confirmation in `AdminDiagnosticsView`.
+
+---
+
+### WP-15: Physical Keyboard & Enter Support on Cart Dialogs
+**Objective:** Allow customers and attendants to type barcodes/PINs directly using physical/hardware keyboards (including numpads and barcode scanners) in Cart modal dialogs and trigger actions using the `Enter` key.
+
+- [x] **15.1 Direct Keypad Keyboard Routing:**
+  - `BuildKeypadPanel` in `CartView` handles alphanumeric, numpad, `Backspace`, `Delete`, `Escape`, and `Enter` keystrokes directly into formatted entry boxes.
+- [x] **15.2 Enter Key Execution Triggers:**
+  - Pressing `Enter` triggers "Check Price" in Price Check dialog, "Add to Cart" in Add Item Manually dialog, and "Restore Cart" in Recall Cart dialog.
+- [x] **15.3 Modal Focus Retention:**
+  - Dialogs automatically capture programmatic focus upon opening without locking out physical keyboard input.
+
+---
+
 ## 📈 Execution Sequence
 
 ```mermaid
@@ -279,4 +303,6 @@ graph TD
     I --> J["WP-11: Dynamic COM Port Auto-Probe & Multi-Device Discovery"]
     J --> K["WP-12: Universal Admin Button Navigation"]
     K --> L["WP-13: Centralized Global Router & AppRoutes"]
+    L --> M["WP-14: Vault Inventory Persistence"]
+    M --> N["WP-15: Physical Keyboard & Enter Support on Cart Dialogs"]
 ```

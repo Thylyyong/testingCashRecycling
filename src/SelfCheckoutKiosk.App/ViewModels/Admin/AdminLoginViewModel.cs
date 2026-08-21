@@ -135,7 +135,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
             if (_enteredPin == DefaultAdminPin || _enteredPin == "88888888" || _enteredPin.Length == RequiredPinLength)
             {
                 Debug.WriteLine("[Admin Login] Authentication successful.");
-                _navigationService.NavigateTo(KioskRoute.AdminDiagnostics, SlideNavigationTransitionEffect.FromLeft);
+                _navigationService.NavigateTo(KioskRoute.AdminDiagnostics, SlideNavigationTransitionEffect.FromRight);
                 return true;
             }
             else

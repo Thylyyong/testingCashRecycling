@@ -246,7 +246,7 @@ namespace SelfCheckoutKiosk.App
                 }
                 else
                 {
-                    AppRouter.ToAdmin(SlideNavigationTransitionEffect.FromLeft);
+                    AppRouter.ToAdmin(SlideNavigationTransitionEffect.FromRight);
                 }
                 e.Handled = true;
             }

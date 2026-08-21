@@ -70,7 +70,7 @@ namespace SelfCheckoutKiosk.App.Navigation
             Navigate(KioskRoute.Success, parameter, effect);
 
         /// <summary>Navigates to Staff / Attendant PIN Login screen (AdminLoginView)</summary>
-        public static bool ToAdmin(SlideNavigationTransitionEffect? effect = SlideNavigationTransitionEffect.FromLeft) =>
+        public static bool ToAdmin(SlideNavigationTransitionEffect? effect = SlideNavigationTransitionEffect.FromRight) =>
             Navigate(KioskRoute.AdminLogin, null, effect);
 
         /// <summary>Navigates to Staff Diagnostics & Hardware Management screen (AdminDiagnosticsView)</summary>
@@ -84,7 +84,7 @@ namespace SelfCheckoutKiosk.App.Navigation
         /// <summary>
         /// Safely prunes all Admin pages from the backstack and returns to the calling customer screen.
         /// </summary>
-        public static bool BackToCustomer(SlideNavigationTransitionEffect effect = SlideNavigationTransitionEffect.FromRight) =>
+        public static bool BackToCustomer(SlideNavigationTransitionEffect effect = SlideNavigationTransitionEffect.FromLeft) =>
             Service?.NavigateBackToCustomer(effect) ?? false;
 
         /// <summary>

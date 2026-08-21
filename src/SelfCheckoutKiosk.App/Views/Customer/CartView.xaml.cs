@@ -33,6 +33,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private ContentDialog? _activeDialog;
         private StackPanel? _activePriceResultPanel;
+        private Action<VirtualKey>? _activeDialogKeypadInput;
 
         private readonly KeyEventHandler _dialogScanKeyHandler;
 
@@ -75,10 +76,21 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             RefreshNetworkStatusUI();
             RefreshCurrencyLabel();
             UpdateCartStateUI();
+            this.Focus(FocusState.Programmatic);
+
+            if (App.MainWindowInstance?.Content is UIElement root)
+            {
+                root.RemoveHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler);
+                root.AddHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler, handledEventsToo: true);
+            }
         }
 
         private void CartView_Unloaded(object sender, RoutedEventArgs e)
         {
+            if (App.MainWindowInstance?.Content is UIElement root)
+            {
+                root.RemoveHandler(UIElement.PreviewKeyDownEvent, _dialogScanKeyHandler);
+            }
         }
 
         private void Scanner_OnBarcodeScanned(object? sender, SelfCheckoutKiosk.Core.Abstractions.BarcodeScannedEventArgs e)
@@ -100,6 +112,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void Page_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
         {
+            // If a modal dialog with active keypad input is open, route direct keystrokes to it
+            if (_activeDialog != null && _activeDialogKeypadInput != null)
+            {
+                _activeDialogKeypadInput(e.Key);
+                e.Handled = true;
+                return;
+            }
+
             var now = DateTime.Now;
             var elapsed = (now - _lastKeyTime).TotalMilliseconds;
             _lastKeyTime = now;
@@ -457,10 +477,28 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             var resultPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 0, 16), Width = 380, MaxWidth = 380 };
             ShowPriceCheckPlaceholder(resultPanel);
 
-            var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
+            Action? performPriceCheck = null;
+
+            var (keypadPanel, getEnteredCode, clearEntry, entryBox, handleKey) = BuildKeypadPanel(
                 Localizer.GetString("EnterEan13"),
-                onClear: () => ShowPriceCheckPlaceholder(resultPanel)
+                onClear: () => ShowPriceCheckPlaceholder(resultPanel),
+                onEnter: () => performPriceCheck?.Invoke()
             );
+
+            performPriceCheck = () =>
+            {
+                string code = getEnteredCode()?.Trim() ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    ShowInlineError(resultPanel, Localizer.GetString("ErrorBarcodeRequired"));
+                    entryBox.Focus(FocusState.Programmatic);
+                    return;
+                }
+
+                RenderPriceCheckResult(resultPanel, code);
+                entryBox.Focus(FocusState.Programmatic);
+            };
 
             var contentPanel = new StackPanel { Spacing = 0, Width = 380, MaxWidth = 380, HorizontalAlignment = HorizontalAlignment.Center };
             contentPanel.Children.Add(resultPanel);
@@ -498,34 +536,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             dialog.PrimaryButtonClick += (s, args) =>
             {
                 args.Cancel = true; // Keep dialog open
-                var deferral = args.GetDeferral();
-
-                try
-                {
-                    string code = getEnteredCode();
-
-                    if (string.IsNullOrWhiteSpace(code))
-                    {
-                        ShowInlineError(resultPanel, Localizer.GetString("ErrorBarcodeRequired"));
-                        entryBox.Focus(FocusState.Programmatic);
-                        return;
-                    }
-
-                    RenderPriceCheckResult(resultPanel, code);
-                    entryBox.Focus(FocusState.Programmatic);
-                }
-                finally
-                {
-                    deferral.Complete();
-                }
+                performPriceCheck();
             };
 
-            dialog.AddHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler, true);
             dialog.Opened += (s, args) => entryBox.Focus(FocusState.Programmatic);
 
             _scanBehavior = ScanBehavior.PriceCheck;
             _activeDialog = dialog;
             _activePriceResultPanel = resultPanel;
+            _activeDialogKeypadInput = handleKey;
 
             try
             {
@@ -533,7 +552,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
             finally
             {
-                dialog.RemoveHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler);
+                _activeDialogKeypadInput = null;
                 _activeDialog = null;
                 _activePriceResultPanel = null;
                 _scanBehavior = ScanBehavior.AddToCart;
@@ -704,7 +723,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 FontFamily = font
             });
 
-            var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
+            ContentDialog? dialog = null;
+            Action? performRecall = null;
+
+            var (keypadPanel, getEnteredCode, clearEntry, entryBox, handleKey) = BuildKeypadPanel(
                 Localizer.GetString("SixDigitPin"),
                 onClear: () =>
                 {
@@ -718,8 +740,42 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                         Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 100, 116, 139)),
                         FontFamily = font
                     });
-                }
+                },
+                onEnter: () => performRecall?.Invoke(),
+                maxCodeLength: 6
             );
+
+            performRecall = () =>
+            {
+                string pin = getEnteredCode()?.Trim() ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(pin) || pin.Length != 6)
+                {
+                    ShowInlineError(resultPanel, Localizer.GetString("ErrorInvalidPin"));
+                    entryBox.Focus(FocusState.Programmatic);
+                    return;
+                }
+
+                if (ViewModel.TryRecallSavedCart(pin, out string errorReason))
+                {
+                    UpdateCartStateUI();
+                    dialog?.Hide(); // Successfully restored, dismiss dialog
+                }
+                else
+                {
+                    string displayError = !string.IsNullOrWhiteSpace(errorReason)
+                        ? Localizer.GetString(errorReason)
+                        : Localizer.GetString("ErrorCartNotFound");
+
+                    if (string.IsNullOrWhiteSpace(displayError))
+                    {
+                        displayError = Localizer.GetString("ErrorCartNotFound");
+                    }
+
+                    ShowInlineError(resultPanel, displayError);
+                    entryBox.Focus(FocusState.Programmatic);
+                }
+            };
 
             var contentPanel = new StackPanel { Spacing = 0, Width = 380, MaxWidth = 380, HorizontalAlignment = HorizontalAlignment.Center };
             contentPanel.Children.Add(resultPanel);
@@ -733,7 +789,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
             closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
-            var dialog = new ContentDialog
+            dialog = new ContentDialog
             {
                 Title = new TextBlock
                 {
@@ -757,53 +813,26 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             dialog.PrimaryButtonClick += (s, args) =>
             {
                 args.Cancel = true; // Keep dialog open while validating
-                var deferral = args.GetDeferral();
-
-                try
-                {
-                    string pin = getEnteredCode()?.Trim() ?? string.Empty;
-
-                    if (string.IsNullOrWhiteSpace(pin) || pin.Length != 6)
-                    {
-                        ShowInlineError(resultPanel, Localizer.GetString("ErrorInvalidPin"));
-                        entryBox.Focus(FocusState.Programmatic);
-                        return;
-                    }
-
-                    if (ViewModel.TryRecallSavedCart(pin, out string errorReason))
-                    {
-                        UpdateCartStateUI();
-                        dialog.Hide(); // Successfully restored, dismiss dialog
-                    }
-                    else
-                    {
-                        string displayError = !string.IsNullOrWhiteSpace(errorReason)
-                            ? Localizer.GetString(errorReason)
-                            : Localizer.GetString("ErrorCartNotFound");
-
-                        if (string.IsNullOrWhiteSpace(displayError))
-                        {
-                            displayError = Localizer.GetString("ErrorCartNotFound");
-                        }
-
-                        ShowInlineError(resultPanel, displayError);
-                        entryBox.Focus(FocusState.Programmatic);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[Recall Exception] {ex}");
-                    ShowInlineError(resultPanel, Localizer.GetString("ErrorRecallGeneric"));
-                }
-                finally
-                {
-                    deferral.Complete();
-                }
+                performRecall();
             };
 
             dialog.Opened += (s, args) => entryBox.Focus(FocusState.Programmatic);
 
-            await ShowDialogBlockingScansAsync(dialog);
+            _scanBehavior = ScanBehavior.Blocked;
+            _activeDialog = dialog;
+            _activeDialogKeypadInput = handleKey;
+
+            try
+            {
+                await dialog.ShowAsync();
+            }
+            finally
+            {
+                _activeDialogKeypadInput = null;
+                _activeDialog = null;
+                _scanBehavior = ScanBehavior.AddToCart;
+                ResetFocus();
+            }
         }
 
         private void ConfirmRemove_Click(object sender, RoutedEventArgs e)
@@ -842,14 +871,43 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             resultPanel.Children.Add(CreateInstructionText());
 
-            var (keypadPanel, getEnteredCode, clearEntry, entryBox) = BuildKeypadPanel(
+            ContentDialog? dialog = null;
+            Action? performAddItem = null;
+
+            var (keypadPanel, getEnteredCode, clearEntry, entryBox, handleKey) = BuildKeypadPanel(
                 Localizer.GetString("EnterEan13"),
                 onClear: () =>
                 {
                     resultPanel.Children.Clear();
                     resultPanel.Children.Add(CreateInstructionText());
-                }
+                },
+                onEnter: () => performAddItem?.Invoke()
             );
+
+            performAddItem = () =>
+            {
+                string code = getEnteredCode()?.Trim() ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(code))
+                {
+                    ShowInlineError(resultPanel, Localizer.GetString("ErrorBarcodeRequired"));
+                    entryBox.Focus(FocusState.Programmatic);
+                    return;
+                }
+
+                bool added = ViewModel.TryAddScannedBarcode(code, out _);
+
+                if (added)
+                {
+                    UpdateCartStateUI();
+                    dialog?.Hide(); // Close dialog on success
+                }
+                else
+                {
+                    ShowInlineError(resultPanel, $"{Localizer.GetString("ErrorProductNotFoundForBarcode")}\n{code}");
+                    entryBox.Focus(FocusState.Programmatic);
+                }
+            };
 
             var contentPanel = new StackPanel { Spacing = 0, Width = 380, MaxWidth = 380, HorizontalAlignment = HorizontalAlignment.Center };
             contentPanel.Children.Add(resultPanel);
@@ -863,7 +921,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             var closeButtonStyleWithFont = new Style(typeof(Button)) { BasedOn = baseDialogStyle };
             closeButtonStyleWithFont.Setters.Add(new Setter(Control.FontFamilyProperty, font));
 
-            var dialog = new ContentDialog
+            dialog = new ContentDialog
             {
                 Title = new TextBlock
                 {
@@ -887,48 +945,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             dialog.PrimaryButtonClick += (s, args) =>
             {
                 args.Cancel = true; // Keep dialog open while processing
-                var deferral = args.GetDeferral();
-
-                try
-                {
-                    string code = getEnteredCode()?.Trim() ?? string.Empty;
-
-                    if (string.IsNullOrWhiteSpace(code))
-                    {
-                        ShowInlineError(resultPanel, Localizer.GetString("ErrorBarcodeRequired"));
-                        entryBox.Focus(FocusState.Programmatic);
-                        return;
-                    }
-
-                    bool added = ViewModel.TryAddScannedBarcode(code, out _);
-
-                    if (added)
-                    {
-                        UpdateCartStateUI();
-                        dialog.Hide(); // Close dialog on success
-                    }
-                    else
-                    {
-                        ShowInlineError(resultPanel, $"{Localizer.GetString("ErrorProductNotFoundForBarcode")}\n{code}");
-                        entryBox.Focus(FocusState.Programmatic);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[Add Item Exception] {ex}");
-                    ShowInlineError(resultPanel, "An error occurred while adding this item.");
-                }
-                finally
-                {
-                    deferral.Complete();
-                }
+                performAddItem();
             };
 
-            dialog.AddHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler, true);
             dialog.Opened += (s, args) => entryBox.Focus(FocusState.Programmatic);
 
             _scanBehavior = ScanBehavior.AddToCart;
             _activeDialog = dialog;
+            _activeDialogKeypadInput = handleKey;
 
             try
             {
@@ -936,7 +960,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
             finally
             {
-                dialog.RemoveHandler(UIElement.KeyDownEvent, _dialogScanKeyHandler);
+                _activeDialogKeypadInput = null;
                 _activeDialog = null;
                 _scanBehavior = ScanBehavior.AddToCart;
                 ResetFocus();
@@ -1234,9 +1258,11 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
         }
 
-        private (FrameworkElement Panel, Func<string> GetCode, Action Clear, TextBox EntryBox) BuildKeypadPanel(
+        private (FrameworkElement Panel, Func<string> GetCode, Action Clear, TextBox EntryBox, Action<VirtualKey> HandleKey) BuildKeypadPanel(
             string placeholder,
-            Action? onClear = null)
+            Action? onClear = null,
+            Action? onEnter = null,
+            int maxCodeLength = 16)
         {
             var isKm = LocalizationService.Instance.CurrentLanguage == "km";
             var font = isKm
@@ -1258,14 +1284,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 BorderBrush = (Brush)Application.Current.Resources["CardBorderBrush"],
                 BorderThickness = new Thickness(1.5),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
-                FontFamily = font
+                FontFamily = font,
+                IsTabStop = true
             };
 
-            void AppendDigit(string digit)
+            void AppendChar(char c)
             {
-                if (enteredCode.Length < 16)
+                if (enteredCode.Length < maxCodeLength)
                 {
-                    enteredCode += digit;
+                    enteredCode += c;
                     entryBox.CharacterSpacing = 100;
                     entryBox.FontSize = 24;
                     entryBox.Text = enteredCode;
@@ -1292,6 +1319,37 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                         entryBox.FontSize = isKm ? 18 : 24;
                     }
                     entryBox.Text = enteredCode;
+                }
+            }
+
+            void HandleDirectKey(VirtualKey key)
+            {
+                if (key >= VirtualKey.Number0 && key <= VirtualKey.Number9)
+                {
+                    char d = (char)('0' + (key - VirtualKey.Number0));
+                    AppendChar(d);
+                }
+                else if (key >= VirtualKey.NumberPad0 && key <= VirtualKey.NumberPad9)
+                {
+                    char d = (char)('0' + (key - VirtualKey.NumberPad0));
+                    AppendChar(d);
+                }
+                else if (key >= VirtualKey.A && key <= VirtualKey.Z)
+                {
+                    char letter = (char)('A' + (key - VirtualKey.A));
+                    AppendChar(letter);
+                }
+                else if (key == VirtualKey.Back || key == VirtualKey.Delete)
+                {
+                    DeleteLast();
+                }
+                else if (key == VirtualKey.Escape)
+                {
+                    ClearAll();
+                }
+                else if (key == VirtualKey.Enter)
+                {
+                    onEnter?.Invoke();
                 }
             }
 
@@ -1328,8 +1386,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             {
                 for (int col = 0; col < 3; col++)
                 {
-                    string digit = (row * 3 + col + 1).ToString();
-                    var btn = MakeKeyButton(digit, () => AppendDigit(digit));
+                    char digitChar = (char)('1' + (row * 3 + col));
+                    var btn = MakeKeyButton(digitChar.ToString(), () => AppendChar(digitChar));
                     Grid.SetRow(btn, row);
                     Grid.SetColumn(btn, col);
                     keypadGrid.Children.Add(btn);
@@ -1339,7 +1397,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             var clearBtn = MakeKeyButton(Localizer.GetString("Clear"), ClearAll, isDanger: true);
             Grid.SetRow(clearBtn, 3); Grid.SetColumn(clearBtn, 0); keypadGrid.Children.Add(clearBtn);
 
-            var zeroBtn = MakeKeyButton("0", () => AppendDigit("0"));
+            var zeroBtn = MakeKeyButton("0", () => AppendChar('0'));
             Grid.SetRow(zeroBtn, 3); Grid.SetColumn(zeroBtn, 1); keypadGrid.Children.Add(zeroBtn);
 
             var deleteBtn = MakeKeyButton(
@@ -1354,7 +1412,13 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             contentPanel.Children.Add(entryBox);
             contentPanel.Children.Add(keypadGrid);
 
-            return (contentPanel, () => enteredCode, ClearAll, entryBox);
+            entryBox.PreviewKeyDown += (s, e) =>
+            {
+                HandleDirectKey(e.Key);
+                e.Handled = true;
+            };
+
+            return (contentPanel, () => enteredCode, ClearAll, entryBox, HandleDirectKey);
         }
 
         private void CloseFlyoutForElement(FrameworkElement element)

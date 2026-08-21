@@ -98,12 +98,12 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
 
         public void NavigateBackToDiagnostics()
         {
-            _navigationService.NavigateTo(KioskRoute.AdminDiagnostics, null, new SuppressNavigationTransitionInfo());
+            _navigationService.NavigateTo(KioskRoute.AdminDiagnostics, SlideNavigationTransitionEffect.FromLeft);
         }
 
         public void ExitToCustomerMode()
         {
-            _navigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromRight);
+            _navigationService.NavigateBackToCustomer(SlideNavigationTransitionEffect.FromLeft);
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

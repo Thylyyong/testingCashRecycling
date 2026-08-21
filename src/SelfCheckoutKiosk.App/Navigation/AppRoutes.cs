@@ -22,8 +22,8 @@ namespace SelfCheckoutKiosk.App.Navigation
             [KioskRoute.QRPayment] = (typeof(QRPaymentView), SlideNavigationTransitionEffect.FromRight),
             [KioskRoute.CashIngestion] = (typeof(IngestionProgressView), SlideNavigationTransitionEffect.FromRight),
             [KioskRoute.Success] = (typeof(SuccessView), SlideNavigationTransitionEffect.FromRight),
-            [KioskRoute.AdminLogin] = (typeof(AdminLoginView), SlideNavigationTransitionEffect.FromLeft),
-            [KioskRoute.AdminDiagnostics] = (typeof(AdminDiagnosticsView), SlideNavigationTransitionEffect.FromLeft),
+            [KioskRoute.AdminLogin] = (typeof(AdminLoginView), SlideNavigationTransitionEffect.FromRight),
+            [KioskRoute.AdminDiagnostics] = (typeof(AdminDiagnosticsView), SlideNavigationTransitionEffect.FromRight),
             [KioskRoute.MediaBranding] = (typeof(MediaBrandingView), SlideNavigationTransitionEffect.FromRight)
         };
 
