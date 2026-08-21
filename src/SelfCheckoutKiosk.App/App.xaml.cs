@@ -71,6 +71,7 @@ public partial class App : Application
     {
         try
         {
+            DiagnosticLogger.Log("[Bootstrap] OnLaunched activated. Starting SelfCheckoutKiosk application...");
 #if DEBUG
             DiagnosticConsole.Initialize();
 #endif
@@ -90,6 +91,7 @@ public partial class App : Application
             mainWindow.NavigationService.NavigateTo(typeof(KioskBaseView));
 
             _window.Activate();
+            DiagnosticLogger.Log("[Bootstrap] Main window activated and UI visible.");
 
             await InitializeLocalizationAsync();
 
@@ -98,6 +100,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
+            DiagnosticLogger.LogError($"[App Startup Crash] {ex.Message}", ex);
             try
             {
                 string crashLog = Path.Combine(AppContext.BaseDirectory, "startup_crash.log");
@@ -112,12 +115,22 @@ public partial class App : Application
     {
         try
         {
+            DiagnosticLogger.Log("[Bootstrap] Initializing system services and hardware...");
+
+            // Check files in root directory
+            string baseDir = AppContext.BaseDirectory;
+            string itlExe = Path.Combine(baseDir, "CashDevice-RestAPI.exe");
+            string simExe = Path.Combine(baseDir, "CashDeviceSimulator.exe");
+            string licFile = Path.Combine(baseDir, "license.token");
+            DiagnosticLogger.Log($"[Bootstrap] Root check: CashDevice-RestAPI.exe={(File.Exists(itlExe) ? "PRESENT" : "MISSING")}, CashDeviceSimulator.exe={(File.Exists(simExe) ? "PRESENT" : "MISSING")}, license.token={(File.Exists(licFile) ? "PRESENT" : "MISSING")}");
+
             // 1. Initialize SQLite Database & Seed Catalog
             using (var db = CreateDbContext())
             {
                 db.EnsureSchemaCreated();
                 CatalogSeeder.SeedIfEmpty(db);
             }
+            DiagnosticLogger.Log("[Bootstrap] Database schema initialized and catalog seeded.");
 
             ProductServiceInstance = new MockProductService();
 

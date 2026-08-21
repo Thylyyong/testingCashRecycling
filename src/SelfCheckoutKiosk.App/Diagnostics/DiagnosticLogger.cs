@@ -13,32 +13,37 @@ namespace SelfCheckoutKiosk.App.Diagnostics;
 public static class DiagnosticLogger
 {
     private static readonly object _syncLock = new();
-    private static readonly string _logDirectory;
-    private static readonly string _logFilePath;
+    private static readonly string _rootLogFilePath;
+    private static readonly string _logsSubdirFilePath;
 
     static DiagnosticLogger()
     {
-        _logDirectory = Path.Combine(AppContext.BaseDirectory, "logs");
-        _logFilePath = Path.Combine(_logDirectory, "hardware_debug.log");
+        _rootLogFilePath = Path.Combine(AppContext.BaseDirectory, "startup_debug.log");
+        string logsDir = Path.Combine(AppContext.BaseDirectory, "logs");
+        _logsSubdirFilePath = Path.Combine(logsDir, "hardware_debug.log");
 
         try
         {
-            if (!Directory.Exists(_logDirectory))
+            if (!Directory.Exists(logsDir))
             {
-                Directory.CreateDirectory(_logDirectory);
+                Directory.CreateDirectory(logsDir);
             }
 
-            // Write session start marker
-            WriteToFile(
+            string header =
                 $"\n======================================================\n" +
                 $" SESSION STARTED: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}\n" +
+                $" OS: {Environment.OSVersion} (64-bit: {Environment.Is64BitOperatingSystem})\n" +
+                $" Machine: {Environment.MachineName} | User: {Environment.UserName}\n" +
                 $" BaseDirectory: {AppContext.BaseDirectory}\n" +
-                $"======================================================\n");
+                $" .NET Runtime: {Environment.Version}\n" +
+                $"======================================================\n";
+
+            WriteToFile(header);
         }
         catch { }
     }
 
-    public static string LogFilePath => _logFilePath;
+    public static string LogFilePath => _rootLogFilePath;
 
     public static void Log(string message)
     {
@@ -69,6 +74,14 @@ public static class DiagnosticLogger
 
         Debug.WriteLine(text);
         WriteToFile(text);
+
+        // Also append immediately to startup_crash.log on root if it's an error
+        try
+        {
+            string crashLog = Path.Combine(AppContext.BaseDirectory, "startup_crash.log");
+            File.AppendAllText(crashLog, text + Environment.NewLine + Environment.NewLine);
+        }
+        catch { }
     }
 
     private static void WriteToFile(string text)
@@ -77,7 +90,13 @@ public static class DiagnosticLogger
         {
             try
             {
-                File.AppendAllText(_logFilePath, text + Environment.NewLine);
+                File.AppendAllText(_rootLogFilePath, text + Environment.NewLine);
+            }
+            catch { }
+
+            try
+            {
+                File.AppendAllText(_logsSubdirFilePath, text + Environment.NewLine);
             }
             catch { }
         }
