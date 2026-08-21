@@ -46,12 +46,15 @@ dotnet publish "$RepoRoot\src\SelfCheckoutKiosk.App\SelfCheckoutKiosk.App.csproj
     -p:WindowsAppSDKSelfContained=true `
     -o $DistDir
 
-# 4. Copy PRI Resource Indexes
-Write-Host "[4/6] Copying PRI Resource Indexes..." -ForegroundColor Yellow
-$PriSource = "$RepoRoot\src\SelfCheckoutKiosk.App\bin\x64\Release\net10.0-windows10.0.19041.0\win-x64\SelfCheckoutKiosk.App.pri"
-if (Test-Path $PriSource) {
-    Copy-Item $PriSource (Join-Path $DistDir "resources.pri") -Force
-    Copy-Item $PriSource (Join-Path $DistDir "SelfCheckoutKiosk.App.pri") -Force
+# 4. Validate PRI Resource Indexes
+Write-Host "[4/6] Validating PRI Resource Indexes..." -ForegroundColor Yellow
+$PublishedPri = Join-Path $DistDir "resources.pri"
+if (Test-Path $PublishedPri) {
+    $AppPri = Join-Path $DistDir "SelfCheckoutKiosk.App.pri"
+    if (-not (Test-Path $AppPri)) {
+        Copy-Item $PublishedPri $AppPri -Force
+    }
+    Write-Host "  -> Verified published merged resources.pri" -ForegroundColor Green
 }
 
 # 5. Package Cash API & Simulator into isolated CashAPI/ subfolder
