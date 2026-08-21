@@ -18,7 +18,10 @@ if not exist "%~dp0license.token" (
 
 :: 2. Launch Cash Device API Simulator / Bridge if present
 echo [2/3] Checking Cash Device API Daemon...
-if exist "%~dp0dist\SelfCheckoutKiosk-Package\CashDeviceSimulator-API\CashDeviceSimulator.exe" (
+if exist "%~dp0dist\SelfCheckoutKiosk-Portable\CashDeviceSimulator-API\CashDeviceSimulator.exe" (
+    start "Cash Device API Daemon" /min "%~dp0dist\SelfCheckoutKiosk-Portable\CashDeviceSimulator-API\CashDeviceSimulator.exe"
+    timeout /t 2 /nobreak >nul
+) else if exist "%~dp0dist\SelfCheckoutKiosk-Package\CashDeviceSimulator-API\CashDeviceSimulator.exe" (
     start "Cash Device API Daemon" /min "%~dp0dist\SelfCheckoutKiosk-Package\CashDeviceSimulator-API\CashDeviceSimulator.exe"
     timeout /t 2 /nobreak >nul
 ) else if exist "%~dp0tools\CashDeviceSimulator\bin\Debug\net10.0\CashDeviceSimulator.exe" (
@@ -32,7 +35,10 @@ if exist "%~dp0dist\SelfCheckoutKiosk-Package\CashDeviceSimulator-API\CashDevice
 
 :: 3. Launch Self-Checkout Kiosk WinUI 3 Application
 echo [3/3] Launching Self-Checkout Kiosk WinUI 3 Application...
-if exist "%~dp0dist\SelfCheckoutKiosk-Package\KioskApp\SelfCheckoutKiosk.App.exe" (
+if exist "%~dp0dist\SelfCheckoutKiosk-Portable\KioskApp\SelfCheckoutKiosk.App.exe" (
+    cd /d "%~dp0dist\SelfCheckoutKiosk-Portable\KioskApp"
+    start "" "%~dp0dist\SelfCheckoutKiosk-Portable\KioskApp\SelfCheckoutKiosk.App.exe"
+) else if exist "%~dp0dist\SelfCheckoutKiosk-Package\KioskApp\SelfCheckoutKiosk.App.exe" (
     cd /d "%~dp0dist\SelfCheckoutKiosk-Package\KioskApp"
     start "" "%~dp0dist\SelfCheckoutKiosk-Package\KioskApp\SelfCheckoutKiosk.App.exe"
 ) else (

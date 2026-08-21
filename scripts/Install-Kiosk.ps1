@@ -60,7 +60,15 @@ if (-not $isAdmin) {
 }
 
 $repoRoot = Resolve-RepositoryRoot
-$packageSource = Join-Path $repoRoot "dist\SelfCheckoutKiosk-Package"
+$candidateSources = @(
+    (Join-Path $repoRoot "dist\SelfCheckoutKiosk-Portable"),
+    (Join-Path $repoRoot "dist\SelfCheckoutKiosk-Installer\Package"),
+    (Join-Path $repoRoot "dist\SelfCheckoutKiosk-Package")
+)
+$packageSource = $candidateSources | Where-Object { Test-Path (Join-Path $_ "KioskApp\SelfCheckoutKiosk.App.exe") } | Select-Object -First 1
+if (-not $packageSource) {
+    $packageSource = Join-Path $repoRoot "dist\SelfCheckoutKiosk-Portable"
+}
 
 # Check if package exists or if we need to build it
 $packageReady = (Test-Path (Join-Path $packageSource "KioskApp\SelfCheckoutKiosk.App.exe")) -and (-not $BuildFromSource)

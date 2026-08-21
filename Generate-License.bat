@@ -6,8 +6,12 @@ echo        GENERATING OFFLINE LICENSE TOKEN FOR THIS DEVICE
 echo =================================================================
 echo.
 
-if exist "%~dp0dist\SelfCheckoutKiosk-Package\LicenseGenerator\GenerateLicense.exe" (
+if exist "%~dp0dist\SelfCheckoutKiosk-Portable\LicenseGenerator\GenerateLicense.exe" (
+    "%~dp0dist\SelfCheckoutKiosk-Portable\LicenseGenerator\GenerateLicense.exe" --output "%~dp0license.token"
+) else if exist "%~dp0dist\SelfCheckoutKiosk-Package\LicenseGenerator\GenerateLicense.exe" (
     "%~dp0dist\SelfCheckoutKiosk-Package\LicenseGenerator\GenerateLicense.exe" --output "%~dp0license.token"
+) else if exist "%~dp0tools\DevLicenseTokenGenerator\bin\x64\Release\net10.0\win-x64\GenerateLicense.exe" (
+    "%~dp0tools\DevLicenseTokenGenerator\bin\x64\Release\net10.0\win-x64\GenerateLicense.exe" --output "%~dp0license.token"
 ) else if exist "%~dp0tools\DevLicenseTokenGenerator\bin\Debug\net10.0\GenerateLicense.exe" (
     "%~dp0tools\DevLicenseTokenGenerator\bin\Debug\net10.0\GenerateLicense.exe" --output "%~dp0license.token"
 ) else (
@@ -15,7 +19,10 @@ if exist "%~dp0dist\SelfCheckoutKiosk-Package\LicenseGenerator\GenerateLicense.e
     dotnet run --project "%~dp0tools\DevLicenseTokenGenerator\DevLicenseTokenGenerator.csproj" -- --output "%~dp0license.token"
 )
 
-:: Also copy to KioskApp folder if present
+:: Also copy to KioskApp folders if present
+if exist "%~dp0dist\SelfCheckoutKiosk-Portable\KioskApp" (
+    copy /y "%~dp0license.token" "%~dp0dist\SelfCheckoutKiosk-Portable\KioskApp\license.token" >nul
+)
 if exist "%~dp0dist\SelfCheckoutKiosk-Package\KioskApp" (
     copy /y "%~dp0license.token" "%~dp0dist\SelfCheckoutKiosk-Package\KioskApp\license.token" >nul
 )
