@@ -1,18 +1,14 @@
 @echo off
 setlocal enabledelayedexpansion
-title Build Self-Checkout Kiosk Deployment Package
+title Build Self-Checkout Kiosk Deployment Packages (Portable + Installer)
 cd /d "%~dp0"
 
 echo =================================================================
-echo        BUILDING SELF-CHECKOUT KIOSK DEPLOYMENT PACKAGE           
+echo   BUILDING SELF-CHECKOUT KIOSK PACKAGES (PORTABLE + INSTALLER)   
 echo =================================================================
 echo.
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '%~dp0scripts\Install-Kiosk.ps1' -BuildFromSource -NoShortcuts -NoFirewall -InstallPath '%~dp0dist\SelfCheckoutKiosk-Package'"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\Build-DeploymentPackage.ps1" -Configuration Release -Runtime win-x64
 
-echo.
-echo =================================================================
-echo Package ready at: %~dp0dist\SelfCheckoutKiosk-Package
-echo =================================================================
 echo.
 pause

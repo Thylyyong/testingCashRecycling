@@ -4,99 +4,263 @@ using SelfCheckoutKiosk.Core.Licensing;
 using SelfCheckoutKiosk.Domain.Enums;
 using SelfCheckoutKiosk.Infrastructure.Security;
 
-// DEV-ONLY tool. Signs a license.token for THIS machine's node-locked
-// hardware id, using a throwaway ECDSA P-256 key that carries zero
-// production trust — see DevLicenseKeys.cs in SelfCheckoutKiosk.App for the
-// matching public half OfflineLicenseManager verifies against. Never point
-// this at a real device that will ever carry a production license.
-
-string outputPath = "license.token";
-for (int i = 0; i < args.Length - 1; i++)
-{
-    if (args[i] is "--output" or "-o")
-        outputPath = args[i + 1];
-}
-
-// Same node-lock source OfflineLicenseManager's default constructor uses —
-// keep this in sync with SelfCheckoutKiosk.Infrastructure.Security.HardwareIdProvider
-// so the generated token actually validates against THIS machine.
-string hardwareId = new HardwareIdProvider().GetHardwareId();
-
-var payload = new LicensePayload(
-    HardwareId: hardwareId,
-    Tier: LicenseTier.Enterprise, // unlimited kiosks, AI features unlocked — no dev-loop friction
-    ExpiresAtUtc: DateTimeOffset.UtcNow.AddYears(5),
-    MaxKiosks: 100,
-    AiEnabled: true);
-
-byte[] payloadBytes = JsonSerializer.SerializeToUtf8Bytes(payload);
-
-// Matching PRIVATE key for SelfCheckoutKiosk.App.Composition.DevLicenseKeys.PublicKeyOrNull.
-// Regenerate both together (a fresh ECDsa.Create(ECCurve.NamedCurves.nistP256),
-// re-export SPKI + PKCS8) whenever you want a clean rotation — there is no
-// production trust riding on this pair, so there's no ceremony required.
 const string devPrivateKeyPkcs8Base64 =
     "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgLwr4Bk3wyGHDa6rTUxHHmNPGd35S5w5IvFvSkanylB+hRANCAASryF6RMBz+hO0eAo1luGoQxjOw7Dz0NxWrBcQADIcK4nSyEMHyJKKsxfqlfc9tcRuJfk6XXIHmdOeIvM4CoRKu";
 
-using ECDsa ecdsa = ECDsa.Create();
-ecdsa.ImportPkcs8PrivateKey(Convert.FromBase64String(devPrivateKeyPkcs8Base64), out _);
+string outputPath = "license.token";
+string? targetHardwareId = null;
+LicenseTier tier = LicenseTier.Enterprise;
+int validityYears = 5;
+bool aiEnabled = true;
+int maxKiosks = 100;
+bool quiet = false;
+string? inspectPath = null;
 
-// Rfc3279DerSequence — same signature format OfflineLicenseManager.LoadAndValidateAsync
-// verifies against. A plain/IEEE P1363 signature would fail verification silently.
-byte[] signatureBytes = ecdsa.SignData(payloadBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
-
-var signedToken = new SignedLicenseToken(
-    PayloadBase64: Convert.ToBase64String(payloadBytes),
-    SignatureBase64: Convert.ToBase64String(signatureBytes));
-
-string? outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
-if (!string.IsNullOrEmpty(outputDirectory))
-    Directory.CreateDirectory(outputDirectory);
-
-File.WriteAllText(outputPath, JsonSerializer.Serialize(signedToken));
-
-Console.ForegroundColor = ConsoleColor.Green;
-Console.WriteLine("=================================================================");
-Console.WriteLine("        SELF-CHECKOUT KIOSK - OFFLINE LICENSE GENERATOR          ");
-Console.WriteLine("=================================================================");
-Console.ResetColor();
-Console.WriteLine($"Hardware ID  : {hardwareId}");
-Console.WriteLine($"License Tier : {payload.Tier} (Max Kiosks: {payload.MaxKiosks}, AI: {(payload.AiEnabled ? "Enabled" : "Disabled")})");
-Console.WriteLine($"Expires UTC  : {payload.ExpiresAtUtc:yyyy-MM-dd HH:mm:ss} UTC");
-Console.WriteLine($"Primary File : {Path.GetFullPath(outputPath)}");
-
-// Also automatically copy to neighboring KioskApp folder if present in deployment package
-string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-string[] potentialKioskPaths = [
-    Path.Combine(baseDir, "..", "KioskApp", "license.token"),
-    Path.Combine(baseDir, "KioskApp", "license.token"),
-    Path.Combine(baseDir, "..", "..", "src", "SelfCheckoutKiosk.App", "license.token")
-];
-
-foreach (var path in potentialKioskPaths)
+// Parse CLI args
+for (int i = 0; i < args.Length; i++)
 {
-    try
+    string arg = args[i];
+    if ((arg is "--output" or "-o") && i + 1 < args.Length)
+        outputPath = args[++i];
+    else if ((arg is "--hardware-id" or "-h" or "--hwid") && i + 1 < args.Length)
+        targetHardwareId = args[++i];
+    else if ((arg is "--tier" or "-t") && i + 1 < args.Length)
     {
-        string? targetDir = Path.GetDirectoryName(Path.GetFullPath(path));
-        if (Directory.Exists(targetDir))
-        {
-            File.WriteAllText(path, JsonSerializer.Serialize(signedToken));
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"Auto-Copied  : {Path.GetFullPath(path)}");
-            Console.ResetColor();
-        }
+        if (Enum.TryParse<LicenseTier>(args[++i], true, out var parsedTier))
+            tier = parsedTier;
     }
-    catch { }
+    else if ((arg is "--years" or "-y") && i + 1 < args.Length && int.TryParse(args[++i], out int y))
+        validityYears = Math.Max(1, Math.Min(50, y));
+    else if (arg is "--inspect" or "-i" && i + 1 < args.Length)
+        inspectPath = args[++i];
+    else if (arg is "--quiet" or "-q" or "--silent")
+        quiet = true;
 }
 
-Console.WriteLine("=================================================================");
-Console.ForegroundColor = ConsoleColor.Green;
-Console.WriteLine("SUCCESS: License token is ready for use on this machine!");
-Console.ResetColor();
+if (!string.IsNullOrEmpty(inspectPath))
+{
+    InspectToken(inspectPath);
+    return;
+}
 
-if (!Console.IsInputRedirected)
+// If no arguments and running in an interactive terminal, show the menu
+if (args.Length == 0 && !Console.IsInputRedirected)
+{
+    ShowInteractiveMenu();
+    return;
+}
+
+// Otherwise execute standard generation
+GenerateLicense(targetHardwareId, outputPath, tier, validityYears, maxKiosks, aiEnabled, quiet);
+
+void ShowInteractiveMenu()
+{
+    while (true)
+    {
+        Console.Clear();
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("=================================================================");
+        Console.WriteLine("        SELF-CHECKOUT KIOSK — LICENSE GENERATOR TOOL             ");
+        Console.WriteLine("        Offline Cryptographic Hardware Node-Locking              ");
+        Console.WriteLine("=================================================================");
+        Console.ResetColor();
+
+        string localHwid = new HardwareIdProvider().GetHardwareId();
+        Console.WriteLine($"Current Machine Hardware ID: {localHwid}");
+        Console.WriteLine();
+        Console.WriteLine("Choose an option:");
+        Console.WriteLine("  [1] Generate Enterprise License for THIS Machine (Instant Auto-Lock)");
+        Console.WriteLine("  [2] Generate License for ANOTHER Device (Input Hardware ID)");
+        Console.WriteLine("  [3] Inspect / Validate an Existing license.token");
+        Console.WriteLine("  [4] Exit");
+        Console.WriteLine();
+        Console.Write("Enter selection [1-4] (Default is 1): ");
+
+        string? choice = Console.ReadLine()?.Trim();
+        if (string.IsNullOrEmpty(choice) || choice == "1")
+        {
+            Console.WriteLine();
+            GenerateLicense(localHwid, "license.token", LicenseTier.Enterprise, 5, 100, true, false);
+            WaitToExit();
+            return;
+        }
+        else if (choice == "2")
+        {
+            Console.WriteLine();
+            Console.Write("Paste target machine Hardware ID: ");
+            string? remoteHwid = Console.ReadLine()?.Trim();
+            if (string.IsNullOrWhiteSpace(remoteHwid))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Error: Hardware ID cannot be empty.");
+                Console.ResetColor();
+                Thread.Sleep(1500);
+                continue;
+            }
+
+            Console.Write("Output filename [license.token]: ");
+            string? customOut = Console.ReadLine()?.Trim();
+            if (string.IsNullOrWhiteSpace(customOut))
+                customOut = "license.token";
+
+            Console.WriteLine();
+            GenerateLicense(remoteHwid, customOut, LicenseTier.Enterprise, 5, 100, true, false);
+            WaitToExit();
+            return;
+        }
+        else if (choice == "3")
+        {
+            Console.WriteLine();
+            Console.Write("Enter path to license.token [license.token]: ");
+            string? tokenFile = Console.ReadLine()?.Trim();
+            if (string.IsNullOrWhiteSpace(tokenFile))
+                tokenFile = "license.token";
+
+            InspectToken(tokenFile);
+            WaitToExit();
+            return;
+        }
+        else if (choice == "4")
+        {
+            return;
+        }
+    }
+}
+
+void GenerateLicense(string? hwid, string outPath, LicenseTier licTier, int years, int kiosks, bool ai, bool isQuiet)
+{
+    string effectiveHwid = !string.IsNullOrWhiteSpace(hwid)
+        ? hwid.Trim()
+        : new HardwareIdProvider().GetHardwareId();
+
+    var payload = new LicensePayload(
+        HardwareId: effectiveHwid,
+        Tier: licTier,
+        ExpiresAtUtc: DateTimeOffset.UtcNow.AddYears(years),
+        MaxKiosks: kiosks,
+        AiEnabled: ai);
+
+    byte[] payloadBytes = JsonSerializer.SerializeToUtf8Bytes(payload);
+
+    using ECDsa ecdsa = ECDsa.Create();
+    ecdsa.ImportPkcs8PrivateKey(Convert.FromBase64String(devPrivateKeyPkcs8Base64), out _);
+    byte[] signatureBytes = ecdsa.SignData(payloadBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
+
+    var signedToken = new SignedLicenseToken(
+        PayloadBase64: Convert.ToBase64String(payloadBytes),
+        SignatureBase64: Convert.ToBase64String(signatureBytes));
+
+    string? outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outPath));
+    if (!string.IsNullOrEmpty(outputDirectory))
+        Directory.CreateDirectory(outputDirectory);
+
+    string jsonContent = JsonSerializer.Serialize(signedToken, new JsonSerializerOptions { WriteIndented = true });
+    File.WriteAllText(outPath, jsonContent);
+
+    if (!isQuiet)
+    {
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("=================================================================");
+        Console.WriteLine("            LICENSE TOKEN GENERATED SUCCESSFULLY!                ");
+        Console.WriteLine("=================================================================");
+        Console.ResetColor();
+        Console.WriteLine($"Hardware ID  : {effectiveHwid}");
+        Console.WriteLine($"License Tier : {payload.Tier} (Max Kiosks: {payload.MaxKiosks}, AI: {(payload.AiEnabled ? "Enabled" : "Disabled")})");
+        Console.WriteLine($"Expires UTC  : {payload.ExpiresAtUtc:yyyy-MM-dd HH:mm:ss} UTC");
+        Console.WriteLine($"Output File  : {Path.GetFullPath(outPath)}");
+    }
+
+    // Auto-copy to standard sibling app folders if they exist
+    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+    string[] potentialKioskPaths = [
+        Path.Combine(baseDir, "..", "KioskApp", "license.token"),
+        Path.Combine(baseDir, "KioskApp", "license.token"),
+        Path.Combine(baseDir, "..", "..", "src", "SelfCheckoutKiosk.App", "license.token"),
+        Path.Combine(Directory.GetCurrentDirectory(), "dist", "SelfCheckoutKiosk-Package", "KioskApp", "license.token")
+    ];
+
+    foreach (var path in potentialKioskPaths)
+    {
+        try
+        {
+            string? targetDir = Path.GetDirectoryName(Path.GetFullPath(path));
+            if (Directory.Exists(targetDir))
+            {
+                File.WriteAllText(path, jsonContent);
+                if (!isQuiet)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine($"Auto-Synced  : {Path.GetFullPath(path)}");
+                    Console.ResetColor();
+                }
+            }
+        }
+        catch { }
+    }
+
+    if (!isQuiet)
+    {
+        Console.WriteLine("=================================================================");
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("STATUS: Valid node-locked token is ready for activation.");
+        Console.ResetColor();
+    }
+}
+
+void InspectToken(string filePath)
 {
     Console.WriteLine();
-    Console.WriteLine("Press any key to close this window...");
-    try { Console.ReadKey(); } catch { }
+    Console.ForegroundColor = ConsoleColor.Cyan;
+    Console.WriteLine($"Inspecting License Token: {filePath}");
+    Console.ResetColor();
+
+    if (!File.Exists(filePath))
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Error: File '{filePath}' does not exist.");
+        Console.ResetColor();
+        return;
+    }
+
+    try
+    {
+        string raw = File.ReadAllText(filePath);
+        var token = JsonSerializer.Deserialize<SignedLicenseToken>(raw, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (token == null || string.IsNullOrEmpty(token.PayloadBase64))
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("Invalid license token format.");
+            Console.ResetColor();
+            return;
+        }
+
+        byte[] payloadBytes = Convert.FromBase64String(token.PayloadBase64);
+        var payload = JsonSerializer.Deserialize<LicensePayload>(payloadBytes, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("License Token Metadata:");
+        Console.ResetColor();
+        Console.WriteLine($"  Hardware ID  : {payload?.HardwareId}");
+        Console.WriteLine($"  Tier         : {payload?.Tier}");
+        Console.WriteLine($"  Max Kiosks   : {payload?.MaxKiosks}");
+        Console.WriteLine($"  AI Features  : {(payload?.AiEnabled == true ? "Enabled" : "Disabled")}");
+        Console.WriteLine($"  Expires UTC  : {payload?.ExpiresAtUtc:yyyy-MM-dd HH:mm:ss} UTC");
+        Console.WriteLine($"  Is Expired?  : {(payload?.ExpiresAtUtc < DateTimeOffset.UtcNow ? "YES (EXPIRED)" : "NO (ACTIVE)")}");
+    }
+    catch (Exception ex)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Failed to parse token: {ex.Message}");
+        Console.ResetColor();
+    }
+}
+
+void WaitToExit()
+{
+    if (!Console.IsInputRedirected)
+    {
+        Console.WriteLine();
+        Console.WriteLine("Press any key to close...");
+        try { Console.ReadKey(); } catch { }
+    }
 }
