@@ -367,6 +367,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
         }
 
+        private void AdminButton_Click(object sender, RoutedEventArgs e)
+        {
+            App.MainWindowInstance?.NavigationService.NavigateTo(
+                typeof(Views.Admin.AdminLoginView),
+                null,
+                SlideNavigationTransitionEffect.FromBottom
+            );
+        }
+
         private void RefreshNetworkStatusUI()
         {
             bool isOnline = HardwareStatusManager.Instance.IsServerOnline;

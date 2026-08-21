@@ -326,6 +326,16 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             ScanIconAnimation.Begin();
         }
 
+        private void AdminButton_Click(object sender, RoutedEventArgs e)
+        {
+            ResetInactivityTimer();
+            App.MainWindowInstance?.NavigationService.NavigateTo(
+                typeof(Views.Admin.AdminLoginView),
+                null,
+                Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromBottom
+            );
+        }
+
         private void PaymentIcon_Loaded(object sender, RoutedEventArgs e)
         {
             PaymentIconAnimation.Begin();

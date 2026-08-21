@@ -11,11 +11,11 @@ namespace SelfCheckoutKiosk.App.Services
         {
             // Dairy & Eggs
             new Product { Sku = "8485234828415", Name = "Organic Fresh Milk 1L", Category = "Dairy", Price = 2.50m },
-            new Product { Sku = "4111154381009", Name = "Free Range Eggs 10pk", Category = "Dairy", Price = 3.20m },
+            new Product { Sku = "7243026805126", Name = "Free Range Eggs 10pk", Category = "Dairy", Price = 3.20m },
             new Product { Sku = "7072010958018", Name = "Cheddar Cheese Block 250g", Category = "Dairy", Price = 2.80m },
 
             // Beverages - Soft Drinks
-            new Product { Sku = "7243026805126", Name = "Coca-Cola 330ml", Category = "Beverages", Price = 0.50m },
+            new Product { Sku = "4111154381009", Name = "Coca-Cola 330ml", Category = "Beverages", Price = 0.50m },
             new Product { Sku = "8975067721347", Name = "Pepsi 330ml", Category = "Beverages", Price = 0.50m },
             new Product { Sku = "6855258299058", Name = "Sprite Lemon-Lime 330ml", Category = "Beverages", Price = 0.50m },
             new Product { Sku = "4644880396783", Name = "Fanta Orange 330ml", Category = "Beverages", Price = 0.50m },

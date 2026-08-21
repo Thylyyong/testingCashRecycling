@@ -258,12 +258,25 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <Border Grid.Column="2" Background="#26FFFFFF" CornerRadius="12" Padding="10,4" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon x:Name="NetworkIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE701;" FontSize="14" Foreground="{StaticResource SuccessLightBrush}"/>
-                            <TextBlock x:Name="NetworkStatusLabel" Text="Online" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Border Background="#26FFFFFF" CornerRadius="12" Padding="10,4" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon x:Name="NetworkIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE701;" FontSize="14" Foreground="{StaticResource SuccessLightBrush}"/>
+                                <TextBlock x:Name="NetworkStatusLabel" Text="Online" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Button x:Name="AdminButton" Style="{StaticResource HeaderChipButtonStyle}" Height="32" Padding="10,4" CornerRadius="10" Click="AdminButton_Click">
+                            <Button.Resources>
+                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
+                                <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>
+                            </Button.Resources>
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7EE;" FontSize="12" Foreground="{StaticResource TextOnAccentBrush}"/>
+                                <TextBlock Text="{x:Bind Localizer.GetString('Admin'), Mode=OneWay}" Foreground="{StaticResource TextOnAccentBrush}" FontSize="12" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </Grid>
 
                 <Grid>

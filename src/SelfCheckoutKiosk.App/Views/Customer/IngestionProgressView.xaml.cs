@@ -374,5 +374,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             await dialog.ShowAsync();
         }
+
+        private void AdminButton_Click(object sender, RoutedEventArgs e)
+        {
+            App.MainWindowInstance?.NavigationService.NavigateTo(
+                typeof(Views.Admin.AdminLoginView),
+                null,
+                Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromBottom
+            );
+        }
     }
 }

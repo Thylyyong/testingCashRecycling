@@ -199,5 +199,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             ViewModel.GoBack();
         }
+
+        private void AdminButton_Click(object sender, RoutedEventArgs e)
+        {
+            ResetInactivityTimer();
+            App.MainWindowInstance?.NavigationService.NavigateTo(
+                typeof(Views.Admin.AdminLoginView),
+                null,
+                Microsoft.UI.Xaml.Media.Animation.SlideNavigationTransitionEffect.FromBottom
+            );
+        }
     }
 }

@@ -141,14 +141,24 @@
                     <TextBlock x:Name="HeaderSubTitle" Text="{x:Bind Localizer.GetString('CHECKOUT'), Mode=OneWay}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" CharacterSpacing="100"/>
                     <TextBlock x:Name="HeaderTitle" Text="{x:Bind Localizer.GetString('PaymentOptionTitle'), Mode=OneWay}" FontSize="36" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
                 </StackPanel>
-                <Button x:Name="HelpButton" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Background="Transparent" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1.5" CornerRadius="24" Padding="20,10"
-                        Click="HelpButton_Click">
-                    <StackPanel x:Name="HelpButtonStack" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                        <FontIcon x:Name="HelpButtonIcon" Glyph="&#xE9CE;" FontFamily="Segoe Fluent Icons" FontSize="16" Foreground="{StaticResource TextDarkSlateBrush}"/>
-                        <TextBlock x:Name="HelpButtonText" Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="AdminButton"
+                            Background="Transparent" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1.5" CornerRadius="24" Padding="18,10"
+                            Click="AdminButton_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE7EE;" FontFamily="Segoe Fluent Icons" FontSize="16" Foreground="{StaticResource TextDarkSlateBrush}"/>
+                            <TextBlock Text="{x:Bind Localizer.GetString('Admin'), Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="HelpButton"
+                            Background="Transparent" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1.5" CornerRadius="24" Padding="20,10"
+                            Click="HelpButton_Click">
+                        <StackPanel x:Name="HelpButtonStack" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <FontIcon x:Name="HelpButtonIcon" Glyph="&#xE9CE;" FontFamily="Segoe Fluent Icons" FontSize="16" Foreground="{StaticResource TextDarkSlateBrush}"/>
+                            <TextBlock x:Name="HelpButtonText" Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Grid>
 

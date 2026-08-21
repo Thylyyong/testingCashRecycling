@@ -22,6 +22,7 @@
 | **WP-09** | [Peripheral & Workflow Stabilization (Scan 2x, Khmer Hours, Single-Print)](#wp-09-peripheral--workflow-stabilization-scan-2x-khmer-hours-single-print) | `P0` | 🟢 `COMPLETED` | Barcode scan deduplication, Khmer 'Open until' localization, SuccessView single-print guarantee |
 | **WP-10** | [Standalone Unpackaged Portable Distribution (`dist/SelfCheckoutKiosk`)](#wp-10-standalone-unpackaged-portable-distribution-distselfcheckoutkiosk) | `P0` | 🟢 `COMPLETED` | Unpackaged self-contained publish, isolated `CashAPI/` subfolder, 1-click launcher, and Debug/Release validation |
 | **WP-11** | [Dynamic COM Port Auto-Probe & Multi-Device Hardware Discovery](#wp-11-dynamic-com-port-auto-probe--multi-device-hardware-discovery) | `P0` | 🟢 `COMPLETED` | Serial scanner all-COM sweep, Cash Recycler dynamic port allocation, Admin Diagnostics live port reflect |
+| **WP-12** | [Universal Admin Button Navigation Across All Customer Views](#wp-12-universal-admin-button-navigation-across-all-customer-views) | `P1` | 🟢 `COMPLETED` | HomeView, CartView, PaymentSelectionView, PaymentOptionView, QRPaymentView, IngestionProgressView, SuccessView |
 
 ---
 
@@ -216,6 +217,23 @@
 
 ---
 
+### WP-12: Universal Admin Button Navigation Across All Customer Views
+**Objective:** Provide accessible, elegantly integrated "Admin" navigation buttons on every customer screen (`HomeView`, `CartView`, `PaymentSelectionView`, `PaymentOptionView`, `QRPaymentView`, `IngestionProgressView`, and `SuccessView`), allowing store attendants to access the PIN-gated Admin Diagnostics panel at any point during customer interactions without cancelling active baskets or interrupting transactions.
+
+- [x] **12.1 Tailored UI Integration Across Customer Screens:**
+  - `HomeView.xaml`: Integrated top-right pill button matching the header language selector.
+  - `CartView.xaml`: Integrated compact chip button in the top status header next to the Network Status badge.
+  - `PaymentSelectionView.xaml` & `PaymentOptionView.xaml`: Integrated header action button alongside the Help button.
+  - `QRPaymentView.xaml` & `IngestionProgressView.xaml`: Integrated header chip action button alongside the Help button with full theme matching.
+  - `SuccessView.xaml`: Integrated top-right action button with timer-stop safeguards so attendants can enter diagnostics from the completed order receipt screen.
+- [x] **12.2 Navigation & Seamless Return Flow:**
+  - All views route directly to `AdminLoginView` with a smooth bottom slide transition (`SlideNavigationTransitionEffect.FromBottom`).
+  - Returning or cancelling from `AdminLoginView` safely returns to the exact calling customer screen via `NavigationService.NavigateBackToCustomer()`.
+- [x] **12.3 Internationalization Support:**
+  - Added localized `"Admin"` (`"Admin"` in English, `"រដ្ឋបាល"` in Khmer) keys to `en.json` and `km.json`.
+
+---
+
 ## 📈 Execution Sequence
 
 ```mermaid
@@ -229,4 +247,5 @@ graph TD
     G --> H["WP-09: Peripheral & Workflow Stabilization"]
     H --> I["WP-10: Standalone Unpackaged Portable Distribution"]
     I --> J["WP-11: Dynamic COM Port Auto-Probe & Multi-Device Discovery"]
+    J --> K["WP-12: Universal Admin Button Navigation"]
 ```

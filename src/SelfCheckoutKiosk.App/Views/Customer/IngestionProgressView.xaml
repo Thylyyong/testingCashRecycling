@@ -234,25 +234,42 @@
                     </StackPanel>
                 </Button>
 
-                <!-- Right Floating Help Button -->
-                <Button x:Name="HelpButton"
-                        Height="50"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        CornerRadius="10"
-                        Click="HelpButton_Click"
-                        Style="{StaticResource HeaderChipButtonStyle}">
-                    <Button.Resources>
-                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
-                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
-                        <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White"/>
-                        <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
-                    </Button.Resources>
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE9CE;" FontFamily="Segoe Fluent Icons" FontSize="18"/>
-                        <TextBlock Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                <!-- Right Floating Action Buttons -->
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="AdminButton"
+                            Height="50"
+                            CornerRadius="10"
+                            Click="AdminButton_Click"
+                            Style="{StaticResource HeaderChipButtonStyle}">
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White"/>
+                            <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE7EE;" FontFamily="Segoe Fluent Icons" FontSize="18"/>
+                            <TextBlock Text="{x:Bind Localizer.GetString('Admin'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="HelpButton"
+                            Height="50"
+                            CornerRadius="10"
+                            Click="HelpButton_Click"
+                            Style="{StaticResource HeaderChipButtonStyle}">
+                        <Button.Resources>
+                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#2D8EDD"/>
+                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#166BAE"/>
+                            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White"/>
+                            <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White"/>
+                        </Button.Resources>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE9CE;" FontFamily="Segoe Fluent Icons" FontSize="18"/>
+                            <TextBlock Text="{x:Bind Localizer.GetString('NeedHelp'), Mode=OneWay}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
 
             </Grid>
         </Border>
