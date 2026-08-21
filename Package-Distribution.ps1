@@ -15,9 +15,17 @@ Write-Host "==================================================" -ForegroundColor
 Write-Host "  PACKAGING SELF-CHECKOUT KIOSK V2 STANDALONE     " -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 
-# 1. Run Tests (unless skipped)
+# 1. Stop Any Running Kiosk / Hardware Processes (prevent file locking)
+Write-Host "[1/7] Checking for running kiosk processes..." -ForegroundColor Yellow
+$LockedProcesses = @("SelfCheckoutKiosk.App", "CashDevice-RestAPI", "CashDeviceSimulator", "GenerateLicense")
+foreach ($procName in $LockedProcesses) {
+    Get-Process -Name $procName -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+}
+Start-Sleep -Milliseconds 500
+
+# 2. Run Tests (unless skipped)
 if (-not $SkipTests) {
-    Write-Host "[1/6] Running Solution Test Suite..." -ForegroundColor Yellow
+    Write-Host "[2/7] Running Solution Test Suite..." -ForegroundColor Yellow
     dotnet test "$RepoRoot\SelfCheckoutKiosk.sln" -c Release --nologo
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Test suite execution failed. Packaging aborted."
@@ -25,19 +33,19 @@ if (-not $SkipTests) {
     }
     Write-Host "  -> All tests passed!" -ForegroundColor Green
 } else {
-    Write-Host "[1/6] Skipping tests (-SkipTests specified)..." -ForegroundColor Gray
+    Write-Host "[2/7] Skipping tests (-SkipTests specified)..." -ForegroundColor Gray
 }
 
-# 2. Clean & Prepare Output Folder
-Write-Host "[2/6] Preparing Output Folder: dist/SelfCheckoutKiosk..." -ForegroundColor Yellow
+# 3. Clean & Prepare Output Folder
+Write-Host "[3/7] Preparing Output Folder: dist/SelfCheckoutKiosk..." -ForegroundColor Yellow
 $DistDir = Join-Path $RepoRoot "dist\SelfCheckoutKiosk"
 if (Test-Path $DistDir) {
     Remove-Item -Recurse -Force $DistDir
 }
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 
-# 3. Publish Main WinUI 3 App
-Write-Host "[3/6] Publishing WinUI 3 Touch App (Release / win-x64)..." -ForegroundColor Yellow
+# 4. Publish Main WinUI 3 App
+Write-Host "[4/7] Publishing WinUI 3 Touch App (Release / win-x64)..." -ForegroundColor Yellow
 dotnet publish "$RepoRoot\src\SelfCheckoutKiosk.App\SelfCheckoutKiosk.App.csproj" `
     -c Release `
     -r win-x64 `
@@ -46,19 +54,39 @@ dotnet publish "$RepoRoot\src\SelfCheckoutKiosk.App\SelfCheckoutKiosk.App.csproj
     -p:WindowsAppSDKSelfContained=true `
     -o $DistDir
 
-# 4. Validate PRI Resource Indexes
-Write-Host "[4/6] Validating PRI Resource Indexes..." -ForegroundColor Yellow
-$PublishedPri = Join-Path $DistDir "resources.pri"
-if (Test-Path $PublishedPri) {
-    $AppPri = Join-Path $DistDir "SelfCheckoutKiosk.App.pri"
-    if (-not (Test-Path $AppPri)) {
-        Copy-Item $PublishedPri $AppPri -Force
+# 5. Copy & Validate PRI Resource Indexes
+Write-Host "[5/7] Validating PRI Resource Indexes..." -ForegroundColor Yellow
+$DistResourcesPri = Join-Path $DistDir "resources.pri"
+$DistAppPri = Join-Path $DistDir "SelfCheckoutKiosk.App.pri"
+
+# Look for source PRI from build directory if not in dist
+$SourcePri = "$RepoRoot\src\SelfCheckoutKiosk.App\bin\Release\net10.0-windows10.0.19041.0\win-x64\SelfCheckoutKiosk.App.pri"
+if (-not (Test-Path $SourcePri)) {
+    $SearchPri = Get-ChildItem -Path "$RepoRoot\src\SelfCheckoutKiosk.App\bin" -Filter "SelfCheckoutKiosk.App.pri" -Recurse -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($SearchPri) {
+        $SourcePri = $SearchPri.FullName
     }
-    Write-Host "  -> Verified published merged resources.pri" -ForegroundColor Green
 }
 
-# 5. Package Cash API & Simulator into isolated CashAPI/ subfolder
-Write-Host "[5/6] Packaging Cash API into CashAPI/ subfolder..." -ForegroundColor Yellow
+if (Test-Path $SourcePri) {
+    if (-not (Test-Path $DistResourcesPri) -or ((Get-Item $DistResourcesPri).FullName -ne (Get-Item $SourcePri).FullName)) {
+        Copy-Item $SourcePri $DistResourcesPri -Force
+    }
+    if (-not (Test-Path $DistAppPri) -or ((Get-Item $DistAppPri).FullName -ne (Get-Item $SourcePri).FullName)) {
+        Copy-Item $SourcePri $DistAppPri -Force
+    }
+    Write-Host "  -> Successfully verified and synced PRI resource indexes." -ForegroundColor Green
+} elseif (Test-Path $DistResourcesPri) {
+    if (-not (Test-Path $DistAppPri)) {
+        Copy-Item $DistResourcesPri $DistAppPri -Force
+    }
+    Write-Host "  -> Verified published resources.pri." -ForegroundColor Green
+} else {
+    Write-Warning "Could not find SelfCheckoutKiosk.App.pri or resources.pri! Application may fail to load XAML."
+}
+
+# 6. Package Cash API & Simulator into isolated CashAPI/ subfolder
+Write-Host "[6/7] Packaging Cash API into CashAPI/ subfolder..." -ForegroundColor Yellow
 $CashApiDir = Join-Path $DistDir "CashAPI"
 New-Item -ItemType Directory -Force -Path $CashApiDir | Out-Null
 
@@ -75,8 +103,8 @@ dotnet publish "$RepoRoot\tools\CashDeviceSimulator\CashDeviceSimulator.csproj" 
     --self-contained true `
     -o $SimDir
 
-# 6. Package License Generator & Generate Token
-Write-Host "[6/6] Packaging License Generator & 1-Click Launcher..." -ForegroundColor Yellow
+# 7. Package License Generator & Generate Token
+Write-Host "[7/7] Packaging License Generator & 1-Click Launcher..." -ForegroundColor Yellow
 $LicGenDir = Join-Path $DistDir "LicenseGenerator"
 New-Item -ItemType Directory -Force -Path $LicGenDir | Out-Null
 
