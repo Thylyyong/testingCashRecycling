@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Services.Audio;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
 using System.Diagnostics;
@@ -57,6 +58,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             RenderDetails();
             StartAutoReturnTimer();
+            AppSound.ThankYouTakeReceipt();
 
             bool alreadyPrinted = payment.IsReceiptPrinted || _printedTransactions.Contains(payment.TransactionId);
 
@@ -179,6 +181,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void DoneButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             StopAutoReturnTimer();
             if (ViewModel != null)
             {
@@ -192,6 +195,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             StopAutoReturnTimer();
             AppRouter.ToAdmin();
         }

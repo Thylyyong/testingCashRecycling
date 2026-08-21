@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Services.Audio;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -36,49 +37,35 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
                 {
                     _enteredPin = value;
                     OnPropertyChanged();
-                    OnPropertyChanged(nameof(DisplayPin));
-                    OnPropertyChanged(nameof(PinLength));
+                    OnPropertyChanged(nameof(MaskedPinDisplay));
                     OnPropertyChanged(nameof(CanSubmit));
-                    NotifyPinSlots();
-                    ClearError();
+                    OnPropertyChanged(nameof(PinLengthDisplay));
                 }
             }
         }
 
-        public string DisplayPin => string.IsNullOrEmpty(_enteredPin) ? string.Empty : new string('●', _enteredPin.Length);
+        public string MaskedPinDisplay => new string('●', _enteredPin.Length);
+
+        public string DisplayPin => MaskedPinDisplay;
 
         public int PinLength => _enteredPin.Length;
 
-        public Visibility IsSlot1Filled => PinLength >= 1 ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility IsSlot2Filled => PinLength >= 2 ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility IsSlot3Filled => PinLength >= 3 ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility IsSlot4Filled => PinLength >= 4 ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility IsSlot5Filled => PinLength >= 5 ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility IsSlot6Filled => PinLength >= 6 ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility IsSlot7Filled => PinLength >= 7 ? Visibility.Visible : Visibility.Collapsed;
-        public Visibility IsSlot8Filled => PinLength >= 8 ? Visibility.Visible : Visibility.Collapsed;
+        public string PinLengthDisplay => $"{_enteredPin.Length} / {RequiredPinLength}";
 
-        private void NotifyPinSlots()
-        {
-            OnPropertyChanged(nameof(IsSlot1Filled));
-            OnPropertyChanged(nameof(IsSlot2Filled));
-            OnPropertyChanged(nameof(IsSlot3Filled));
-            OnPropertyChanged(nameof(IsSlot4Filled));
-            OnPropertyChanged(nameof(IsSlot5Filled));
-            OnPropertyChanged(nameof(IsSlot6Filled));
-            OnPropertyChanged(nameof(IsSlot7Filled));
-            OnPropertyChanged(nameof(IsSlot8Filled));
-        }
+        public bool CanSubmit => _enteredPin.Length == RequiredPinLength && !_isAuthenticating;
 
         public string ErrorMessage
         {
             get => _errorMessage;
             set
             {
-                _errorMessage = value;
-                _hasError = !string.IsNullOrEmpty(value);
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(HasError));
+                if (_errorMessage != value)
+                {
+                    _errorMessage = value;
+                    _hasError = !string.IsNullOrWhiteSpace(value);
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(HasError));
+                }
             }
         }
 
@@ -87,19 +74,27 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
         public bool IsAuthenticating
         {
             get => _isAuthenticating;
-            set { _isAuthenticating = value; OnPropertyChanged(); }
+            set
+            {
+                if (_isAuthenticating != value)
+                {
+                    _isAuthenticating = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(CanSubmit));
+                }
+            }
         }
-
-        public bool CanSubmit => _enteredPin.Length == RequiredPinLength;
 
         public void AppendDigit(string digit)
         {
-            if (string.IsNullOrEmpty(digit) || !char.IsDigit(digit[0]))
-                return;
+            if (string.IsNullOrWhiteSpace(digit) || _enteredPin.Length >= RequiredPinLength) return;
 
-            if (_enteredPin.Length < RequiredPinLength)
+            ErrorMessage = string.Empty;
+            EnteredPin += digit;
+
+            if (_enteredPin.Length == RequiredPinLength)
             {
-                EnteredPin += digit;
+                TryAuthenticate();
             }
         }
 
@@ -107,6 +102,7 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
         {
             if (_enteredPin.Length > 0)
             {
+                ErrorMessage = string.Empty;
                 EnteredPin = _enteredPin.Substring(0, _enteredPin.Length - 1);
             }
         }
@@ -114,32 +110,28 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
         public void ClearPin()
         {
             EnteredPin = string.Empty;
-        }
-
-        public void ClearError()
-        {
-            if (_hasError)
-            {
-                ErrorMessage = string.Empty;
-            }
+            ErrorMessage = string.Empty;
         }
 
         public bool TryAuthenticate()
         {
             if (_enteredPin.Length < RequiredPinLength)
             {
+                AppSound.ErrorPassword();
                 ErrorMessage = $"Please enter all {RequiredPinLength} digits of your admin PIN.";
                 return false;
             }
 
             if (_enteredPin == DefaultAdminPin || _enteredPin == "88888888" || _enteredPin.Length == RequiredPinLength)
             {
+                AppSound.SuccessBeep();
                 Debug.WriteLine("[Admin Login] Authentication successful.");
                 _navigationService.NavigateTo(KioskRoute.AdminDiagnostics, SlideNavigationTransitionEffect.FromRight);
                 return true;
             }
             else
             {
+                AppSound.ErrorPassword();
                 ErrorMessage = "Incorrect PIN. Please try again.";
                 ClearPin();
                 return false;

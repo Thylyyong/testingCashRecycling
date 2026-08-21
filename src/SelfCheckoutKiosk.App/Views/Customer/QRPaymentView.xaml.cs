@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Services.Audio;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
 
@@ -41,6 +42,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void BackButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             var font = LocalizationService.Instance.CurrentLanguage == "km"
                 ? (FontFamily)Application.Current.Resources["KhmerFont"]
                 : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
@@ -109,16 +111,19 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void SimulateCancelButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             ViewModel.NavigateBackToPaymentSelection();
         }
 
         private void SimulateSuccessButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.SuccessBeep();
             ViewModel.SimulatePaymentSuccessAndProceed();
         }
 
         private async void HelpButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
 
             var dialog = new ContentDialog
@@ -169,6 +174,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             AppRouter.ToAdmin();
         }
     }

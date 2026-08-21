@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Services.Audio;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
 using System.ComponentModel;
@@ -55,6 +56,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             SetupVideoPlayer();
 
             LocalizationService.Instance.PropertyChanged += Localizer_PropertyChanged;
+            Loaded += (s, e) => AppSound.Welcome();
             Unloaded += KioskBaseView_Unloaded;
         }
 
@@ -200,6 +202,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         {
             if (!_wasManipulated)
             {
+                AppSound.ButtonClick();
                 ViewModel.ProceedToHome();
             }
         }

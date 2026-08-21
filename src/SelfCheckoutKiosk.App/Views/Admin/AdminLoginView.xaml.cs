@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using SelfCheckoutKiosk.App.Services.Audio;
 using SelfCheckoutKiosk.App.ViewModels.Admin;
 using Windows.System;
 
@@ -54,23 +55,27 @@ namespace SelfCheckoutKiosk.App.Views.Admin
         {
             if (e.Key >= VirtualKey.Number0 && e.Key <= VirtualKey.Number9)
             {
+                AppSound.KeypadClick();
                 string digit = ((int)(e.Key - VirtualKey.Number0)).ToString();
                 ViewModel.AppendDigit(digit);
                 e.Handled = true;
             }
             else if (e.Key >= VirtualKey.NumberPad0 && e.Key <= VirtualKey.NumberPad9)
             {
+                AppSound.KeypadClick();
                 string digit = ((int)(e.Key - VirtualKey.NumberPad0)).ToString();
                 ViewModel.AppendDigit(digit);
                 e.Handled = true;
             }
             else if (e.Key == VirtualKey.Back)
             {
+                AppSound.KeypadClick();
                 ViewModel.DeleteLast();
                 e.Handled = true;
             }
             else if (e.Key == VirtualKey.Escape)
             {
+                AppSound.ButtonClick();
                 ViewModel.ClearPin();
                 e.Handled = true;
             }
@@ -83,6 +88,7 @@ namespace SelfCheckoutKiosk.App.Views.Admin
 
         private void KeypadDigit_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.KeypadClick();
             if (sender is Button btn && btn.Tag is string digit)
             {
                 ViewModel.AppendDigit(digit);
@@ -91,21 +97,25 @@ namespace SelfCheckoutKiosk.App.Views.Admin
 
         private void KeypadClear_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             ViewModel.ClearPin();
         }
 
         private void KeypadDelete_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.KeypadClick();
             ViewModel.DeleteLast();
         }
 
         private void UnlockButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             ViewModel.TryAuthenticate();
         }
 
         private void ReturnButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             ViewModel.ReturnToCustomerMode();
         }
 

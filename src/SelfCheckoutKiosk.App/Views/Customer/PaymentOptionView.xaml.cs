@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Services.Audio;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using SelfCheckoutKiosk.Core.Abstractions;
 using System;
@@ -197,13 +198,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private void BackButton_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
-
+            AppSound.ButtonClick();
             ViewModel.GoBack();
         }
 
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
+            AppSound.ButtonClick();
             AppRouter.ToAdmin();
         }
     }

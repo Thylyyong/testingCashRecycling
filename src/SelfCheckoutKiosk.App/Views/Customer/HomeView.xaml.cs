@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Services.Audio;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
 using System.ComponentModel;
@@ -121,10 +122,12 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             if (!HardwareStatusManager.Instance.IsCashAvailable && !HardwareStatusManager.Instance.IsQrAvailable)
             {
+                AppSound.ButtonClick();
                 await ShowNoPaymentAvailableDialogAsync();
                 return;
             }
 
+            AppSound.PleaseScanFirstItem();
             ViewModel.ProceedToCart();
         }
 
@@ -200,12 +203,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private void PaymentOptionsCard_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
+            AppSound.ButtonClick();
             ViewModel.ProceedToPaymentOptions();
         }
 
         private async void HelpButton_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
+            AppSound.ButtonClick();
 
             var font = LocalizationService.Instance.CurrentLanguage == "km"
                 ? (FontFamily)Application.Current.Resources["KhmerFont"]
@@ -274,6 +279,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private async void LanguageItem_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
+            AppSound.ButtonClick();
 
             if (sender is MenuFlyoutItem menuItem)
             {
@@ -330,6 +336,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
+            AppSound.ButtonClick();
             AppRouter.ToAdmin();
         }
 

@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Media.Animation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Services.Audio;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using System;
 using System.Diagnostics;
@@ -225,6 +226,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             var product = ViewModel.FindProductBySku(cleanedSku);
             if (product == null)
             {
+                AppSound.InvalidBarcode();
                 var notFoundDialog = CreateBaseDialog("Item Not Found", $"No product found for barcode: {cleanedSku}");
                 notFoundDialog.CloseButtonText = "OK";
                 await ShowDialogBlockingScansAsync(notFoundDialog);
@@ -237,6 +239,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
             else
             {
+                AppSound.SuccessBeep();
                 ViewModel.AddItem(product.Name, product.Sku, product.Price, 1);
                 UpdateCartStateUI();
             }
@@ -491,11 +494,13 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
                 if (string.IsNullOrWhiteSpace(code))
                 {
+                    AppSound.ErrorPassword();
                     ShowInlineError(resultPanel, Localizer.GetString("ErrorBarcodeRequired"));
                     entryBox.Focus(FocusState.Programmatic);
                     return;
                 }
 
+                AppSound.ButtonClick();
                 RenderPriceCheckResult(resultPanel, code);
                 entryBox.Focus(FocusState.Programmatic);
             };
@@ -751,6 +756,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
                 if (string.IsNullOrWhiteSpace(pin) || pin.Length != 6)
                 {
+                    AppSound.ErrorPassword();
                     ShowInlineError(resultPanel, Localizer.GetString("ErrorInvalidPin"));
                     entryBox.Focus(FocusState.Programmatic);
                     return;
@@ -758,11 +764,13 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
                 if (ViewModel.TryRecallSavedCart(pin, out string errorReason))
                 {
+                    AppSound.SuccessBeep();
                     UpdateCartStateUI();
                     dialog?.Hide(); // Successfully restored, dismiss dialog
                 }
                 else
                 {
+                    AppSound.ErrorPassword();
                     string displayError = !string.IsNullOrWhiteSpace(errorReason)
                         ? Localizer.GetString(errorReason)
                         : Localizer.GetString("ErrorCartNotFound");
@@ -890,6 +898,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
                 if (string.IsNullOrWhiteSpace(code))
                 {
+                    AppSound.ErrorPassword();
                     ShowInlineError(resultPanel, Localizer.GetString("ErrorBarcodeRequired"));
                     entryBox.Focus(FocusState.Programmatic);
                     return;
@@ -899,11 +908,13 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
                 if (added)
                 {
+                    AppSound.SuccessBeep();
                     UpdateCartStateUI();
                     dialog?.Hide(); // Close dialog on success
                 }
                 else
                 {
+                    AppSound.InvalidBarcode();
                     ShowInlineError(resultPanel, $"{Localizer.GetString("ErrorProductNotFoundForBarcode")}\n{code}");
                     entryBox.Focus(FocusState.Programmatic);
                 }
@@ -967,7 +978,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
         }
 
-        private async void BackButton_Click(object sender, RoutedEventArgs e)
+        private async void ShowCancelConfirmationDialog()
         {
             var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
             var baseAccentStyle = (Style)Application.Current.Resources["AccentButtonStyle"];
@@ -1028,12 +1039,27 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             if (result == ContentDialogResult.Secondary)
             {
+                AppSound.ButtonClick();
                 ViewModel.CancelOrderAndProceedHome();
+            }
+        }
+
+        private void BackButton_Click(object sender, RoutedEventArgs e)
+        {
+            AppSound.ButtonClick();
+            if (ViewModel.IsEmpty)
+            {
+                ViewModel.CancelOrderAndProceedHome();
+            }
+            else
+            {
+                ShowCancelConfirmationDialog();
             }
         }
 
         private void CheckoutButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             if (ViewModel.HasItems)
             {
                 ViewModel.ProceedToPaymentSelection();
@@ -1326,25 +1352,30 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             {
                 if (key >= VirtualKey.Number0 && key <= VirtualKey.Number9)
                 {
+                    AppSound.KeypadClick();
                     char d = (char)('0' + (key - VirtualKey.Number0));
                     AppendChar(d);
                 }
                 else if (key >= VirtualKey.NumberPad0 && key <= VirtualKey.NumberPad9)
                 {
+                    AppSound.KeypadClick();
                     char d = (char)('0' + (key - VirtualKey.NumberPad0));
                     AppendChar(d);
                 }
                 else if (key >= VirtualKey.A && key <= VirtualKey.Z)
                 {
+                    AppSound.KeypadClick();
                     char letter = (char)('A' + (key - VirtualKey.A));
                     AppendChar(letter);
                 }
                 else if (key == VirtualKey.Back || key == VirtualKey.Delete)
                 {
+                    AppSound.KeypadClick();
                     DeleteLast();
                 }
                 else if (key == VirtualKey.Escape)
                 {
+                    AppSound.ButtonClick();
                     ClearAll();
                 }
                 else if (key == VirtualKey.Enter)
@@ -1376,6 +1407,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 };
                 btn.Click += (s, args) =>
                 {
+                    AppSound.KeypadClick();
                     onClick();
                     entryBox.Focus(FocusState.Programmatic);
                 };

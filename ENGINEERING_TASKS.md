@@ -26,6 +26,7 @@
 | **WP-13** | [Centralized Global Router & Route Registry (`AppRouter`)](#wp-13-centralized-global-router--route-registry-approuter) | `P1` | 🟢 `COMPLETED` | `KioskRoute`, `AppRoutes`, `AppRouter`, unified transition matrix, zero-boilerplate 1-line navigation |
 | **WP-14** | [Vault Breakdown Persistence Across App Lifecycles](#wp-14-vault-breakdown-persistence-across-app-lifecycles) | `P0` | 🟢 `COMPLETED` | `VaultInventoryService`, cross-session JSON storage, manual attendant reset |
 | **WP-15** | [Physical Keyboard & Enter Support on Cart Dialogs](#wp-15-physical-keyboard--enter-support-on-cart-dialogs) | `P1` | 🟢 `COMPLETED` | Add Item Manually, Check Price, Recall Cart direct typing & Enter trigger |
+| **WP-16** | [Global Sound System & Audio Feedback Engine](#wp-16-global-sound-system--audio-feedback-engine) | `P1` | 🟢 `COMPLETED` | `KioskSound`, `ISoundService`, `SoundService`, `AppSound`, dual-channel SFX + Voice playback |
 
 ---
 
@@ -288,6 +289,33 @@
 
 ---
 
+### WP-16: Global Sound System & Audio Feedback Engine
+**Objective:** Provide centralized, reusable, and low-latency audio feedback across all customer and admin flows, supporting tactile button clicks, keypad taps, scanner confirmations, error alarms, and voice guidance prompts.
+
+- [x] **16.1 Strongly-Typed Sound Registry (`KioskSound.cs`):**
+  - Defines 11 sound effects and voice prompts mapping 1-to-1 with assets in `Assets/sounds/`:
+    - `ButtonClick` (`button-sound.mp3`)
+    - `KeypadClick` (`keypad-sound.mp3`)
+    - `SuccessBeep` (`success-beep.mp3`)
+    - `ErrorPassword` (`error-password.mp3`)
+    - `ChoosePaymentMethod` (`choose-payment-method.mp3`)
+    - `Welcome` (`welcome-sound.mp3`)
+    - `PleaseScanFirstItem` (`please-scan-first-item.mp3`)
+    - `ThankYouTakeReceipt` (`thank-you-take-receipt.mp3`)
+    - `InvalidBarcode` (`invalid-barcode.mp3`)
+    - `InputMembershipCard` (`input-membership-card-number.mp3`)
+    - `InvalidMembership` (`invalid-membership.mp3`)
+- [x] **16.2 Dual-Channel High-Performance Audio Engine (`SoundService.cs`):**
+  - Isolates short sound effects (`SFX`) from voice guidance prompts (`Voice`) so button clicks do not interrupt ongoing spoken instructions.
+  - Pre-resolves audio URIs from `AppContext.BaseDirectory` on initialization for instantaneous zero-latency playback.
+  - Thread-safe volume control and global mute toggle.
+- [x] **16.3 1-Line Global Facade (`AppSound.cs`):**
+  - Ergonomic static calls available throughout the application (e.g. `AppSound.ButtonClick()`, `AppSound.SuccessBeep()`, `AppSound.ChoosePaymentMethod()`).
+- [x] **16.4 Full View & ViewModel Integration:**
+  - Integrated into `CartView`, `AdminLoginView`, `AdminLoginViewModel`, `PaymentSelectionView`, `SuccessView`, `HomeView`, `KioskBaseView`, `PaymentOptionView`, `QRPaymentView`, and `IngestionProgressView`.
+
+---
+
 ## 📈 Execution Sequence
 
 ```mermaid
@@ -305,4 +333,5 @@ graph TD
     K --> L["WP-13: Centralized Global Router & AppRoutes"]
     L --> M["WP-14: Vault Inventory Persistence"]
     M --> N["WP-15: Physical Keyboard & Enter Support on Cart Dialogs"]
+    N --> O["WP-16: Global Sound System & Audio Engine"]
 ```

@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.Models;
 using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Services.Audio;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using SelfCheckoutKiosk.Core.Abstractions;
 using System;
@@ -246,6 +247,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void BackButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             if (!ViewModel.CanNavigateBack) return;
 
             var font = LocalizationService.Instance.CurrentLanguage == "km"
@@ -319,11 +321,13 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void ConfirmPaymentButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             ViewModel.ConfirmPaymentAndProceed();
         }
 
         private async void HelpButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
 
             var dialog = new ContentDialog
@@ -374,6 +378,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             AppRouter.ToAdmin();
         }
     }

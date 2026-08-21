@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using SelfCheckoutKiosk.App.Navigation;
 using SelfCheckoutKiosk.App.Services;
+using SelfCheckoutKiosk.App.Services.Audio;
 using SelfCheckoutKiosk.App.ViewModels.Customer;
 using SelfCheckoutKiosk.Core.Abstractions;
 using System;
@@ -47,6 +48,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void PaymentSelectionView_Loaded(object sender, RoutedEventArgs e)
         {
+            AppSound.ChoosePaymentMethod();
             UpdateAvailability();
             HardwareStatusManager.Instance.PropertyChanged += HardwareStatusManager_PropertyChanged;
         }
@@ -147,47 +149,55 @@ namespace SelfCheckoutKiosk.App.Views.Customer
         private void CashCard_Click(object sender, RoutedEventArgs e)
         {
             if (!HardwareStatusManager.Instance.IsCashAvailable) return;
+            AppSound.ButtonClick();
             ViewModel.SelectPaymentMethod("Cash");
         }
 
         private void KhqrCard_Click(object sender, RoutedEventArgs e)
         {
             if (!HardwareStatusManager.Instance.IsQrAvailable) return;
+            AppSound.ButtonClick();
             ViewModel.SelectPaymentMethod("KHQR");
         }
 
         private void CardCard_Click(object sender, RoutedEventArgs e)
         {
             if (!HardwareStatusManager.Instance.IsCardAvailable) return;
+            AppSound.ButtonClick();
             ViewModel.SelectPaymentMethod("Card");
         }
 
         private void IntlQrCard_Click(object sender, RoutedEventArgs e)
         {
             if (!HardwareStatusManager.Instance.IsIntlQrAvailable) return;
+            AppSound.ButtonClick();
             ViewModel.SelectPaymentMethod("InternationalQR");
         }
 
         private void MembershipCard_Click(object sender, RoutedEventArgs e)
         {
             if (!HardwareStatusManager.Instance.IsMembershipAvailable) return;
+            AppSound.ButtonClick();
             ViewModel.SelectPaymentMethod("MembershipCard");
         }
 
         private void CouponCard_Click(object sender, RoutedEventArgs e)
         {
             if (!HardwareStatusManager.Instance.IsCouponAvailable) return;
+            AppSound.ButtonClick();
             ViewModel.SelectPaymentMethod("Coupon");
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             ViewModel.Cancel();
             ViewModel.ProceedToCart();
         }
 
         private async void HelpButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
 
             var dialog = new ContentDialog
@@ -238,6 +248,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void AdminButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             AppRouter.ToAdmin();
         }
     }
