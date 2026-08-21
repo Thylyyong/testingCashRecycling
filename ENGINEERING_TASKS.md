@@ -2,7 +2,7 @@
 
 > **Document ID:** `ENG-TASK-2026-V2`  
 > **Status:** Active Execution Tracker  
-> **Scope:** Currency Rounding Rules, UI Attendant Assistance, Receipt Printer Reliability, Bill Acceptor Stabilization & Project Optimization  
+> **Scope:** Currency Rounding Rules, UI Attendant Assistance, Receipt Printer Reliability, Bill Acceptor Stabilization, Production Packaging & Root Cleanup  
 > **Companion Documents:** [tracker.md](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/tracker.md) · [Kiosk_Architectural_Blueprint.md](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/src/Kiosk_Architectural_Blueprint.md)
 
 ---
@@ -17,7 +17,8 @@
 | **WP-04** | [Generic Bill Acceptor & ITL Hardware Stabilization](#wp-04-generic-bill-acceptor--itl-hardware-stabilization) | `P0` | 🟡 `IN PROGRESS` | ITL NV200/NV11, simulator & validator |
 | **WP-05** | [Architecture Interaction Flow & Component Remarks](#wp-05-architecture-interaction-flow--component-remarks) | `P1` | 🔴 `TODO` | In-depth code remarks & lifecycle mapping |
 | **WP-06** | [Project Structure Optimization & Dead Code Removal](#wp-06-project-structure-optimization--dead-code-removal) | `P1` | 🟢 `COMPLETED` | Safe cleanup, unused tools & structure pruning |
-| **WP-07** | [Admin Diagnostics & Age-Restricted Approval Workflow](#wp-07-admin-diagnostics--age-restricted-approval-workflow) | `P0` | 🟢 `COMPLETED` | Vault breakdown, receipt reprint, age approval modal, store branding & persistence |
+| **WP-07** | [Standalone Production Packaging & Installer Suite](#wp-07-standalone-production-packaging--installer-suite) | `P0` | 🟢 `COMPLETED` | Release distribution, installer engine, PRI resource bundling, license generator |
+| **WP-08** | [Admin Diagnostics & Age-Restricted Approval Workflow](#wp-08-admin-diagnostics--age-restricted-approval-workflow) | `P0` | 🟢 `COMPLETED` | Vault breakdown, receipt reprint, age approval modal, store branding & persistence |
 
 ---
 
@@ -35,7 +36,7 @@
 - [x] **1.2 UI & Receipt Synchronization:**
   - `CartViewModel`, `CartService`, `QRPaymentViewModel`, `IngestionProgressViewModel`, and `EpsonReceiptPrinter` now use `CalculateTotalKhr`.
 - [x] **1.3 Unit Tests:**
-  - Added test cases in `DualCurrencyCalculatorTests.cs` (Exact, 1 KHR, 50 KHR, 99 KHR remainders, Invalid rate). All 97 tests passing.
+  - Added test cases in `DualCurrencyCalculatorTests.cs` (Exact, 1 KHR, 50 KHR, 99 KHR remainders, Invalid rate). All 98 tests passing.
 
 ---
 
@@ -106,38 +107,40 @@
 
 ---
 
-### WP-06: Project Structure Optimization & Dead Code Removal
-**Objective:** Streamline the solution structure, eliminate orphaned tools/files safely without touching `.presentation` or breaking UI flows.
+### WP-06: Project Structure Optimization & Clean Root Reorganization
+**Objective:** Streamline repository organization, move build/packaging helper scripts to `scripts/`, remove dead code, and maintain a minimalist root.
 
-- [x] **6.1 Prune Orphaned Tools & Redundancies:**
-  - Removed deprecated orphaned `KeyGen` tool directory (`tools/KeyGen`) superseded by `DevLicenseTokenGenerator`.
-  - Preserved active models and headless test harness in `SelfCheckoutKiosk.Presentation` untouched.
-- [x] **6.2 Solution & Reference Synchronization:**
-  - Synchronized solution references and documentation in `tracker.md` and `ENGINEERING_TASKS.md`.
-  - Verified all projects and test suites build and execute without regression.
+- [x] **6.1 Move Batch Helpers to `scripts/`:**
+  - Moved `Build-DeploymentPackage.bat`, `QuickStart-Kiosk.bat`, `Generate-License.bat`, `Install-Kiosk.bat` into [`scripts/`](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/scripts/).
+  - Removed redundant root wrappers (`Installer.bat`, `Installer.ps1`).
+- [x] **6.2 Expand and Harden `.gitignore`:**
+  - Added comprehensive ignore rules for `dist/`, `publish/`, `artifacts/`, `*.log`, `*.db`, `*.dmp`, and cryptographic keys.
+- [x] **6.3 Prune Orphaned Tools & Redundancies:**
+  - Removed deprecated `KeyGen` tool superseded by `DevLicenseTokenGenerator`.
 
 ---
 
-### WP-07: Standalone Production Packaging & Distribution
-**Objective:** Provide a complete, self-contained Windows x64 release package with standalone executables for the Kiosk App, Cash Device REST API, and offline License Generator.
+### WP-07: Standalone Production Packaging & Installer Suite
+**Objective:** Provide complete, self-contained Windows x64 release distributions in `dist/` supporting both portable unpackaged execution and a 1-click administrative installer.
 
-- [x] **7.1 Self-Contained WinUI 3 Kiosk Application (`dist/SelfCheckoutKiosk-Package/KioskApp`):**
-  - Fully self-contained `SelfCheckoutKiosk.App.exe` built specifically for `win-x64` with bundled runtime, SQLCipher, DWriteCore, ONNX runtime, and all native libraries.
-  - Complete asset bundling: all i18n JSON localizations (`en.json`, `km.json`), flag PNGs, logo assets, videos, and fonts.
-  - Hardened absolute path loading in `MainWindow.xaml.cs` and `MediaBrandingService` (`Path.Combine(AppContext.BaseDirectory, ...)`).
-- [x] **7.2 Standalone Cash Device REST API Daemon (`dist/SelfCheckoutKiosk-Package/CashDeviceSimulator-API`):**
-  - Single-file standalone `CashDeviceSimulator.exe` with smart port fallback: binds to port 5000, or automatically falls back to port 5055 if port 5000 is occupied by a live hardware bridge (`CashDevice-RestAPI.exe`).
-  - Added package path resolution in `CashApiProcessManager.cs` to locate neighboring simulator/SDK executables automatically.
-- [x] **7.3 Standalone Offline License Generator (`dist/SelfCheckoutKiosk-Package/LicenseGenerator`):**
-  - Single-file `GenerateLicense.exe` with interactive prompt and automatic node-locked deployment to `KioskApp\license.token`.
-- [x] **7.4 1-Click Launchers & Deployment Documentation:**
-  - Added `Start-Kiosk-With-API.bat`, `Start-Kiosk.bat`, `Start-CashDevice-API.bat`, `Generate-License-For-This-Device.bat`, and `README_DEPLOYMENT.md`.
-  - Added working directory context pinning (`cd /d "%~dp0KioskApp"`) so launchers work from any directory or administrative context.
+- [x] **7.1 Portable Unpackaged Version (`dist/SelfCheckoutKiosk-Portable`):**
+  - Zero-installation folder running directly in-place from any directory or USB drive.
+  - Bundles self-contained `SelfCheckoutKiosk.App.exe`, `CashDeviceSimulator.exe`, and single-file `GenerateLicense.exe`.
+  - Includes `Start-Kiosk-With-API.bat` launcher with automatic node-locked license generation.
+- [x] **7.2 Administrative Installer Suite (`dist/SelfCheckoutKiosk-Installer`):**
+  - 1-Click interactive/silent installer engine (`Install.bat` / `Setup.bat` / `Installer.ps1`).
+  - Automatically provisions target directory (`C:\SelfCheckoutKiosk`), inspects machine hardware ID, generates valid `license.token`, opens firewall ports (`5055`/`5000`), creates Desktop/Start Menu shortcuts, and generates `Uninstall.bat`.
+- [x] **7.3 WinUI 3 XAML Resource Index (PRI) Bundling Fix:**
+  - Resolved `XamlParseException` during `MainWindow.InitializeComponent()` by explicitly bundling `resources.pri` and `SelfCheckoutKiosk.App.pri` into published output folders.
+- [x] **7.4 Release Mode Build Conflict Resolution:**
+  - Fixed `NETSDK1152` duplicate `license.token` collision in `SelfCheckoutKiosk.App.csproj` and set explicit `x64` / `win-x64` platform defaults.
+- [x] **7.5 Interactive & CLI License Generator (`GenerateLicense.exe`):**
+  - Supports current machine auto-detection, remote hardware ID generation, token inspection, and automatic synchronization across target directories.
 
 ---
 
 ### WP-08: Admin Diagnostics & Age-Restricted Approval Workflow
-**Objective:** Provide full attendant diagnostics UI matching target designs (Image 1, 2, 3), real-time vault breakdown tracking and reset confirmation, thermal receipt reprinting, genuine external hardware connectivity status, and a global staff assistance / age-restricted item approval pipeline.
+**Objective:** Provide full attendant diagnostics UI, real-time vault breakdown tracking and reset confirmation, thermal receipt reprinting, genuine external hardware connectivity status, and a global staff assistance / age-restricted item approval pipeline.
 
 - [x] **8.1 Dynamic Vault Breakdown & Reset Confirmation:**
   - Implemented `VaultInventoryService` tracking deposited notes across KHR (100, 500, 1000, 5000, 10000, 20000, 50000) and USD ($1, $5, $10, $20, $50, $100).
@@ -151,25 +154,20 @@
 - [x] **8.4 Age-Restricted Customer Alert & Admin Approval:**
   - Created `AgeRestrictedApprovalManager` to manage pending approvals across customer and admin views.
   - In `CartView.xaml.cs` and `App.xaml.cs`, scanning age-restricted products triggers the modal dialog ("One moment — staff assistance needed" / "សូមរង់ចាំមួយភ្លែត — ត្រូវការជំនួយពីបុគ្គលិក") with blue circular badge, Admin shortcut, and full Khmer (`km`) / English (`en`) dictionary localization and font switching.
-  - In `AdminDiagnosticsView.xaml`, renders the top approval card (bold product name, gray SKU, vibrant blue `[Approve]` button, outlined red `[Reject]` button with full hover/pressed states) matching reference design.
+  - In `AdminDiagnosticsView.xaml`, renders the top approval card matching reference design.
   - **Quantity Stacking Fix:** `AgeRestrictedApprovalManager.Approve()` directly invokes `App.CartServiceInstance.AddItem(...)` exactly once upon attendant approval. Removed leaky view-level event subscriptions in `CartView` that caused duplicate/multiplied quantities when scanning and approving subsequent items.
-  - Approved items are immediately added to the cart, pre-existing cart items are preserved intact, and repeated scans increment by exactly +1 per approved scan.
 - [x] **8.5 Admin Diagnostics Design & Navigation:**
   - Restored `AdminDiagnosticsView.xaml` to match `MediaBrandingView.xaml` design language (`#F1F5F9` background, white top bar, `CornerRadius="12"` cards with `#CBD5E1` borders, responsive 2-column ↔ portrait layout, section header style).
-  - Preserved original header: "Admin Diagnostics" bold title, `System Operational` green pill badge, subtitle, text-only `Close` button.
-  - Retained prominent "Media & Branding Management" card with blue icon badge and `Open` accent button.
-  - Reset Vault Counts button uses red danger styling (`#FEF2F2` background, `#FECACA` border, `#DC2626` text) with dedicated hover/pressed visual states and a destructive `ContentDialog` confirmation.
+  - Reset Vault Counts button uses red danger styling with dedicated hover/pressed visual states and a destructive `ContentDialog` confirmation.
   - Implemented `INavigationService.NavigateBackToCustomer()` which prunes admin stack entries and returns to whichever customer screen opened Admin.
 - [x] **8.6 Dynamic Store Branding & Cross-Session Persistence:**
   - Updated `BrandingConfig` model to track `CompanyName`, `Tagline`, `LogoFileName` (with fallback to `ca.ico`), `StoreHours`, and `KioskId`.
   - Added JSON serialization & local disk persistence (`branding_config.json`) in `MediaBrandingService`, automatically loading saved branding and playlist on application boot.
-  - Wired `MediaBrandingService.BrandingChanged` event to notify listeners dynamically.
   - Updated `HomeViewModel` and `HomeView.xaml` to dynamically render the store logo, brand name, tagline, and store hours in the header and footer across both 16:9 Landscape and 9:16 Portrait kiosk aspect ratios.
-  - Enhanced `MediaBrandingView.xaml` with live logo image preview, store hours configuration, and save action.
-- [x] **7.7 Peripheral Robustness & UI Consistency Fixes:**
-  - **Scanner Binary Noise Filtering:** Added strict validation in `DatalogicBarcodeScanner.IsValidBarcodeString` and `CartView.ProcessScannedBarcodeAsync` to filter out non-barcode binary serial traffic (e.g. bluetooth frames / heartbeat pulses), eliminating spurious "Item Not Found" dialogs with corrupted characters.
-  - **Payment Decoupling:** Added `isCash` parameter to `IPaymentService.BeginTransaction(...)` and configured `QRPaymentViewModel` with `isCash: false`. Cash hardware arming (`ArmAcceptanceAsync`) is now strictly constrained to cash transactions with verified online hardware, preventing spurious exceptions during KHQR flows.
-  - **Universal Help Button Consistency:** Unified Help button icon across all customer views (`HomeView`, `CartView`, `PaymentSelectionView`, `IngestionProgressView`, `QRPaymentView`) to Segoe Fluent glyph `&#xE9CE;` and aligned the header pill chip in `PaymentSelectionView`.
+- [x] **8.7 Peripheral Robustness & UI Consistency Fixes:**
+  - **Scanner Binary Noise Filtering:** Added strict validation in `DatalogicBarcodeScanner.IsValidBarcodeString` and `CartView.ProcessScannedBarcodeAsync` to filter out non-barcode binary serial traffic.
+  - **Payment Decoupling:** Added `isCash` parameter to `IPaymentService.BeginTransaction(...)` and configured `QRPaymentViewModel` with `isCash: false`.
+  - **Universal Help Button Consistency:** Unified Help button icon across all customer views to Segoe Fluent glyph `&#xE9CE;`.
 
 ---
 
@@ -178,10 +176,9 @@
 ```mermaid
 graph TD
     A["WP-01: Dual-Currency KHR Round-Up Total"] --> B["WP-02: Attendant Assistance Flow on Payments"]
-    B --> C["WP-03: Receipt Printer Pipeline & Fallback"]
-    C --> D["WP-04: Generic Bill Acceptor Stabilization"]
-    D --> E["WP-05: Architecture Remarks & Docs"]
-    E --> F["WP-06: Project Optimization & Safe Cleanup"]
-    F --> G["WP-07: Admin Diagnostics, Age Approval & Branding"]
-    G --> H["WP-07.7: Peripheral Robustness & UI Consistency"]
+    B --> C["WP-03: Thermal Receipt Printer & Supermarket Template"]
+    C --> D["WP-04: Bill Acceptor & ITL REST Bridge"]
+    D --> E["WP-06: Project Structure Optimization & Root Clean"]
+    E --> F["WP-07: Standalone Packaging & Installer Suite"]
+    F --> G["WP-08: Admin Diagnostics, Age Approval & Store Branding"]
 ```
