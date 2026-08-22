@@ -1,6 +1,9 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
+using Windows.UI;
 
 namespace SelfCheckoutKiosk.App.Models
 {
@@ -11,6 +14,7 @@ namespace SelfCheckoutKiosk.App.Models
         private string _mediaType = "Image"; // "Image" or "Video"
         private int _durationSeconds = 10;
         private bool _isActive = true;
+        private bool _isAudioEnabled = true;
         private int _sortOrder = 0;
 
         public string Id
@@ -28,10 +32,19 @@ namespace SelfCheckoutKiosk.App.Models
         public string MediaType
         {
             get => _mediaType;
-            set { _mediaType = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsVideo)); OnPropertyChanged(nameof(TypeGlyph)); }
+            set
+            {
+                _mediaType = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsVideo));
+                OnPropertyChanged(nameof(TypeGlyph));
+                OnPropertyChanged(nameof(VideoVisibility));
+            }
         }
 
         public bool IsVideo => string.Equals(_mediaType, "Video", StringComparison.OrdinalIgnoreCase);
+
+        public Visibility VideoVisibility => IsVideo ? Visibility.Visible : Visibility.Collapsed;
 
         public string TypeGlyph => IsVideo ? "\uE714" : "\uEB9F"; // Video icon vs Image icon
 
@@ -71,6 +84,30 @@ namespace SelfCheckoutKiosk.App.Models
         }
 
         public string StatusText => IsActive ? "Active" : "Inactive";
+
+        public bool IsAudioEnabled
+        {
+            get => _isAudioEnabled;
+            set
+            {
+                if (_isAudioEnabled != value)
+                {
+                    _isAudioEnabled = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(SoundGlyph));
+                    OnPropertyChanged(nameof(SoundTooltip));
+                    OnPropertyChanged(nameof(SoundForegroundBrush));
+                }
+            }
+        }
+
+        public string SoundGlyph => IsAudioEnabled ? "\uE767" : "\uE74F"; // Volume vs Mute
+
+        public string SoundTooltip => IsAudioEnabled ? "Audio: ON (Sound enabled)" : "Audio: OFF (Muted)";
+
+        public Brush SoundForegroundBrush => IsAudioEnabled
+            ? new SolidColorBrush(Color.FromArgb(255, 37, 99, 235))   // Blue #2563EB
+            : new SolidColorBrush(Color.FromArgb(255, 148, 163, 184)); // Muted slate #94A3B8
 
         public int SortOrder
         {

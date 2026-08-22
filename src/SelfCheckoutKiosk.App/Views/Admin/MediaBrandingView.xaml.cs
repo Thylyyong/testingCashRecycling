@@ -111,6 +111,14 @@ namespace SelfCheckoutKiosk.App.Views.Admin
             }
         }
 
+        private void SoundToggle_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is AdminMediaItem item)
+            {
+                ViewModel.ToggleAudio(item);
+            }
+        }
+
         private void DeleteMedia_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is AdminMediaItem item)

@@ -76,6 +76,7 @@ public sealed class MediaBrandingService
         if (_isLoading) return;
 
         if (e.PropertyName == nameof(AdminMediaItem.IsActive) ||
+            e.PropertyName == nameof(AdminMediaItem.IsAudioEnabled) ||
             e.PropertyName == nameof(AdminMediaItem.SortOrder) ||
             e.PropertyName == nameof(AdminMediaItem.DurationSeconds) ||
             e.PropertyName == nameof(AdminMediaItem.FileName))
@@ -259,6 +260,12 @@ public sealed class MediaBrandingService
         SaveConfiguration();
     }
 
+    public void ToggleAudio(AdminMediaItem item)
+    {
+        item.IsAudioEnabled = !item.IsAudioEnabled;
+        SaveConfiguration();
+    }
+
     public void RemoveMedia(AdminMediaItem item)
     {
         if (MediaItems.Remove(item))
@@ -292,6 +299,7 @@ public sealed class MediaBrandingService
             {
                 Path = m.UriPath,
                 IsVideo = m.IsVideo,
+                IsAudioEnabled = m.IsAudioEnabled,
                 DurationSeconds = m.DurationSeconds > 0 ? m.DurationSeconds : 7
             })
             .ToList();
@@ -302,6 +310,7 @@ public sealed class MediaBrandingService
             {
                 Path = "ms-appx:///Assets/Images/Banner/banner1.jpg",
                 IsVideo = false,
+                IsAudioEnabled = false,
                 DurationSeconds = 7
             });
         }

@@ -198,6 +198,19 @@
                                                 </StackPanel>
 
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <!-- Video Sound Toggle Button (First Button) -->
+                                                    <Button
+                                                        Width="32"
+                                                        Height="32"
+                                                        Padding="0"
+                                                        CornerRadius="6"
+                                                        Style="{StaticResource DialogButtonStyle}"
+                                                        Tag="{x:Bind}"
+                                                        Visibility="{x:Bind VideoVisibility, Mode=OneWay}"
+                                                        ToolTipService.ToolTip="{x:Bind SoundTooltip, Mode=OneWay}"
+                                                        Click="SoundToggle_Click">
+                                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="{x:Bind SoundGlyph, Mode=OneWay}" FontSize="12" Foreground="{x:Bind SoundForegroundBrush, Mode=OneWay}"/>
+                                                    </Button>
                                                     <Button Width="32" Height="32" Padding="0" CornerRadius="6" Style="{StaticResource DialogButtonStyle}" Tag="{x:Bind}" Click="MoveUp_Click">
                                                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE70E;" FontSize="11" Foreground="#0F172A"/>
                                                     </Button>
@@ -378,6 +391,19 @@
                                                 </StackPanel>
 
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <!-- Video Sound Toggle Button (First Button) -->
+                                                    <Button
+                                                        Width="30"
+                                                        Height="30"
+                                                        Padding="0"
+                                                        CornerRadius="6"
+                                                        Style="{StaticResource DialogButtonStyle}"
+                                                        Tag="{x:Bind}"
+                                                        Visibility="{x:Bind VideoVisibility, Mode=OneWay}"
+                                                        ToolTipService.ToolTip="{x:Bind SoundTooltip, Mode=OneWay}"
+                                                        Click="SoundToggle_Click">
+                                                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="{x:Bind SoundGlyph, Mode=OneWay}" FontSize="12" Foreground="{x:Bind SoundForegroundBrush, Mode=OneWay}"/>
+                                                    </Button>
                                                     <Button Width="30" Height="30" Padding="0" CornerRadius="6" Style="{StaticResource DialogButtonStyle}" Tag="{x:Bind}" Click="MoveUp_Click">
                                                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE70E;" FontSize="11" Foreground="#0F172A"/>
                                                     </Button>

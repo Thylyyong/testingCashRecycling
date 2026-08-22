@@ -294,6 +294,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     var player = BannerVideoPlayer.MediaPlayer;
                     if (player != null)
                     {
+                        player.IsMuted = !current.IsAudioEnabled;
+                        player.Volume = current.IsAudioEnabled ? 1.0 : 0.0;
                         player.IsLoopingEnabled = false;
                         player.Play();
                     }

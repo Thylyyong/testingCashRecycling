@@ -65,6 +65,12 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
             StatusMessage = $"Media '{item.FileName}' is now {item.StatusText}.";
         }
 
+        public void ToggleAudio(AdminMediaItem item)
+        {
+            MediaBrandingService.Instance.ToggleAudio(item);
+            StatusMessage = $"Sound for '{item.FileName}' is now {(item.IsAudioEnabled ? "ON" : "OFF (Muted)")}.";
+        }
+
         public void RemoveMedia(AdminMediaItem item)
         {
             MediaBrandingService.Instance.RemoveMedia(item);

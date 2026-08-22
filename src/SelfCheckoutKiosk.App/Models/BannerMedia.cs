@@ -4,6 +4,7 @@ namespace SelfCheckoutKiosk.App.Models
     {
         public string Path { get; set; } = string.Empty;
         public bool IsVideo { get; set; }
+        public bool IsAudioEnabled { get; set; } = true;
         public bool IsCurrent { get; set; }
         public int DurationSeconds { get; set; } = 7;
     }
