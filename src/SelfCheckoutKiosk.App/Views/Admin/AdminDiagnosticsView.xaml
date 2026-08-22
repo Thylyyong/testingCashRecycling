@@ -503,7 +503,7 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Cash Recycler Vault Breakdown" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center" Margin="0"/>
+                                <TextBlock Grid.Column="0" Text="Bill Acceptor Vault Breakdown" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center" Margin="0"/>
                                 <Button
                                     Grid.Column="1"
                                     Click="ResetVaultButton_Click"

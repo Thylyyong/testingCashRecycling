@@ -84,7 +84,7 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
     {
         VaultInventoryService.Instance.ResetVault();
         RefreshCassettes();
-        StatusMessage = "Cash vault breakdown counts reset to zero.";
+        StatusMessage = "Cash Box breakdown counts reset to zero.";
         IsStatusSuccess = true;
     }
 
@@ -182,7 +182,7 @@ public class AdminDiagnosticsViewModel : INotifyPropertyChanged
 
         HardwareDevices.Add(new HardwareDeviceStatus
         {
-            Name = "Cash Recycler",
+            Name = "Bill Acceptor",
             DeviceType = "Cash & Note Validator",
             IsConnected = hw.IsCashAvailable,
             PortOrInterface = hw.IsCashAvailable ? $"REST API • {cashPort}" : hw.CashStatusReason,

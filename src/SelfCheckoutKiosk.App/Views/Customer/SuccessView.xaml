@@ -41,6 +41,7 @@
                         <Setter Target="RedirectProgressBar.Width" Value="180"/>
                         <Setter Target="FooterGrid.Padding" Value="22,16"/>
                         <Setter Target="DoneButton.Height" Value="60"/>
+                        <Setter Target="DoneButtonIcon.FontSize" Value="18"/>
                         <Setter Target="DoneButtonText.FontSize" Value="19"/>
                     </VisualState.Setters>
                 </VisualState>
@@ -74,6 +75,7 @@
                         <Setter Target="RedirectProgressBar.Width" Value="260"/>
                         <Setter Target="FooterGrid.Padding" Value="36,24"/>
                         <Setter Target="DoneButton.Height" Value="80"/>
+                        <Setter Target="DoneButtonIcon.FontSize" Value="22"/>
                         <Setter Target="DoneButtonText.FontSize" Value="24"/>
                     </VisualState.Setters>
                 </VisualState>
@@ -107,6 +109,7 @@
                         <Setter Target="RedirectProgressBar.Width" Value="340"/>
                         <Setter Target="FooterGrid.Padding" Value="48,32"/>
                         <Setter Target="DoneButton.Height" Value="96"/>
+                        <Setter Target="DoneButtonIcon.FontSize" Value="28"/>
                         <Setter Target="DoneButtonText.FontSize" Value="30"/>
                     </VisualState.Setters>
                 </VisualState>
@@ -225,15 +228,18 @@
         </Grid>
 
         <!-- KIOSK FOOTER -->
-        <Grid x:Name="FooterGrid" Grid.Row="2" Background="{StaticResource CardBackgroundBrush}" Padding="32,20">
-            <Button x:Name="DoneButton" HorizontalAlignment="Stretch" Height="72" Background="{StaticResource CheckoutButtonGradientBrush}" CornerRadius="{StaticResource KioskHeroCardCornerRadius}" Click="DoneButton_Click">
+        <Grid x:Name="FooterGrid" Grid.Row="2" Background="Transparent" Padding="32,20">
+            <Button x:Name="DoneButton" HorizontalAlignment="Stretch" Height="72" Background="{StaticResource CheckoutButtonGradientBrush}" CornerRadius="16" Click="DoneButton_Click">
                 <Button.Resources>
                     <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="PrimaryBrandHoverBrush"/>
                     <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="PrimaryBrandPressedBrush"/>
                     <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="TextOnAccentBrush"/>
                     <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="TextOnAccentBrush"/>
                 </Button.Resources>
-                <TextBlock x:Name="DoneButtonText" Text="{x:Bind Localizer.GetString('Done'), Mode=OneWay}" FontFamily="{StaticResource GlobalAppFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeHeroSmall}" Foreground="{StaticResource TextOnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" CharacterSpacing="60"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                    <FontIcon x:Name="DoneButtonIcon" FontFamily="Segoe Fluent Icons" Glyph="&#xE73E;" FontSize="20" Foreground="{StaticResource TextOnAccentBrush}"/>
+                    <TextBlock x:Name="DoneButtonText" Text="{x:Bind Localizer.GetString('Done'), Mode=OneWay}" FontFamily="{StaticResource GlobalAppFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeHeroSmall}" Foreground="{StaticResource TextOnAccentBrush}" VerticalAlignment="Center" CharacterSpacing="60"/>
+                </StackPanel>
             </Button>
         </Grid>
     </Grid>

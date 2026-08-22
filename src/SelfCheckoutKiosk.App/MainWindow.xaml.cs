@@ -49,6 +49,8 @@ namespace SelfCheckoutKiosk.App
         private IntPtr _hwnd;
         private Win32SubClassDelegate? _wndProcDelegate;
         private IntPtr _oldWndProc;
+        private AppWindow? _appWindow;
+        private bool _isFullScreen;
 
         private delegate IntPtr Win32SubClassDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
@@ -104,16 +106,20 @@ namespace SelfCheckoutKiosk.App
                 Debug.WriteLine($"[Window SubClass Warning] {ex.Message}");
             }
 
+            _appWindow = appWindow;
+
             // Configure window mode based on option flag
             if (_startInFullScreen)
             {
                 // Native WinUI 3 Fullscreen mode (overrides window frame sizing)
                 appWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
+                _isFullScreen = true;
             }
             else
             {
                 // Force initial window size to a clean 9:16 portrait layout on startup (e.g., Width: 540, Height: 960)
                 EnforceInitialAspectRatio(540, 960);
+                _isFullScreen = false;
             }
 
             // Initialize your navigation service with the root frame defined in XAML
@@ -138,12 +144,37 @@ namespace SelfCheckoutKiosk.App
                 }
             }
 
+            // 1.5. F11 Fullscreen toggle
+            if (e.Key == VirtualKey.F11)
+            {
+                ToggleFullScreen();
+                e.Handled = true;
+                return;
+            }
+
             // 2. Allow Admin keyboard shortcuts (Ctrl+Shift+A, Ctrl+Shift+Backspace)
             var ctrl = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down);
             var shift = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(CoreVirtualKeyStates.Down);
             if (ctrl && shift && (e.Key == VirtualKey.A || e.Key == VirtualKey.Back))
             {
                 _wedgeBuffer.Clear();
+
+                if (e.Key == VirtualKey.A)
+                {
+                    var currentPageType = RootFrame.Content?.GetType();
+                    if (currentPageType == typeof(AdminDiagnosticsView) ||
+                        currentPageType == typeof(MediaBrandingView))
+                    {
+                        AppRouter.BackToCustomer();
+                    }
+                    else
+                    {
+                        _ = AdminLoginDialog.ShowAsync(this.Content?.XamlRoot);
+                    }
+                    e.Handled = true;
+                    return;
+                }
+
                 return;
             }
 
@@ -192,6 +223,30 @@ namespace SelfCheckoutKiosk.App
             SetWindowPos(_hwnd, IntPtr.Zero, 0, 0, initialWidth, initialHeight, SWP_NOMOVE | SWP_NOZORDER);
         }
 
+        public void ToggleFullScreen()
+        {
+            if (_appWindow == null)
+            {
+                var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+                var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(windowHandle);
+                _appWindow = AppWindow.GetFromWindowId(windowId);
+            }
+
+            if (_appWindow != null)
+            {
+                if (_isFullScreen || _appWindow.Presenter.Kind == AppWindowPresenterKind.FullScreen)
+                {
+                    _appWindow.SetPresenter(AppWindowPresenterKind.Default);
+                    _isFullScreen = false;
+                }
+                else
+                {
+                    _appWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
+                    _isFullScreen = true;
+                }
+            }
+        }
+
         private IntPtr CustomWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
         {
             if (msg == WM_SIZING)
@@ -234,19 +289,18 @@ namespace SelfCheckoutKiosk.App
             var shift = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)
                 .HasFlag(CoreVirtualKeyStates.Down);
 
-            // Ctrl + Shift + A -> Admin Login or Toggle Back to Kiosk if already in Admin
+            // Ctrl + Shift + A -> Admin Login Dialog or Toggle Back to Kiosk if already in Admin
             if (ctrl && shift && e.Key == VirtualKey.A)
             {
                 var currentPageType = RootFrame.Content?.GetType();
-                if (currentPageType == typeof(AdminLoginView) ||
-                    currentPageType == typeof(AdminDiagnosticsView) ||
+                if (currentPageType == typeof(AdminDiagnosticsView) ||
                     currentPageType == typeof(MediaBrandingView))
                 {
                     AppRouter.BackToCustomer();
                 }
                 else
                 {
-                    AppRouter.ToAdmin(SlideNavigationTransitionEffect.FromRight);
+                    _ = AdminLoginDialog.ShowAsync(this.Content?.XamlRoot);
                 }
                 e.Handled = true;
             }

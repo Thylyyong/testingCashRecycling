@@ -341,11 +341,11 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             ScanIconAnimation.Begin();
         }
 
-        private void AdminButton_Click(object sender, RoutedEventArgs e)
+        private async void AdminButton_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
             AppSound.ButtonClick();
-            AppRouter.ToAdmin();
+            await AdminLoginDialog.ShowAsync(this.XamlRoot);
         }
 
         private void PaymentIcon_Loaded(object sender, RoutedEventArgs e)

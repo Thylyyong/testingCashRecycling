@@ -202,11 +202,11 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             ViewModel.GoBack();
         }
 
-        private void AdminButton_Click(object sender, RoutedEventArgs e)
+        private async void AdminButton_Click(object sender, RoutedEventArgs e)
         {
             ResetInactivityTimer();
             AppSound.ButtonClick();
-            AppRouter.ToAdmin();
+            await AdminLoginDialog.ShowAsync(this.XamlRoot);
         }
     }
 }

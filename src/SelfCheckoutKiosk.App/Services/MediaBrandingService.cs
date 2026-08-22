@@ -28,13 +28,18 @@ public sealed class MediaBrandingService
     public event EventHandler? PlaylistChanged;
     public event EventHandler? BrandingChanged;
 
+    private bool _isLoading = false;
+
     private MediaBrandingService()
     {
         LoadPersistedConfiguration();
 
         Branding.PropertyChanged += (s, e) =>
         {
-            BrandingChanged?.Invoke(this, EventArgs.Empty);
+            if (!_isLoading)
+            {
+                BrandingChanged?.Invoke(this, EventArgs.Empty);
+            }
         };
 
         MediaItems.CollectionChanged += MediaItems_CollectionChanged;
@@ -60,22 +65,29 @@ public sealed class MediaBrandingService
                 item.PropertyChanged -= Item_PropertyChanged;
             }
         }
-        PlaylistChanged?.Invoke(this, EventArgs.Empty);
+        if (!_isLoading)
+        {
+            PlaylistChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void Item_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (_isLoading) return;
+
         if (e.PropertyName == nameof(AdminMediaItem.IsActive) ||
             e.PropertyName == nameof(AdminMediaItem.SortOrder) ||
             e.PropertyName == nameof(AdminMediaItem.DurationSeconds) ||
             e.PropertyName == nameof(AdminMediaItem.FileName))
         {
             PlaylistChanged?.Invoke(this, EventArgs.Empty);
+            SaveConfiguration();
         }
     }
 
     private void LoadPersistedConfiguration()
     {
+        _isLoading = true;
         try
         {
             if (File.Exists(ConfigFilePath))
@@ -93,21 +105,45 @@ public sealed class MediaBrandingService
                         Branding.StoreHours = stored.Branding.StoreHours ?? "Open until 10:00 PM";
                     }
 
-                    if (stored.MediaItems != null && stored.MediaItems.Count > 0)
+                    MediaItems.Clear();
+
+                    var loadedItems = stored.MediaItems ?? new List<AdminMediaItem>();
+                    var defaultItems = GetDefaultMediaList();
+                    var loadedFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    // 1. Restore all saved items in their custom sort order and saved active toggle state
+                    foreach (var item in loadedItems.OrderBy(m => m.SortOrder))
                     {
-                        MediaItems.Clear();
-                        foreach (var item in stored.MediaItems.OrderBy(m => m.SortOrder))
+                        MediaItems.Add(item);
+                        if (!string.IsNullOrWhiteSpace(item.FileName))
                         {
-                            MediaItems.Add(item);
+                            loadedFileNames.Add(item.FileName);
                         }
-                        return;
                     }
+
+                    // 2. Ensure default bundled media items exist on startup (restores temporarily deleted items on app launch)
+                    int nextOrder = MediaItems.Count;
+                    foreach (var def in defaultItems)
+                    {
+                        if (!loadedFileNames.Contains(def.FileName))
+                        {
+                            def.SortOrder = nextOrder++;
+                            MediaItems.Add(def);
+                        }
+                    }
+
+                    ReindexSortOrders();
+                    return;
                 }
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[MediaBrandingService] Could not load persisted branding config: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
         }
 
         // Fallback to default playlist if no stored items found
@@ -116,6 +152,8 @@ public sealed class MediaBrandingService
 
     public void SaveConfiguration()
     {
+        if (_isLoading) return;
+
         try
         {
             var model = new BrandingStorageModel
@@ -137,51 +175,59 @@ public sealed class MediaBrandingService
         }
     }
 
-    private void InitializeDefaultPlaylist()
+    public static List<AdminMediaItem> GetDefaultMediaList()
     {
-        MediaItems.Clear();
-
-        // 1. video1.mp4 (Promotional Video 1)
-        MediaItems.Add(new AdminMediaItem
+        return new List<AdminMediaItem>
         {
-            FileName = "video1.mp4",
-            MediaType = "Video",
-            DurationSeconds = 15,
-            IsActive = true,
-            SortOrder = 0
-        });
-
-        // 2. banner1.jpg (Welcome Banner)
-        MediaItems.Add(new AdminMediaItem
-        {
-            FileName = "banner1.jpg",
-            MediaType = "Image",
-            DurationSeconds = 7,
-            IsActive = true,
-            SortOrder = 1
-        });
-
-        // 3. video2.mp4 (Promotional Video 2)
-        MediaItems.Add(new AdminMediaItem
-        {
-            FileName = "video2.mp4",
-            MediaType = "Video",
-            DurationSeconds = 15,
-            IsActive = true,
-            SortOrder = 2
-        });
-
-        // 4. banner2.jpg - banner5.jpg (Featured Store Banners)
-        for (int i = 2; i <= 5; i++)
-        {
-            MediaItems.Add(new AdminMediaItem
+            // 1. video1.mp4 (Promotional Video 1)
+            new AdminMediaItem
             {
-                FileName = $"banner{i}.jpg",
+                FileName = "video1.mp4",
+                MediaType = "Video",
+                DurationSeconds = 15,
+                IsActive = true,
+                SortOrder = 0
+            },
+            // 2. banner1.jpg (Welcome Banner)
+            new AdminMediaItem
+            {
+                FileName = "banner1.jpg",
                 MediaType = "Image",
                 DurationSeconds = 7,
                 IsActive = true,
-                SortOrder = i + 1
-            });
+                SortOrder = 1
+            },
+            // 3. video2.mp4 (Promotional Video 2)
+            new AdminMediaItem
+            {
+                FileName = "video2.mp4",
+                MediaType = "Video",
+                DurationSeconds = 15,
+                IsActive = true,
+                SortOrder = 2
+            },
+            // 4. banner2.jpg - banner5.jpg (Featured Store Banners)
+            new AdminMediaItem { FileName = "banner2.jpg", MediaType = "Image", DurationSeconds = 7, IsActive = true, SortOrder = 3 },
+            new AdminMediaItem { FileName = "banner3.jpg", MediaType = "Image", DurationSeconds = 7, IsActive = true, SortOrder = 4 },
+            new AdminMediaItem { FileName = "banner4.jpg", MediaType = "Image", DurationSeconds = 7, IsActive = true, SortOrder = 5 },
+            new AdminMediaItem { FileName = "banner5.jpg", MediaType = "Image", DurationSeconds = 7, IsActive = true, SortOrder = 6 }
+        };
+    }
+
+    private void InitializeDefaultPlaylist()
+    {
+        _isLoading = true;
+        try
+        {
+            MediaItems.Clear();
+            foreach (var item in GetDefaultMediaList())
+            {
+                MediaItems.Add(item);
+            }
+        }
+        finally
+        {
+            _isLoading = false;
         }
     }
 

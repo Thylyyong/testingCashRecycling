@@ -33,18 +33,18 @@
                     </VisualState.Setters>
                 </VisualState>
 
-                <!-- 2. Vertical Kiosk: 9:16, 27.5 Inches (1080x1920) -->
-                <VisualState x:Name="Vertical27InchState">
+                <!-- 2. Vertical Kiosk: 9:16, 21.5" & 27.5" (both 1080x1920 @ 100% DPI → effective height ~1920px) -->
+                <VisualState x:Name="VerticalKioskState">
                     <VisualState.StateTriggers>
                         <AdaptiveTrigger MinWindowHeight="1200" MinWindowWidth="0" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="ScrimRectangle.Height" Value="420" />
-                        <Setter Target="BrandingStackPanel.Margin" Value="56,0,0,64" />
-                        <Setter Target="WelcomeTextBlock.FontSize" Value="24" />
-                        <Setter Target="TitleTextBlock.FontSize" Value="68" />
-                        <Setter Target="TapPromptTextBlock.FontSize" Value="26" />
-                        <Setter Target="IndicatorDots.Margin" Value="0,0,56,72" />
+                        <Setter Target="ScrimRectangle.Height" Value="500" />
+                        <Setter Target="BrandingStackPanel.Margin" Value="56,0,0,72" />
+                        <Setter Target="WelcomeTextBlock.FontSize" Value="30" />
+                        <Setter Target="TitleTextBlock.FontSize" Value="86" />
+                        <Setter Target="TapPromptTextBlock.FontSize" Value="32" />
+                        <Setter Target="IndicatorDots.Margin" Value="0,0,56,80" />
                     </VisualState.Setters>
                 </VisualState>
 

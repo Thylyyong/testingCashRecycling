@@ -336,10 +336,11 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 BorderThickness = new Thickness(1),
                 HorizontalAlignment = HorizontalAlignment.Left
             };
-            adminBtn.Click += (s, e) =>
+            adminBtn.Click += async (s, e) =>
             {
+                AppSound.ButtonClick();
                 dialog.Hide();
-                AppRouter.ToAdmin();
+                await AdminLoginDialog.ShowAsync(this.XamlRoot);
             };
             container.Children.Add(adminBtn);
 
@@ -392,9 +393,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
         }
 
-        private void AdminButton_Click(object sender, RoutedEventArgs e)
+        private async void AdminButton_Click(object sender, RoutedEventArgs e)
         {
-            AppRouter.ToAdmin();
+            AppSound.ButtonClick();
+            await AdminLoginDialog.ShowAsync(this.XamlRoot);
         }
 
         private void RefreshNetworkStatusUI()
@@ -416,6 +418,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void CurrencySwitch_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             _isUsd = !_isUsd;
             ViewModel.ToggleCurrency();
             RefreshCurrencyLabel();
@@ -428,6 +431,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void HelpButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             var globalFont = (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
 
             var dialog = new ContentDialog
@@ -473,11 +477,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 RequestedTheme = ElementTheme.Light
             };
 
+            dialog.CloseButtonClick += (s, args) => AppSound.ButtonClick();
+
             await ShowDialogBlockingScansAsync(dialog);
         }
 
         private async void CheckPriceButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             var font = LocalizationService.Instance.CurrentLanguage == "km"
                 ? (FontFamily)Application.Current.Resources["KhmerFont"]
                 : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
@@ -543,6 +550,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 RequestedTheme = ElementTheme.Light
             };
 
+            dialog.CloseButtonClick += (s, args) => AppSound.ButtonClick();
+
             dialog.PrimaryButtonClick += (s, args) =>
             {
                 args.Cancel = true; // Keep dialog open
@@ -572,6 +581,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void SaveCartButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             var font = LocalizationService.Instance.CurrentLanguage == "km"
                 ? (FontFamily)Application.Current.Resources["KhmerFont"]
                 : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
@@ -625,6 +635,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                     XamlRoot = this.XamlRoot,
                     RequestedTheme = ElementTheme.Light
                 };
+
+                emptyDialog.CloseButtonClick += (s, args) => AppSound.ButtonClick();
 
                 await ShowDialogBlockingScansAsync(emptyDialog);
                 return;
@@ -711,12 +723,15 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 RequestedTheme = ElementTheme.Light
             };
 
+            savedSuccessDialog.PrimaryButtonClick += (s, args) => AppSound.ButtonClick();
+
             await ShowDialogBlockingScansAsync(savedSuccessDialog);
             ViewModel.ProceedToHome();
         }
 
         private async void RecallButton_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             var font = LocalizationService.Instance.CurrentLanguage == "km"
                 ? (FontFamily)Application.Current.Resources["KhmerFont"]
                 : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
@@ -823,6 +838,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 RequestedTheme = ElementTheme.Light
             };
 
+            dialog.CloseButtonClick += (s, args) => AppSound.ButtonClick();
+
             dialog.PrimaryButtonClick += (s, args) =>
             {
                 args.Cancel = true; // Keep dialog open while validating
@@ -850,6 +867,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private void ConfirmRemove_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             if (sender is Button innerButton)
             {
                 CloseFlyoutForElement(innerButton);
@@ -866,6 +884,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private async void AddItemManuallyLink_Click(object sender, RoutedEventArgs e)
         {
+            AppSound.ButtonClick();
             var font = LocalizationService.Instance.CurrentLanguage == "km"
                 ? (FontFamily)Application.Current.Resources["KhmerFont"]
                 : (FontFamily)(Application.Current.Resources["GlobalAppFont"] ?? new FontFamily("Segoe UI"));
@@ -958,6 +977,8 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 RequestedTheme = ElementTheme.Light
             };
 
+            dialog.CloseButtonClick += (s, args) => AppSound.ButtonClick();
+
             dialog.PrimaryButtonClick += (s, args) =>
             {
                 args.Cancel = true; // Keep dialog open while processing
@@ -1039,6 +1060,9 @@ namespace SelfCheckoutKiosk.App.Views.Customer
                 XamlRoot = this.XamlRoot,
                 RequestedTheme = ElementTheme.Light
             };
+
+            dialog.PrimaryButtonClick += (s, args) => AppSound.ButtonClick();
+            dialog.CloseButtonClick += (s, args) => AppSound.ButtonClick();
 
             var result = await ShowDialogBlockingScansAsync(dialog);
 

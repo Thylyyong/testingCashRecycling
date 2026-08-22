@@ -120,5 +120,9 @@
   "PaidWith": "បានបង់ជាមួយ",
   "CashPaymentMethod": "សាច់ប្រាក់",
   "KHQRPaymentMethod": "KHQR",
-  "ReturnToStartText": "អេក្រង់នេះនឹងត្រឡប់ទៅទំព័រចាប់ផ្តើមក្នុងរយៈពេល"
+  "ReturnToStartText": "អេក្រង់នេះនឹងត្រឡប់ទៅទំព័រចាប់ផ្តើមក្នុងរយៈពេល",
+  "_comment_9_admin": "=================== 9. ADMIN LOGIN DIALOG ===================",
+  "AdminLoginTitle": "ការចូលប្រព័ន្ធរដ្ឋបាល",
+  "AdminLoginSubtitle": "សូមបញ្ចូលលេខកូដសម្ងាត់បុគ្គលិក ៨ ខ្ទង់",
+  "SignIn": "ចូល"
 }

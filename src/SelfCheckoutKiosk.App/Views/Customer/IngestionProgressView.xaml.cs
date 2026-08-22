@@ -376,10 +376,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             await dialog.ShowAsync();
         }
 
-        private void AdminButton_Click(object sender, RoutedEventArgs e)
+        private async void AdminButton_Click(object sender, RoutedEventArgs e)
         {
             AppSound.ButtonClick();
-            AppRouter.ToAdmin();
+            await AdminLoginDialog.ShowAsync(this.XamlRoot);
         }
     }
 }

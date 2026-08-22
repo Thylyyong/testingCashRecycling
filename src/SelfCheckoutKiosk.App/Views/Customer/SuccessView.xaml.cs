@@ -193,11 +193,11 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
         }
 
-        private void AdminButton_Click(object sender, RoutedEventArgs e)
+        private async void AdminButton_Click(object sender, RoutedEventArgs e)
         {
             AppSound.ButtonClick();
             StopAutoReturnTimer();
-            AppRouter.ToAdmin();
+            await AdminLoginDialog.ShowAsync(this.XamlRoot);
         }
     }
 }

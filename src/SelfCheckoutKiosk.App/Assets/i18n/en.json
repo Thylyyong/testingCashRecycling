@@ -120,5 +120,9 @@
   "PaidWith": "Paid With",
   "CashPaymentMethod": "Cash",
   "KHQRPaymentMethod": "KHQR",
-  "ReturnToStartText": "This screen will return to the start in"
+  "ReturnToStartText": "This screen will return to the start in",
+  "_comment_9_admin": "=================== 9. ADMIN LOGIN DIALOG ===================",
+  "AdminLoginTitle": "Administrator Login",
+  "AdminLoginSubtitle": "Enter 8-digit attendant PIN",
+  "SignIn": "Sign In"
 }

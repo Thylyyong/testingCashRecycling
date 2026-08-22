@@ -69,14 +69,16 @@
                         <AdaptiveTrigger MinWindowHeight="1200" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="HeaderContainer.Margin" Value="64,48,64,36" />
-                        <Setter Target="CardsGrid.Padding" Value="64,40" />
-                        <Setter Target="FooterContainer.Padding" Value="64,0,64,48" />
+                        <Setter Target="HeaderContainer.Margin" Value="64,36,64,24" />
+                        <Setter Target="CardsGrid.Padding" Value="64,24" />
+                        <Setter Target="CardsGrid.RowDefinitions[1].Height" Value="12" />
+                        <Setter Target="CardsGrid.RowDefinitions[3].Height" Value="12" />
+                        <Setter Target="FooterContainer.Padding" Value="64,0,64,36" />
                         <Setter Target="HeaderTitle.FontSize" Value="48" />
                         <Setter Target="HeaderSubTitle.FontSize" Value="20" />
-                        <Setter Target="CancelButton.Height" Value="96" />
-                        <Setter Target="CancelButtonText.FontSize" Value="28" />
-                        <Setter Target="HelpButton.Padding" Value="28,14" />
+                        <Setter Target="CancelButton.Height" Value="88" />
+                        <Setter Target="CancelButtonText.FontSize" Value="26" />
+                        <Setter Target="HelpButton.Padding" Value="24,12" />
                     </VisualState.Setters>
                 </VisualState>
 
@@ -121,11 +123,11 @@
 
         <Grid.RowDefinitions>
             <!-- 0: Header -->
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" MaxHeight="160"/>
             <!-- 1: Payment cards grid -->
             <RowDefinition Height="*"/>
             <!-- 2: Cancel button -->
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" MaxHeight="160"/>
         </Grid.RowDefinitions>
 
         <!-- ========================================================= -->
