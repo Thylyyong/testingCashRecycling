@@ -44,6 +44,7 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
             Loaded += PaymentSelectionView_Loaded;
             Unloaded += PaymentSelectionView_Unloaded;
+            SizeChanged += Page_SizeChanged;
         }
 
         private void PaymentSelectionView_Loaded(object sender, RoutedEventArgs e)
@@ -51,6 +52,108 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             AppSound.ChoosePaymentMethod();
             UpdateAvailability();
             HardwareStatusManager.Instance.PropertyChanged += HardwareStatusManager_PropertyChanged;
+            ApplyCardLayout(this.ActualWidth, this.ActualHeight);
+
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                ApplyCardLayout(this.ActualWidth, this.ActualHeight);
+                this.InvalidateMeasure();
+                this.InvalidateArrange();
+                this.UpdateLayout();
+            });
+        }
+
+        private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            ApplyCardLayout(e.NewSize.Width, e.NewSize.Height);
+        }
+
+        private void ApplyCardLayout(double width, double height)
+        {
+            if (CardsGrid == null || CashViewbox == null) return;
+
+            // Only switch to 3 cards per row if the app window is actually wide landscape (Width > Height and Width >= 1200)
+            bool isWideLandscape = (width > height && width >= 1200);
+
+            if (isWideLandscape)
+            {
+                // 3 Columns x 2 Rows for Big Horizontal Widescreen (3 cards per row)
+                CardsGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+                CardsGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+                CardsGrid.ColumnDefinitions[2].Width = new GridLength(1, GridUnitType.Star);
+
+                CardsGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
+                CardsGrid.RowDefinitions[1].Height = new GridLength(1, GridUnitType.Star);
+                CardsGrid.RowDefinitions[2].Height = new GridLength(0);
+
+                Grid.SetRow(CashViewbox, 0); Grid.SetColumn(CashViewbox, 0);
+                Grid.SetRow(KhqrViewbox, 0); Grid.SetColumn(KhqrViewbox, 1);
+                Grid.SetRow(CardViewbox, 0); Grid.SetColumn(CardViewbox, 2);
+
+                Grid.SetRow(IntlQrViewbox, 1); Grid.SetColumn(IntlQrViewbox, 0);
+                Grid.SetRow(MembershipViewbox, 1); Grid.SetColumn(MembershipViewbox, 1);
+                Grid.SetRow(CouponViewbox, 1); Grid.SetColumn(CouponViewbox, 2);
+
+                CardsGrid.Padding = new Thickness(48, 16, 48, 16);
+                CardsGrid.RowSpacing = 16;
+                CardsGrid.ColumnSpacing = 16;
+                HeaderContainer.Margin = new Thickness(48, 16, 48, 12);
+                FooterContainer.Padding = new Thickness(48, 0, 48, 20);
+                HeaderTitle.FontSize = 32;
+                HeaderSubTitle.FontSize = 14;
+                CancelButton.Height = 64;
+                CancelButtonText.FontSize = 20;
+                HelpButton.Padding = new Thickness(18, 10, 18, 10);
+            }
+            else
+            {
+                // 2 Columns x 3 Rows (2 cards per row) for ALL Vertical / Portrait Kiosk Displays
+                CardsGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+                CardsGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+                CardsGrid.ColumnDefinitions[2].Width = new GridLength(0);
+
+                CardsGrid.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
+                CardsGrid.RowDefinitions[1].Height = new GridLength(1, GridUnitType.Star);
+                CardsGrid.RowDefinitions[2].Height = new GridLength(1, GridUnitType.Star);
+
+                Grid.SetRow(CashViewbox, 0); Grid.SetColumn(CashViewbox, 0);
+                Grid.SetRow(KhqrViewbox, 0); Grid.SetColumn(KhqrViewbox, 1);
+
+                Grid.SetRow(CardViewbox, 1); Grid.SetColumn(CardViewbox, 0);
+                Grid.SetRow(IntlQrViewbox, 1); Grid.SetColumn(IntlQrViewbox, 1);
+
+                Grid.SetRow(MembershipViewbox, 2); Grid.SetColumn(MembershipViewbox, 0);
+                Grid.SetRow(CouponViewbox, 2); Grid.SetColumn(CouponViewbox, 1);
+
+                if (height >= 1200)
+                {
+                    // Large 27.5" Vertical Kiosk (1080x1920)
+                    CardsGrid.Padding = new Thickness(64, 24, 64, 24);
+                    CardsGrid.RowSpacing = 20;
+                    CardsGrid.ColumnSpacing = 20;
+                    HeaderContainer.Margin = new Thickness(64, 36, 64, 24);
+                    FooterContainer.Padding = new Thickness(64, 0, 64, 36);
+                    HeaderTitle.FontSize = 48;
+                    HeaderSubTitle.FontSize = 20;
+                    CancelButton.Height = 88;
+                    CancelButtonText.FontSize = 26;
+                    HelpButton.Padding = new Thickness(24, 12, 24, 12);
+                }
+                else
+                {
+                    // Standard Testing Vertical Window (< 1200px)
+                    CardsGrid.Padding = new Thickness(24, 12, 24, 12);
+                    CardsGrid.RowSpacing = 12;
+                    CardsGrid.ColumnSpacing = 12;
+                    HeaderContainer.Margin = new Thickness(24, 16, 24, 12);
+                    FooterContainer.Padding = new Thickness(24, 0, 24, 16);
+                    HeaderTitle.FontSize = 32;
+                    HeaderSubTitle.FontSize = 13;
+                    CancelButton.Height = 64;
+                    CancelButtonText.FontSize = 20;
+                    HelpButton.Padding = new Thickness(16, 8, 16, 8);
+                }
+            }
         }
 
         private void PaymentSelectionView_Unloaded(object sender, RoutedEventArgs e)

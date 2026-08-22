@@ -108,13 +108,12 @@ namespace SelfCheckoutKiosk.App.Services
             object? parameter,
             SlideNavigationTransitionEffect effect)
         {
+            // Note: SlideNavigationTransitionInfo in WinUI 3 has a known compositor clipping bug in Release mode
+            // that causes pages to render offset/truncated. EntranceNavigationTransitionInfo provides a clean, glitch-free transition.
             return NavigateTo(
                 pageType,
                 parameter,
-                new SlideNavigationTransitionInfo
-                {
-                    Effect = effect
-                }
+                new EntranceNavigationTransitionInfo()
             );
         }
 
@@ -179,10 +178,7 @@ namespace SelfCheckoutKiosk.App.Services
             SlideNavigationTransitionEffect effect)
         {
             return GoBack(
-                new SlideNavigationTransitionInfo
-                {
-                    Effect = effect
-                }
+                new EntranceNavigationTransitionInfo()
             );
         }
 

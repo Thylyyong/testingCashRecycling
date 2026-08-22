@@ -219,8 +219,15 @@ namespace SelfCheckoutKiosk.App
 
         private void EnforceInitialAspectRatio(int initialWidth, int initialHeight)
         {
-            // Forces the window to start immediately at a valid 9:16 resolution
-            SetWindowPos(_hwnd, IntPtr.Zero, 0, 0, initialWidth, initialHeight, SWP_NOMOVE | SWP_NOZORDER);
+            // Forces the window to start immediately at a valid 9:16 resolution and syncs WinUI 3 AppWindow compositor
+            if (_appWindow != null)
+            {
+                _appWindow.ResizeClient(new Windows.Graphics.SizeInt32(initialWidth, initialHeight));
+            }
+            else
+            {
+                SetWindowPos(_hwnd, IntPtr.Zero, 0, 0, initialWidth, initialHeight, SWP_NOMOVE | SWP_NOZORDER);
+            }
         }
 
         public void ToggleFullScreen()

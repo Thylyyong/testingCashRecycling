@@ -54,71 +54,9 @@
         </Style>
     </Page.Resources>
 
-    <Grid Background="{StaticResource CardBackgroundBrush}">
-        <!-- ========================================================= -->
-        <!-- VISUAL STATE MANAGER (ADAPTIVE RESPONSIVE STATES)          -->
-        <!-- ========================================================= -->
-        <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup x:Name="DisplayStates">
-                <!-- DEFAULT STATE: Optimized for Small Vertical Testing Displays (< 1200px Height) -->
-                <VisualState x:Name="SmallVerticalState" />
-
-                <!-- LARGE VERTICAL KIOSK STATE: 27.5 Inch (1080x1920) -->
-                <VisualState x:Name="LargeVerticalKioskState">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowHeight="1200" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="HeaderContainer.Margin" Value="64,36,64,24" />
-                        <Setter Target="CardsGrid.Padding" Value="64,24" />
-                        <Setter Target="CardsGrid.RowDefinitions[1].Height" Value="12" />
-                        <Setter Target="CardsGrid.RowDefinitions[3].Height" Value="12" />
-                        <Setter Target="FooterContainer.Padding" Value="64,0,64,36" />
-                        <Setter Target="HeaderTitle.FontSize" Value="48" />
-                        <Setter Target="HeaderSubTitle.FontSize" Value="20" />
-                        <Setter Target="BackButton.Height" Value="88" />
-                        <Setter Target="BackButtonText.FontSize" Value="26" />
-                    </VisualState.Setters>
-                </VisualState>
-
-                <!-- HORIZONTAL KIOSK STATE: 17.3 Inch (1920x1080) -->
-                <VisualState x:Name="HorizontalKioskState">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="1200" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="HeaderContainer.Margin" Value="48,16,48,12" />
-                        <Setter Target="CardsGrid.Padding" Value="48,16" />
-                        <Setter Target="FooterContainer.Padding" Value="48,0,48,20" />
-                        <Setter Target="HeaderTitle.FontSize" Value="32" />
-                        <Setter Target="HeaderSubTitle.FontSize" Value="14" />
-                        <Setter Target="BackButton.Height" Value="64" />
-                        <Setter Target="BackButtonText.FontSize" Value="20" />
-                        <!-- Switch Cards to 3 Columns x 2 Rows for Horizontal Display -->
-                        <Setter Target="CardsGrid.ColumnDefinitions[0].Width" Value="*" />
-                        <Setter Target="CardsGrid.ColumnDefinitions[1].Width" Value="20" />
-                        <Setter Target="CardsGrid.ColumnDefinitions[2].Width" Value="*" />
-                        <Setter Target="CardsGrid.ColumnDefinitions[3].Width" Value="20" />
-                        <Setter Target="CardsGrid.ColumnDefinitions[4].Width" Value="*" />
-                        <Setter Target="CardsGrid.RowDefinitions[0].Height" Value="*" />
-                        <Setter Target="CardsGrid.RowDefinitions[1].Height" Value="20" />
-                        <Setter Target="CardsGrid.RowDefinitions[2].Height" Value="*" />
-                        <Setter Target="CardsGrid.RowDefinitions[3].Height" Value="0" />
-                        <Setter Target="CardsGrid.RowDefinitions[4].Height" Value="0" />
-                        <!-- Reposition Cards for 3x2 Grid Placement -->
-                        <Setter Target="CardViewbox.Grid.Row" Value="0" />
-                        <Setter Target="CardViewbox.Grid.Column" Value="4" />
-                        <Setter Target="IntlQrViewbox.Grid.Row" Value="2" />
-                        <Setter Target="IntlQrViewbox.Grid.Column" Value="0" />
-                        <Setter Target="MembershipViewbox.Grid.Row" Value="2" />
-                        <Setter Target="MembershipViewbox.Grid.Column" Value="2" />
-                        <Setter Target="CouponViewbox.Grid.Row" Value="2" />
-                        <Setter Target="CouponViewbox.Grid.Column" Value="4" />
-                    </VisualState.Setters>
-                </VisualState>
-            </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
-
+    <Grid Background="{StaticResource CardBackgroundBrush}"
+          HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch">
         <Grid.RowDefinitions>
             <!-- 0: Header -->
             <RowDefinition Height="Auto" MaxHeight="160"/>
@@ -156,23 +94,19 @@
         <!-- 1. PAYMENT CARDS                                          -->
         <!-- Dynamic Layout: 2x3 (Vertical) or 3x2 (Horizontal)         -->
         <!-- ========================================================= -->
-        <Grid x:Name="CardsGrid" Grid.Row="1" Padding="32,20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid x:Name="CardsGrid" Grid.Row="1" Padding="32,16" RowSpacing="16" ColumnSpacing="16" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="20"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="0"/>
                 <ColumnDefinition Width="0"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="20"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="20"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- ===== CASH CARD ===== -->
+            <!-- ===== CASH CARD (Row 0, Col 0) ===== -->
             <Viewbox x:Name="CashViewbox" Grid.Row="0" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="CashCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}">
                     <Button.Resources>
@@ -189,8 +123,8 @@
                 </Button>
             </Viewbox>
 
-            <!-- ===== KHQR CARD ===== -->
-            <Viewbox x:Name="KhqrViewbox" Grid.Row="0" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== KHQR CARD (Row 0, Col 1) ===== -->
+            <Viewbox x:Name="KhqrViewbox" Grid.Row="0" Grid.Column="1" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="KhqrCard" Width="360" Height="360" Style="{StaticResource PaymentCardEnabledStyle}">
                     <Button.Resources>
                         <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="SurfaceHoverBrush"/>
@@ -206,8 +140,8 @@
                 </Button>
             </Viewbox>
 
-            <!-- ===== DEBIT / CREDIT CARD ===== -->
-            <Viewbox x:Name="CardViewbox" Grid.Row="2" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== DEBIT / CREDIT CARD (Row 1, Col 0 in vertical / Row 0, Col 2 in horizontal) ===== -->
+            <Viewbox x:Name="CardViewbox" Grid.Row="1" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="CardCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}">
                     <Button.Resources>
                         <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="SurfaceHoverBrush"/>
@@ -223,8 +157,8 @@
                 </Button>
             </Viewbox>
 
-            <!-- ===== INTERNATIONAL QR CARD ===== -->
-            <Viewbox x:Name="IntlQrViewbox" Grid.Row="2" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== INTERNATIONAL QR CARD (Row 1, Col 1 in vertical / Row 1, Col 0 in horizontal) ===== -->
+            <Viewbox x:Name="IntlQrViewbox" Grid.Row="1" Grid.Column="1" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="IntlQrCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}">
                     <Button.Resources>
                         <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="SurfaceHoverBrush"/>
@@ -240,8 +174,8 @@
                 </Button>
             </Viewbox>
 
-            <!-- ===== MEMBERSHIP CARD ===== -->
-            <Viewbox x:Name="MembershipViewbox" Grid.Row="4" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== MEMBERSHIP CARD (Row 2, Col 0 in vertical / Row 1, Col 1 in horizontal) ===== -->
+            <Viewbox x:Name="MembershipViewbox" Grid.Row="2" Grid.Column="0" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="MembershipCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}">
                     <Button.Resources>
                         <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="SurfaceHoverBrush"/>
@@ -257,8 +191,8 @@
                 </Button>
             </Viewbox>
 
-            <!-- ===== COUPON CARD ===== -->
-            <Viewbox x:Name="CouponViewbox" Grid.Row="4" Grid.Column="2" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <!-- ===== COUPON CARD (Row 2, Col 1 in vertical / Row 1, Col 2 in horizontal) ===== -->
+            <Viewbox x:Name="CouponViewbox" Grid.Row="2" Grid.Column="1" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                 <Button x:Name="CouponCard" Width="360" Height="360" Style="{StaticResource PaymentCardDisabledStyle}">
                     <Button.Resources>
                         <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="SurfaceHoverBrush"/>
