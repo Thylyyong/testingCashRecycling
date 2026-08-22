@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 
 namespace SelfCheckoutKiosk.App.Models
 {
@@ -48,6 +49,7 @@ namespace SelfCheckoutKiosk.App.Models
             set { _storeHours = value; OnPropertyChanged(); }
         }
 
+        [JsonIgnore]
         public string LogoUri
         {
             get

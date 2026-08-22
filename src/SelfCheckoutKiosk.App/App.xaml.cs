@@ -795,23 +795,12 @@ public partial class App : Application
 
     private async Task InitializeLocalizationAsync()
     {
-        string savedLang = "en";
-
-        try
-        {
-            if (AppInstanceIsPackaged())
-            {
-                savedLang = Windows.Storage.ApplicationData.Current.LocalSettings.Values["AppLanguage"] as string ?? "en";
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[App Settings Warning] Could not read LocalSettings: {ex.Message}");
-        }
+        string savedLang = LocalizationService.Instance.GetPersistedLanguage();
 
         try
         {
             await LocalizationService.Instance.SetLanguageAsync(savedLang);
+            Debug.WriteLine($"[Localization Initialized] Active language: '{savedLang}'");
         }
         catch (Exception ex)
         {

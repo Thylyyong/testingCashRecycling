@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
@@ -42,12 +43,16 @@ namespace SelfCheckoutKiosk.App.Models
             }
         }
 
+        [JsonIgnore]
         public bool IsVideo => string.Equals(_mediaType, "Video", StringComparison.OrdinalIgnoreCase);
 
+        [JsonIgnore]
         public Visibility VideoVisibility => IsVideo ? Visibility.Visible : Visibility.Collapsed;
 
+        [JsonIgnore]
         public string TypeGlyph => IsVideo ? "\uE714" : "\uEB9F"; // Video icon vs Image icon
 
+        [JsonIgnore]
         public string UriPath
         {
             get
@@ -75,6 +80,7 @@ namespace SelfCheckoutKiosk.App.Models
             set { _durationSeconds = value; OnPropertyChanged(); OnPropertyChanged(nameof(DurationText)); }
         }
 
+        [JsonIgnore]
         public string DurationText => IsVideo ? "Full Video Length" : $"{DurationSeconds}s";
 
         public bool IsActive
@@ -83,6 +89,7 @@ namespace SelfCheckoutKiosk.App.Models
             set { _isActive = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); }
         }
 
+        [JsonIgnore]
         public string StatusText => IsActive ? "Active" : "Inactive";
 
         public bool IsAudioEnabled
@@ -101,10 +108,13 @@ namespace SelfCheckoutKiosk.App.Models
             }
         }
 
+        [JsonIgnore]
         public string SoundGlyph => IsAudioEnabled ? "\uE767" : "\uE74F"; // Volume vs Mute
 
+        [JsonIgnore]
         public string SoundTooltip => IsAudioEnabled ? "Audio: ON (Sound enabled)" : "Audio: OFF (Muted)";
 
+        [JsonIgnore]
         public Brush SoundForegroundBrush => IsAudioEnabled
             ? new SolidColorBrush(Color.FromArgb(255, 37, 99, 235))   // Blue #2563EB
             : new SolidColorBrush(Color.FromArgb(255, 148, 163, 184)); // Muted slate #94A3B8

@@ -19,7 +19,12 @@ public sealed class MediaBrandingService
     private static readonly Lazy<MediaBrandingService> _lazy = new(() => new MediaBrandingService());
     public static MediaBrandingService Instance => _lazy.Value;
 
-    private static readonly string ConfigFilePath = Path.Combine(AppContext.BaseDirectory, "branding_config.json");
+    private static readonly string PrimaryConfigFilePath = Path.Combine(AppContext.BaseDirectory, "branding_config.json");
+    private static readonly string FallbackConfigFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SelfCheckoutKiosk",
+        "branding_config.json");
+
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
 
     public ObservableCollection<AdminMediaItem> MediaItems { get; } = new();
@@ -91,9 +96,19 @@ public sealed class MediaBrandingService
         _isLoading = true;
         try
         {
-            if (File.Exists(ConfigFilePath))
+            string? loadPath = null;
+            if (File.Exists(PrimaryConfigFilePath))
             {
-                string json = File.ReadAllText(ConfigFilePath);
+                loadPath = PrimaryConfigFilePath;
+            }
+            else if (File.Exists(FallbackConfigFilePath))
+            {
+                loadPath = FallbackConfigFilePath;
+            }
+
+            if (loadPath != null)
+            {
+                string json = File.ReadAllText(loadPath);
                 var stored = JsonSerializer.Deserialize<BrandingStorageModel>(json, JsonOptions);
                 if (stored != null)
                 {
@@ -164,8 +179,23 @@ public sealed class MediaBrandingService
             };
 
             string json = JsonSerializer.Serialize(model, JsonOptions);
-            File.WriteAllText(ConfigFilePath, json);
-            Debug.WriteLine($"[MediaBrandingService] Branding configuration persisted to: {ConfigFilePath}");
+
+            // Attempt to write to base directory first; fallback to LocalAppData if directory is write-protected (e.g. Program Files)
+            try
+            {
+                File.WriteAllText(PrimaryConfigFilePath, json);
+                Debug.WriteLine($"[MediaBrandingService] Branding configuration persisted to: {PrimaryConfigFilePath}");
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
+            {
+                string? dir = Path.GetDirectoryName(FallbackConfigFilePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                File.WriteAllText(FallbackConfigFilePath, json);
+                Debug.WriteLine($"[MediaBrandingService] Fallback: Branding configuration persisted to: {FallbackConfigFilePath}");
+            }
 
             BrandingChanged?.Invoke(this, EventArgs.Empty);
             PlaylistChanged?.Invoke(this, EventArgs.Empty);
