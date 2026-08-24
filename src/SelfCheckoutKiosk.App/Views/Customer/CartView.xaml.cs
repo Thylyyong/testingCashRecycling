@@ -38,6 +38,10 @@ namespace SelfCheckoutKiosk.App.Views.Customer
 
         private readonly KeyEventHandler _dialogScanKeyHandler;
 
+        private static string? _lastProcessedSku;
+        private static DateTimeOffset _lastProcessedTime = DateTimeOffset.MinValue;
+        private static readonly object _cartScanLock = new();
+
         public CartViewModel ViewModel { get; }
 
         public CartView()
@@ -99,101 +103,14 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             }
         }
 
-        private void Scanner_OnBarcodeScanned(object? sender, SelfCheckoutKiosk.Core.Abstractions.BarcodeScannedEventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(e.RawBarcode)) return;
-
-            DispatcherQueue?.TryEnqueue(async () =>
-            {
-                if (_scanBehavior == ScanBehavior.AddToCart)
-                {
-                    await ProcessScannedBarcodeAsync(e.RawBarcode);
-                }
-                else if (_scanBehavior == ScanBehavior.PriceCheck && _activePriceResultPanel != null)
-                {
-                    RenderPriceCheckResult(_activePriceResultPanel, e.RawBarcode);
-                }
-            });
-        }
-
-        private async void Page_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
+        private void Page_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
         {
             // If a modal dialog with active keypad input is open, route direct keystrokes to it
             if (_activeDialog != null && _activeDialogKeypadInput != null)
             {
                 _activeDialogKeypadInput(e.Key);
                 e.Handled = true;
-                return;
             }
-
-            var now = DateTime.Now;
-            var elapsed = (now - _lastKeyTime).TotalMilliseconds;
-            _lastKeyTime = now;
-
-            if (elapsed > MaxKeyIntervalMs && _barcodeBuffer.Length > 0)
-            {
-                _barcodeBuffer.Clear();
-            }
-
-            if (e.Key == VirtualKey.Enter)
-            {
-                if (_barcodeBuffer.Length > 0)
-                {
-                    string scannedSku = _barcodeBuffer.ToString().Trim();
-                    _barcodeBuffer.Clear();
-                    e.Handled = true;
-
-                    switch (_scanBehavior)
-                    {
-                        case ScanBehavior.AddToCart:
-                            await ProcessScannedBarcodeAsync(scannedSku);
-                            break;
-
-                        case ScanBehavior.PriceCheck:
-                            if (_activePriceResultPanel != null)
-                            {
-                                RenderPriceCheckResult(_activePriceResultPanel, scannedSku);
-                            }
-                            break;
-
-                        case ScanBehavior.Blocked:
-                            break;
-                    }
-                }
-                else
-                {
-                    if (_activeDialog == null)
-                    {
-                        e.Handled = true;
-                    }
-                }
-            }
-            else
-            {
-                char character = GetCharFromVirtualKey(e.Key);
-                if (character != '\0')
-                {
-                    _barcodeBuffer.Append(character);
-                    if (_activeDialog == null)
-                    {
-                        e.Handled = true;
-                    }
-                }
-            }
-        }
-
-        private char GetCharFromVirtualKey(VirtualKey key)
-        {
-            if (key >= VirtualKey.Number0 && key <= VirtualKey.Number9)
-                return (char)('0' + (key - VirtualKey.Number0));
-
-            if (key >= VirtualKey.NumberPad0 && key <= VirtualKey.NumberPad9)
-                return (char)('0' + (key - VirtualKey.NumberPad0));
-
-            if (key >= VirtualKey.A && key <= VirtualKey.Z)
-                return (char)('A' + (key - VirtualKey.A));
-
-            return '\0';
         }
 
         public async Task ProcessScannedBarcodeAsync(string sku)
@@ -214,6 +131,19 @@ namespace SelfCheckoutKiosk.App.Views.Customer
             {
                 Debug.WriteLine($"[CartView] Discarded corrupted binary scan data: '{cleanedSku}'");
                 return;
+            }
+
+            lock (_cartScanLock)
+            {
+                var now = DateTimeOffset.UtcNow;
+                if (string.Equals(_lastProcessedSku, cleanedSku, StringComparison.OrdinalIgnoreCase) &&
+                    (now - _lastProcessedTime).TotalMilliseconds < 400)
+                {
+                    Debug.WriteLine($"[CartView DEBOUNCE] Ignored duplicate rapid scan: '{cleanedSku}'");
+                    return;
+                }
+                _lastProcessedSku = cleanedSku;
+                _lastProcessedTime = now;
             }
 
             if (_scanBehavior == ScanBehavior.PriceCheck && _activePriceResultPanel != null)

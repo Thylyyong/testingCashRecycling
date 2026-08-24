@@ -341,6 +341,9 @@
   - Updated `AdminLoginViewModel.TryAuthenticate()` to strictly require exactly 8 digits (`_enteredPin.Length == 8`) matching valid admin credentials (`DefaultAdminPin` / `88888888`), preventing premature Enter execution.
 - [x] **17.5 Customer Header AdminButton Tab Stop Disabling:**
   - Set `IsTabStop="False"` on all `AdminButton` elements across customer views (`HomeView.xaml`, `CartView.xaml`, `SuccessView.xaml`, `QRPaymentView.xaml`, `PaymentSelectionView.xaml`, `PaymentOptionView.xaml`, `IngestionProgressView.xaml`), preventing accidental focus and activation by Enter presses.
+- [x] **17.6 Single-Scan Quantity Enforcement & Duplicate Wedge Elimination:**
+  - Removed duplicate `_barcodeBuffer` and redundant `ProcessScannedBarcodeAsync` call from `CartView.Page_PreviewKeyDown`, ensuring keyboard wedge scans are processed exclusively through `App.DispatchWedgeBarcode`.
+  - Added 400ms SKU debounce guard in `CartView.ProcessScannedBarcodeAsync` to permanently eliminate accidental +2 quantity increments on single scan.
 
 ---
 
