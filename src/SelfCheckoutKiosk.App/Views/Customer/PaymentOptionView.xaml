@@ -81,7 +81,7 @@
                 </StackPanel>
                 <Button x:Name="AdminButton" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
                         Background="Transparent" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1.5" CornerRadius="24" Padding="18,10"
-                        Click="AdminButton_Click">
+                        IsTabStop="False" Click="AdminButton_Click">
                     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <FontIcon Glyph="&#xE7EE;" FontFamily="Segoe Fluent Icons" FontSize="16" Foreground="{StaticResource TextDarkSlateBrush}"/>
                         <TextBlock Text="{x:Bind Localizer.GetString('Admin'), Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}" VerticalAlignment="Center"/>

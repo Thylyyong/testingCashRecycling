@@ -266,7 +266,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Button x:Name="AdminButton" Style="{StaticResource HeaderChipButtonStyle}" Height="32" Padding="10,4" CornerRadius="10" Click="AdminButton_Click">
+                        <Button x:Name="AdminButton" Style="{StaticResource HeaderChipButtonStyle}" Height="32" Padding="10,4" CornerRadius="10" IsTabStop="False" Click="AdminButton_Click">
                             <Button.Resources>
                                 <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{Binding Source={StaticResource AccentBlueChipHoverBrush}, Path=Color}"/>
                                 <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{Binding Source={StaticResource AccentBlueChipPressedBrush}, Path=Color}"/>

@@ -26,29 +26,14 @@ namespace SelfCheckoutKiosk.App.Views.Admin
         private void AdminLoginView_Loaded(object sender, RoutedEventArgs e)
         {
             this.Focus(FocusState.Programmatic);
-
-            if (App.MainWindowInstance?.Content is UIElement root)
-            {
-                root.RemoveHandler(UIElement.PreviewKeyDownEvent, _keyHandler);
-                root.AddHandler(UIElement.PreviewKeyDownEvent, _keyHandler, handledEventsToo: true);
-            }
-            else
-            {
-                this.RemoveHandler(UIElement.PreviewKeyDownEvent, _keyHandler);
-                this.AddHandler(UIElement.PreviewKeyDownEvent, _keyHandler, handledEventsToo: true);
-            }
+            this.RemoveHandler(UIElement.PreviewKeyDownEvent, _keyHandler);
+            this.AddHandler(UIElement.PreviewKeyDownEvent, _keyHandler, handledEventsToo: true);
         }
 
         private void AdminLoginView_Unloaded(object sender, RoutedEventArgs e)
         {
-            if (App.MainWindowInstance?.Content is UIElement root)
-            {
-                root.RemoveHandler(UIElement.PreviewKeyDownEvent, _keyHandler);
-            }
-            else
-            {
-                this.RemoveHandler(UIElement.PreviewKeyDownEvent, _keyHandler);
-            }
+            this.RemoveHandler(UIElement.PreviewKeyDownEvent, _keyHandler);
+            ViewModel.ClearPin();
         }
 
         private void Page_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
@@ -81,7 +66,15 @@ namespace SelfCheckoutKiosk.App.Views.Admin
             }
             else if (e.Key == VirtualKey.Enter)
             {
-                ViewModel.TryAuthenticate();
+                if (ViewModel.PinLength == AdminLoginViewModel.RequiredPinLength)
+                {
+                    ViewModel.TryAuthenticate();
+                }
+                else
+                {
+                    AppSound.ErrorPassword();
+                    ViewModel.ErrorMessage = $"Please enter all {AdminLoginViewModel.RequiredPinLength} digits of your admin PIN.";
+                }
                 e.Handled = true;
             }
         }

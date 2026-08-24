@@ -1,6 +1,6 @@
 {
   "ServerConfig": {
-    "Port": "3000",
-    "AllowedOrigins": ["http://localhost:3000"]
+    "Port": "5000",
+    "AllowedOrigins": ["http://localhost:5000"]
   }
 }

@@ -112,14 +112,14 @@ namespace SelfCheckoutKiosk.App.ViewModels.Admin
 
         public bool TryAuthenticate()
         {
-            if (_enteredPin.Length < RequiredPinLength)
+            if (_enteredPin.Length != RequiredPinLength)
             {
                 AppSound.ErrorPassword();
                 ErrorMessage = $"Please enter all {RequiredPinLength} digits of your admin PIN.";
                 return false;
             }
 
-            if (_enteredPin == DefaultAdminPin || _enteredPin == "88888888" || _enteredPin.Length == RequiredPinLength)
+            if (_enteredPin == DefaultAdminPin || _enteredPin == "88888888")
             {
                 AppSound.SuccessBeep();
                 Debug.WriteLine("[Admin Login] Authentication successful.");

@@ -347,44 +347,64 @@ namespace SelfCheckoutKiosk.App.Services
                 container.Children.Add(actionGrid);
 
                 // --- 7. Key Event Listener ---
-                void OnPreviewKeyDown(object sender, KeyRoutedEventArgs e)
+                void HandleKey(VirtualKey key)
                 {
-                    if (e.Key >= VirtualKey.Number0 && e.Key <= VirtualKey.Number9)
+                    if (key >= VirtualKey.Number0 && key <= VirtualKey.Number9)
                     {
                         AppSound.KeypadClick();
-                        string digit = ((int)(e.Key - VirtualKey.Number0)).ToString();
+                        string digit = ((int)(key - VirtualKey.Number0)).ToString();
                         viewModel.AppendDigit(digit);
                         UpdateUI();
-                        e.Handled = true;
                     }
-                    else if (e.Key >= VirtualKey.NumberPad0 && e.Key <= VirtualKey.NumberPad9)
+                    else if (key >= VirtualKey.NumberPad0 && key <= VirtualKey.NumberPad9)
                     {
                         AppSound.KeypadClick();
-                        string digit = ((int)(e.Key - VirtualKey.NumberPad0)).ToString();
+                        string digit = ((int)(key - VirtualKey.NumberPad0)).ToString();
                         viewModel.AppendDigit(digit);
                         UpdateUI();
-                        e.Handled = true;
                     }
-                    else if (e.Key == VirtualKey.Back || e.Key == VirtualKey.Delete)
+                    else if (key == VirtualKey.Back || key == VirtualKey.Delete)
                     {
                         AppSound.KeypadClick();
                         viewModel.DeleteLast();
                         UpdateUI();
-                        e.Handled = true;
                     }
-                    else if (e.Key == VirtualKey.Escape)
+                    else if (key == VirtualKey.Escape)
                     {
                         AppSound.ButtonClick();
                         dialog?.Hide();
-                        e.Handled = true;
                     }
-                    else if (e.Key == VirtualKey.Enter)
+                    else if (key == VirtualKey.Enter)
                     {
-                        AppSound.ButtonClick();
-                        DoAuth();
-                        e.Handled = true;
+                        if (viewModel.PinLength == AdminLoginViewModel.RequiredPinLength)
+                        {
+                            AppSound.ButtonClick();
+                            DoAuth();
+                        }
+                        else
+                        {
+                            AppSound.ErrorPassword();
+                            viewModel.ErrorMessage = $"Please enter all {AdminLoginViewModel.RequiredPinLength} digits of your admin PIN.";
+                            UpdateUI();
+                        }
                     }
                 }
+
+                KeyEventHandler previewKeyHandler = (sender, e) =>
+                {
+                    if (e.Key is VirtualKey.Number0 or VirtualKey.Number1 or VirtualKey.Number2 or
+                        VirtualKey.Number3 or VirtualKey.Number4 or VirtualKey.Number5 or
+                        VirtualKey.Number6 or VirtualKey.Number7 or VirtualKey.Number8 or
+                        VirtualKey.Number9 or VirtualKey.NumberPad0 or VirtualKey.NumberPad1 or
+                        VirtualKey.NumberPad2 or VirtualKey.NumberPad3 or VirtualKey.NumberPad4 or
+                        VirtualKey.NumberPad5 or VirtualKey.NumberPad6 or VirtualKey.NumberPad7 or
+                        VirtualKey.NumberPad8 or VirtualKey.NumberPad9 or VirtualKey.Back or
+                        VirtualKey.Delete or VirtualKey.Escape or VirtualKey.Enter)
+                    {
+                        HandleKey(e.Key);
+                        e.Handled = true;
+                    }
+                };
 
                 // --- 8. Create & Show ContentDialog ---
                 dialog = new ContentDialog
@@ -395,21 +415,31 @@ namespace SelfCheckoutKiosk.App.Services
                     RequestedTheme = ElementTheme.Light
                 };
 
+                dialog.AddHandler(UIElement.PreviewKeyDownEvent, previewKeyHandler, handledEventsToo: true);
+                container.AddHandler(UIElement.PreviewKeyDownEvent, previewKeyHandler, handledEventsToo: true);
+
+                UIElement? registeredAppRoot = null;
+
                 dialog.Opened += (s, e) =>
                 {
                     pinBox.Focus(FocusState.Programmatic);
                     if (App.MainWindowInstance?.Content is UIElement appRoot)
                     {
-                        appRoot.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown), handledEventsToo: true);
+                        registeredAppRoot = appRoot;
+                        appRoot.AddHandler(UIElement.PreviewKeyDownEvent, previewKeyHandler, handledEventsToo: true);
                     }
                 };
 
                 dialog.Closed += (s, e) =>
                 {
-                    if (App.MainWindowInstance?.Content is UIElement appRoot)
+                    if (registeredAppRoot != null)
                     {
-                        appRoot.RemoveHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler(OnPreviewKeyDown));
+                        registeredAppRoot.RemoveHandler(UIElement.PreviewKeyDownEvent, previewKeyHandler);
+                        registeredAppRoot = null;
                     }
+                    dialog?.RemoveHandler(UIElement.PreviewKeyDownEvent, previewKeyHandler);
+                    container.RemoveHandler(UIElement.PreviewKeyDownEvent, previewKeyHandler);
+                    viewModel.ClearPin();
                 };
 
                 await dialog.ShowAsync();

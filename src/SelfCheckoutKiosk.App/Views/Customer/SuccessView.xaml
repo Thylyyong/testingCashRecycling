@@ -126,7 +126,7 @@
         <Grid Grid.Row="0" Padding="32,20" HorizontalAlignment="Stretch">
             <Button x:Name="AdminButton" HorizontalAlignment="Right" VerticalAlignment="Center"
                     Background="Transparent" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1.5"
-                    CornerRadius="20" Padding="14,8" Click="AdminButton_Click">
+                    CornerRadius="20" Padding="14,8" IsTabStop="False" Click="AdminButton_Click">
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7EE;" FontSize="15" Foreground="{StaticResource TextDarkSlateBrush}"/>
                     <TextBlock Text="{x:Bind Localizer.GetString('Admin'), Mode=OneWay}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextDarkSlateBrush}"/>

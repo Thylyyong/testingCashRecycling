@@ -120,15 +120,25 @@ start "" "%~dp0SelfCheckoutKiosk.App.exe"
 
 ---
 
-## ⚡ 1-Script Complete Packaging Automation
+## ⚡ 1-Click Complete Packaging Automation
 
-You can run this single PowerShell command to perform the entire packaging sequence automatically:
+You can build and package the standalone distribution in one click:
 
+### Option A: Double-Click `Package-Distribution.bat` (Recommended)
+Simply double-click [`Package-Distribution.bat`](file:///c:/Users/viti/source/repos/SelfCheckoutKiosk-V2%20-%20Merge/Package-Distribution.bat) in the repository root. It runs tests, cleans, builds, packages, and pauses at the end so you can inspect the output without the window closing.
+
+### Option B: Run PowerShell Script
 ```powershell
-powershell -Command "
-Write-Host '==================================================' -ForegroundColor Cyan;
-Write-Host '  PACKAGING SELF-CHECKOUT KIOSK V2 STANDALONE     ' -ForegroundColor Cyan;
-Write-Host '==================================================' -ForegroundColor Cyan;
+.\Package-Distribution.ps1
+```
+Or to skip running tests:
+```powershell
+.\Package-Distribution.ps1 -SkipTests
+```
+
+---
+
+## 🛠️ Step-by-Step Manual Packaging Commands
 
 # 1. Clean output folder
 if (Test-Path 'dist') { Remove-Item -Recurse -Force 'dist' };

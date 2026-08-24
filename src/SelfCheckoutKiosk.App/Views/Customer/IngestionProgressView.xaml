@@ -239,6 +239,7 @@
                     <Button x:Name="AdminButton"
                             Height="50"
                             CornerRadius="10"
+                            IsTabStop="False"
                             Click="AdminButton_Click"
                             Style="{StaticResource HeaderChipButtonStyle}">
                         <Button.Resources>

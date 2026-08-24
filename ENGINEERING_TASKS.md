@@ -27,6 +27,7 @@
 | **WP-14** | [Vault Breakdown Persistence Across App Lifecycles](#wp-14-vault-breakdown-persistence-across-app-lifecycles) | `P0` | 🟢 `COMPLETED` | `VaultInventoryService`, cross-session JSON storage, manual attendant reset |
 | **WP-15** | [Physical Keyboard & Enter Support on Cart Dialogs](#wp-15-physical-keyboard--enter-support-on-cart-dialogs) | `P1` | 🟢 `COMPLETED` | Add Item Manually, Check Price, Recall Cart direct typing & Enter trigger |
 | **WP-16** | [Global Sound System & Audio Feedback Engine](#wp-16-global-sound-system--audio-feedback-engine) | `P1` | 🟢 `COMPLETED` | `KioskSound`, `ISoundService`, `SoundService`, `AppSound`, dual-channel SFX + Voice playback |
+| **WP-17** | [Distribution Packaging Resilience & Admin Login Key Isolation](#wp-17-distribution-packaging-resilience--admin-login-key-isolation) | `P0` | 🟢 `COMPLETED` | Package-Distribution batch/ps1 script resilience, handler leak fix, strict 8-digit PIN verification |
 
 ---
 
@@ -324,6 +325,25 @@
 
 ---
 
+### WP-17: Distribution Packaging Resilience & Admin Login Key Isolation
+**Objective:** Resolve packaging distribution failures caused by locked directory handles in `Package-Distribution.ps1`, add a non-closing 1-click batch launcher, isolate Admin Login key event handlers, and strictly require all 8 digits before PIN verification.
+
+- [x] **17.1 Package Distribution Script Resilience & Process Termination:**
+  - Updated `Package-Distribution.ps1` to stop lingering kiosk/hardware processes (`SelfCheckoutKiosk.App`, `CashDevice-RestAPI`, `CashDeviceSimulator`, `GenerateLicense`, `DevLicenseTokenGenerator`) and wait for file handles to close.
+  - Cleaned directory contents in `dist\SelfCheckoutKiosk\` without deleting the root folder container, preventing `IOException` file locking errors when Windows Explorer or terminals are open viewing the folder.
+  - Wrapped script in structured `try / catch / finally` with interactive `Press Enter to exit...` prompt on both success and failure (suppressible via `-NoPause`).
+- [x] **17.2 1-Click `Package-Distribution.bat` Launcher:**
+  - Added repository-level `Package-Distribution.bat` batch wrapper that bypasses PowerShell execution policy restrictions and executes `pause` at the end so the console window never closes abruptly.
+- [x] **17.3 Admin Login Key Handler Leak Fix:**
+  - Fixed event listener leak in `AdminLoginDialog.cs` where dynamic delegate instance creation prevented `RemoveHandler` from detaching `OnPreviewKeyDown`, leaving the dialog's key handler active on the window root forever.
+  - Scoped key handlers strictly to the dialog/page lifecycle and guaranteed delegate detachment in `dialog.Closed` and `AdminLoginView.Unloaded`.
+- [x] **17.4 Strict 8-Digit PIN Verification:**
+  - Updated `AdminLoginViewModel.TryAuthenticate()` to strictly require exactly 8 digits (`_enteredPin.Length == 8`) matching valid admin credentials (`DefaultAdminPin` / `88888888`), preventing premature Enter execution.
+- [x] **17.5 Customer Header AdminButton Tab Stop Disabling:**
+  - Set `IsTabStop="False"` on all `AdminButton` elements across customer views (`HomeView.xaml`, `CartView.xaml`, `SuccessView.xaml`, `QRPaymentView.xaml`, `PaymentSelectionView.xaml`, `PaymentOptionView.xaml`, `IngestionProgressView.xaml`), preventing accidental focus and activation by Enter presses.
+
+---
+
 ## 📈 Execution Sequence
 
 ```mermaid
@@ -342,4 +362,5 @@ graph TD
     L --> M["WP-14: Vault Inventory Persistence"]
     M --> N["WP-15: Physical Keyboard & Enter Support on Cart Dialogs"]
     N --> O["WP-16: Global Sound System & Audio Engine"]
+    O --> P["WP-17: Packaging Resilience & Admin Key Isolation"]
 ```
